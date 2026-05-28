@@ -24,10 +24,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <header className="border-b border-border bg-white">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-            <Link href="/" className="text-xl font-semibold tracking-tight">
-              HackMatch AI
+        <header className="sticky top-0 z-30 border-b border-white/30 bg-white/75 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <Link
+              href="/"
+              className="text-2xl tracking-tight"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              HackMatch AI<sup className="text-xs">®</sup>
             </Link>
             <nav className="flex flex-wrap gap-2 text-sm text-muted-foreground">
               {navItems.map((item) => (

@@ -35,23 +35,25 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-        <div className="min-w-0 space-y-6 rounded-lg border border-border bg-white p-6 shadow-soft">
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] -mt-8 min-h-screen w-screen overflow-hidden bg-slate-950 px-4 py-10 text-white sm:px-6 lg:px-8">
+        <TechHeroBackdrop />
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-6 py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:py-[90px]">
+        <div className="liquid-glass min-w-0 space-y-6 rounded-lg p-6">
           <div className="space-y-5">
-            <Badge className="w-fit bg-emerald-100 text-emerald-800">
+            <Badge className="w-fit bg-white/10 text-white ring-1 ring-white/20">
               Deterministic matching, explainable output
             </Badge>
-            <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
-              Watch teams assemble from real constraints.
+            <h1 className="animate-fade-rise max-w-3xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+              Watch teams <em className="not-italic text-emerald-200">assemble</em> from real constraints.
             </h1>
-            <p className="max-w-2xl text-lg text-muted-foreground">
+            <p className="animate-fade-rise-delay max-w-2xl text-base leading-relaxed text-white/72 sm:text-lg">
               Edit participants, tune weights, and see balanced teams form with transparent scores before you add production persistence.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/matching">
+            <div className="animate-fade-rise-delay-2 flex flex-wrap gap-3">
+              <Link className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition hover:scale-[1.03]" href="/admin/matching">
                 Generate teams <ArrowRight size={16} />
               </Link>
-              <Link className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" href="/participant/register">
+              <Link className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition hover:scale-[1.03]" href="/participant/register">
                 Register participant
               </Link>
             </div>
@@ -69,13 +71,13 @@ export default function HomePage() {
         </div>
 
         <div className="min-w-0 space-y-4">
-          <Card className="space-y-4">
+          <Card className="liquid-glass space-y-4 rounded-lg p-5 text-white">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-primary">Live matching preview</p>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight">Current generated teams</h2>
+                <p className="text-sm font-semibold text-emerald-200">Live matching preview</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">Current generated teams</h2>
               </div>
-              <Badge>{result.teams.length} teams</Badge>
+              <Badge className="bg-white/10 text-white ring-1 ring-white/20">{result.teams.length} teams</Badge>
             </div>
             <div className="grid gap-3">
               {previewTeams.map((team) => {
@@ -83,18 +85,18 @@ export default function HomePage() {
                   .map((id) => participantsById.get(id))
                   .filter((participant): participant is Participant => Boolean(participant));
                 return (
-                  <div key={team.id} className="rounded-lg border border-border bg-slate-50 p-4">
+                  <div key={team.id} className="rounded-lg border border-white/15 bg-white/10 p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
                         <h3 className="font-semibold">{team.name}</h3>
-                        <p className="text-xs text-muted-foreground">{members.length} assigned members</p>
+                        <p className="text-xs text-white/65">{members.length} assigned members</p>
                       </div>
                       <ScoreRing score={team.score?.totalScore ?? 0} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {members.map((member) => (
-                        <span key={member.id} className="rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-border">
-                          {member.fullName} · {member.primaryRole}
+                        <span key={member.id} className="rounded-md bg-white/12 px-2 py-1 text-xs font-medium text-white ring-1 ring-white/15">
+                          {member.fullName} - {member.primaryRole}
                         </span>
                       ))}
                     </div>
@@ -112,22 +114,23 @@ export default function HomePage() {
           </Card>
 
           {focusTeam && focusExplanation ? (
-            <Card className="space-y-4">
+            <Card className="liquid-glass space-y-4 rounded-lg p-5 text-white">
               <div className="flex items-center gap-2">
-                <BrainCircuit className="text-primary" size={20} />
+                <BrainCircuit className="text-emerald-200" size={20} />
                 <h2 className="text-xl font-bold tracking-tight">Why this team?</h2>
               </div>
-              <p className="text-sm text-muted-foreground">{focusExplanation.summary}</p>
+              <p className="text-sm text-white/72">{focusExplanation.summary}</p>
               <div className="grid gap-3 md:grid-cols-2">
                 <Insight title="Strengths" items={focusExplanation.strengths.slice(0, 3)} />
                 <Insight title="Watch points" items={[...focusExplanation.weaknesses, ...focusExplanation.warnings].slice(0, 3)} />
               </div>
-              <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">Suggested direction: </span>
+              <div className="rounded-md bg-white/12 p-4 text-sm text-white/72">
+                <span className="font-semibold text-white">Suggested direction: </span>
                 {focusExplanation.suggestedProjectDirection}
               </div>
             </Card>
           ) : null}
+        </div>
         </div>
       </section>
 
@@ -156,6 +159,43 @@ export default function HomePage() {
   );
 }
 
+function TechHeroBackdrop() {
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.14)_1px,transparent_1px)] bg-[size:48px_48px] opacity-40" />
+      <div className="data-stream data-stream-a" />
+      <div className="data-stream data-stream-b" />
+      <div className="data-stream data-stream-c" />
+      <div className="absolute left-[7%] top-[16%] hidden w-72 rounded-lg border border-emerald-300/20 bg-slate-900/70 p-4 text-xs text-emerald-100 shadow-2xl backdrop-blur md:block">
+        <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wide text-emerald-300/80">
+          <span>matching pipeline</span>
+          <span>deterministic</span>
+        </div>
+        {["normalize profiles", "score constraints", "optimize teams"].map((item, index) => (
+          <div key={item} className="mb-2 flex items-center gap-2">
+            <span className="grid h-5 w-5 place-items-center rounded bg-emerald-400/15 text-[10px] text-emerald-200">
+              {index + 1}
+            </span>
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+      <div className="absolute bottom-[12%] right-[7%] hidden w-80 rounded-lg border border-sky-300/20 bg-slate-900/70 p-4 text-xs text-sky-100 shadow-2xl backdrop-blur lg:block">
+        <div className="mb-3 text-[10px] uppercase tracking-wide text-sky-300/80">live signals</div>
+        <div className="grid grid-cols-2 gap-2">
+          {["roles", "skills", "availability", "preferences"].map((item) => (
+            <div key={item} className="rounded-md bg-white/8 p-2">
+              <div className="mb-1 h-1.5 rounded-full bg-sky-300" />
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(20,184,166,0.2),transparent_32%),linear-gradient(180deg,rgba(2,6,23,0.42),rgba(2,6,23,0.88))]" />
+    </div>
+  );
+}
+
 function Metric({
   label,
   value,
@@ -166,17 +206,17 @@ function Metric({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-slate-50 p-4">
-      <div className="mb-3 text-primary">{icon}</div>
+    <div className="liquid-glass rounded-md p-4 text-white">
+      <div className="mb-3 text-emerald-200">{icon}</div>
       <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-sm text-white/68">{label}</div>
     </div>
   );
 }
 
 function ScoreRing({ score }: { score: number }) {
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-emerald-500 bg-white text-sm font-bold">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-emerald-300 bg-white text-sm font-bold text-slate-950">
       {score}
     </div>
   );
@@ -189,8 +229,8 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
         <span>{label}</span>
         <span>{value}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+      <div className="h-2 overflow-hidden rounded-full bg-white/18">
+        <div className="h-full rounded-full bg-emerald-300" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
     </div>
   );
@@ -198,12 +238,12 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 
 function Insight({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="rounded-md border border-border bg-white p-4">
+    <div className="rounded-md border border-white/15 bg-white/10 p-4">
       <div className="mb-2 flex items-center gap-2 font-semibold">
-        <Sparkles size={16} className="text-primary" />
+        <Sparkles size={16} className="text-emerald-200" />
         {title}
       </div>
-      <ul className="space-y-2 text-sm text-muted-foreground">
+      <ul className="space-y-2 text-sm text-white/72">
         {items.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -221,7 +261,7 @@ function AssemblyStrip({
 }) {
   const visibleParticipants = participants.slice(0, 8);
   return (
-    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-slate-950 p-4 text-white">
+    <div className="liquid-glass min-w-0 overflow-hidden rounded-lg p-4 text-white">
       <div className="mb-3 flex items-center justify-between text-sm">
         <span className="font-semibold">Team assembly</span>
         <span className="text-slate-300">{teams.slice(0, 3).join(" / ")}</span>
@@ -243,7 +283,7 @@ function AssemblyStrip({
 
 function LogoPanel({ readiness, teams }: { readiness: number; teams: number }) {
   return (
-    <div className="relative isolate min-h-[210px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950 p-5 text-white">
+    <div className="liquid-glass relative isolate min-h-[210px] overflow-hidden rounded-lg p-5 text-white">
       <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:28px_28px]" />
       <div className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/20" />
       <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/20" />

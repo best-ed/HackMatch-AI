@@ -1,8 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --font-display: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
   --background: 210 30% 98%;
   --foreground: 222 47% 11%;
   --muted: 210 28% 93%;
@@ -22,6 +26,7 @@ body {
   margin: 0;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: var(--font-body);
 }
 
 a {
@@ -31,6 +36,99 @@ a {
 
 .table-scroll {
   overflow-x: auto;
+}
+
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.06);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 20px 60px rgba(2, 6, 23, 0.22);
+  overflow: hidden;
+  position: relative;
+}
+
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.48) 0%,
+    rgba(255, 255, 255, 0.16) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.16) 80%,
+    rgba(255, 255, 255, 0.48) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.animate-fade-rise {
+  animation: fade-rise 0.8s ease-out both;
+}
+
+.animate-fade-rise-delay {
+  animation: fade-rise 0.8s ease-out 0.2s both;
+}
+
+.animate-fade-rise-delay-2 {
+  animation: fade-rise 0.8s ease-out 0.4s both;
+}
+
+.data-stream {
+  position: absolute;
+  height: 2px;
+  width: 36rem;
+  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.9), transparent);
+  opacity: 0.5;
+  transform: rotate(-18deg);
+  animation: data-stream 8s linear infinite;
+}
+
+.data-stream-a {
+  left: -20%;
+  top: 24%;
+}
+
+.data-stream-b {
+  animation-delay: 1.6s;
+  left: 12%;
+  top: 58%;
+}
+
+.data-stream-c {
+  animation-delay: 3.2s;
+  left: 44%;
+  top: 34%;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes data-stream {
+  from {
+    transform: translateX(-20%) rotate(-18deg);
+  }
+
+  to {
+    transform: translateX(140%) rotate(-18deg);
+  }
 }
 
 .assembly-track {
@@ -91,7 +189,11 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .logo-mark,
-  .signal-chip {
+  .signal-chip,
+  .data-stream,
+  .animate-fade-rise,
+  .animate-fade-rise-delay,
+  .animate-fade-rise-delay-2 {
     animation: none;
   }
 }
