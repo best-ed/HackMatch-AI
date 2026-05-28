@@ -65,6 +65,7 @@ export default function HomePage() {
           </div>
 
           <AssemblyStrip participants={participants} teams={previewTeams.map((team) => team.name)} />
+          <LogoPanel readiness={readiness} teams={result.teams.length} />
         </div>
 
         <div className="min-w-0 space-y-4">
@@ -235,6 +236,71 @@ function AssemblyStrip({
             {participant.fullName.split(" ")[0]} · {participant.primaryRole}
           </span>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function LogoPanel({ readiness, teams }: { readiness: number; teams: number }) {
+  return (
+    <div className="relative isolate min-h-[210px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950 p-5 text-white">
+      <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:28px_28px]" />
+      <div className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/20" />
+      <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/20" />
+
+      <div className="relative z-10 grid h-full gap-5 sm:grid-cols-[0.72fr_1fr] sm:items-center">
+        <div className="flex items-center gap-4">
+          <div className="logo-mark relative grid h-24 w-24 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white text-slate-950 shadow-2xl">
+            <div className="absolute -left-2 top-5 h-4 w-4 rounded-md bg-emerald-500 shadow-lg shadow-emerald-500/30" />
+            <div className="absolute -right-2 top-5 h-4 w-4 rounded-md bg-sky-500 shadow-lg shadow-sky-500/30" />
+            <div className="absolute -bottom-2 left-5 h-4 w-4 rounded-md bg-amber-400 shadow-lg shadow-amber-400/30" />
+            <div className="absolute -bottom-2 right-5 h-4 w-4 rounded-md bg-rose-400 shadow-lg shadow-rose-400/30" />
+            <span className="text-3xl font-black tracking-tight">HM</span>
+          </div>
+          <div>
+            <div className="text-2xl font-black tracking-tight">HackMatch AI</div>
+            <div className="mt-1 max-w-44 text-sm text-slate-300">
+              deterministic team intelligence
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {["roles", "skills", "availability", "explainability"].map((signal, index) => (
+              <span
+                key={signal}
+                className="signal-chip rounded-md border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100"
+                style={{ animationDelay: `${index * 0.18}s` }}
+              >
+                {signal}
+              </span>
+            ))}
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/10 p-3">
+            <div className="mb-2 flex justify-between text-xs font-semibold text-slate-300">
+              <span>match signal</span>
+              <span>{readiness}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+              <div className="h-full rounded-full bg-emerald-400" style={{ width: `${readiness}%` }} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="rounded-md bg-white/10 p-2">
+              <div className="text-base font-bold">{teams}</div>
+              <div className="text-slate-300">teams</div>
+            </div>
+            <div className="rounded-md bg-white/10 p-2">
+              <div className="text-base font-bold">0</div>
+              <div className="text-slate-300">random</div>
+            </div>
+            <div className="rounded-md bg-white/10 p-2">
+              <div className="text-base font-bold">100%</div>
+              <div className="text-slate-300">traceable</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

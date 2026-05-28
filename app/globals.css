@@ -56,3 +56,42 @@ a {
     animation: none;
   }
 }
+
+.logo-mark {
+  animation: logo-breathe 5s ease-in-out infinite;
+}
+
+.signal-chip {
+  animation: signal-rise 3.2s ease-in-out infinite;
+}
+
+@keyframes logo-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
+
+@keyframes signal-rise {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-mark,
+  .signal-chip {
+    animation: none;
+  }
+}
