@@ -35,8 +35,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10">
-      <section className="grid gap-6 lg:grid-cols-[0.88fr_1.12fr]">
-        <div className="flex min-h-[560px] flex-col justify-between rounded-lg border border-border bg-white p-6 shadow-soft">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="min-w-0 space-y-6 rounded-lg border border-border bg-white p-6 shadow-soft">
           <div className="space-y-5">
             <Badge className="w-fit bg-emerald-100 text-emerald-800">
               Deterministic matching, explainable output
@@ -57,18 +57,17 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Metric label="Readiness" value={`${readiness}%`} icon={<Gauge size={18} />} />
-              <Metric label="Avg score" value={averageScore} icon={<CheckCircle2 size={18} />} />
-              <Metric label="Participants" value={participants.length} icon={<Users size={18} />} />
-              <Metric label="CSV ready" value="Yes" icon={<Download size={18} />} />
-            </div>
-            <AssemblyStrip participants={participants} teams={previewTeams.map((team) => team.name)} />
+          <div className="grid grid-cols-2 gap-3">
+            <Metric label="Readiness" value={`${readiness}%`} icon={<Gauge size={18} />} />
+            <Metric label="Avg score" value={averageScore} icon={<CheckCircle2 size={18} />} />
+            <Metric label="Participants" value={participants.length} icon={<Users size={18} />} />
+            <Metric label="CSV ready" value="Yes" icon={<Download size={18} />} />
           </div>
+
+          <AssemblyStrip participants={participants} teams={previewTeams.map((team) => team.name)} />
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -221,12 +220,12 @@ function AssemblyStrip({
 }) {
   const visibleParticipants = participants.slice(0, 8);
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-slate-950 p-4 text-white">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-slate-950 p-4 text-white">
       <div className="mb-3 flex items-center justify-between text-sm">
         <span className="font-semibold">Team assembly</span>
         <span className="text-slate-300">{teams.slice(0, 3).join(" / ")}</span>
       </div>
-      <div className="assembly-track flex w-max gap-2">
+      <div className="assembly-track flex w-max max-w-none gap-2">
         {[...visibleParticipants, ...visibleParticipants].map((participant, index) => (
           <span
             key={`${participant.id}-${index}`}
