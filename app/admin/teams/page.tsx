@@ -1,22 +1,36 @@
-import Link from "next/link";
+"use client";
+
 import { Badge, Card } from "@/components/ui";
-import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { teamsToCsv } from "@/lib/export";
+import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function AdminTeamsPage() {
-  const result = generateTeams(demoParticipants, demoMatchingSettings);
-  const csvPreview = teamsToCsv(result, demoParticipants).split("\n").slice(0, 4).join("\n");
+  const { participants, settings } = useHackMatchData();
+  const result = generateTeams(participants, settings);
+  const csv = teamsToCsv(result, participants);
+  const csvPreview = csv.split("\n").slice(0, 4).join("\n");
+
+  function downloadCsv() {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "hackmatch-teams.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Generated teams</h1>
-          <p className="mt-2 text-muted-foreground">Assignments, score breakdowns, explanations, and export.</p>
+          <p className="mt-2 text-muted-foreground">Assignments, score breakdowns, explanations, and export from edited data.</p>
         </div>
-        <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/api/teams.csv">
+        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onClick={downloadCsv}>
           Download CSV
-        </Link>
+        </button>
       </div>
       <div className="grid gap-5">
         {result.teams.map((team) => {
@@ -29,11 +43,11 @@ export default function AdminTeamsPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {team.participantIds.map((id) => {
-                  const participant = demoParticipants.find((item) => item.id === id);
+                  const participant = participants.find((item) => item.id === id);
                   return participant ? (
                     <div key={id} className="rounded-md border border-border p-3">
                       <div className="font-medium">{participant.fullName}</div>
-                      <div className="text-sm text-muted-foreground">{participant.primaryRole} · {participant.experienceLevel}</div>
+                      <div className="text-sm text-muted-foreground">{participant.primaryRole} - {participant.experienceLevel}</div>
                     </div>
                   ) : null;
                 })}

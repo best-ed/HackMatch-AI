@@ -1,26 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
-import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
+import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function AdminMatchingPage() {
-  const result = generateTeams(demoParticipants, demoMatchingSettings);
+  const { participants, settings } = useHackMatchData();
+  const result = generateTeams(participants, settings);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Generate teams</h1>
           <p className="mt-2 text-muted-foreground">
-            Deterministic output from demo participants and current settings.
+            Deterministic output from the editable participant set and current settings.
           </p>
         </div>
         <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/teams">
           View teams
         </Link>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card><Metric label="Desired size" value={demoMatchingSettings.desiredTeamSize} /></Card>
-        <Card><Metric label="Max size" value={demoMatchingSettings.maxTeamSize} /></Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card><Metric label="Participants" value={participants.length} /></Card>
+        <Card><Metric label="Desired size" value={settings.desiredTeamSize} /></Card>
+        <Card><Metric label="Max size" value={settings.maxTeamSize} /></Card>
         <Card><Metric label="Unassigned" value={result.unassignedParticipants.length} /></Card>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -31,7 +36,7 @@ export default function AdminMatchingPage() {
               <Badge>Score {team.score?.totalScore}</Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              {team.participantIds.map((id) => demoParticipants.find((p) => p.id === id)?.fullName).join(", ")}
+              {team.participantIds.map((id) => participants.find((p) => p.id === id)?.fullName).join(", ")}
             </div>
           </Card>
         ))}

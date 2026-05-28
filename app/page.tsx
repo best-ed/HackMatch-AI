@@ -1,11 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Users, SlidersHorizontal, Download } from "lucide-react";
 import { Card } from "@/components/ui";
-import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
+import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function HomePage() {
-  const result = generateTeams(demoParticipants, demoMatchingSettings);
+  const { participants, settings } = useHackMatchData();
+  const result = generateTeams(participants, settings);
   const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
 
   return (
@@ -19,9 +22,7 @@ export default function HomePage() {
             Build balanced teams first. Explain them second.
           </h1>
           <p className="max-w-2xl text-lg text-muted-foreground">
-            HackMatch AI creates repeatable team assignments using transparent
-            constraints and scoring. AI explanations are isolated from the
-            assignment algorithm.
+            Edit participants and settings in this browser, then regenerate teams to test real viability before adding production persistence.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/matching">
@@ -33,7 +34,7 @@ export default function HomePage() {
           </div>
         </div>
         <Card className="grid grid-cols-2 gap-4">
-          <Metric label="Participants" value={demoParticipants.length} icon={<Users size={18} />} />
+          <Metric label="Participants" value={participants.length} icon={<Users size={18} />} />
           <Metric label="Assigned" value={assigned} icon={<Users size={18} />} />
           <Metric label="Teams" value={result.teams.length} icon={<SlidersHorizontal size={18} />} />
           <Metric label="CSV ready" value="Yes" icon={<Download size={18} />} />
@@ -42,10 +43,9 @@ export default function HomePage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         <Card>
-          <h2 className="font-semibold">Deterministic core</h2>
+          <h2 className="font-semibold">Editable MVP data</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Same participant data and settings produce the same assignments every
-            time.
+            Add, edit, delete, and reset participants locally while preserving deterministic output.
           </p>
         </Card>
         <Card>
@@ -56,10 +56,9 @@ export default function HomePage() {
           </p>
         </Card>
         <Card>
-          <h2 className="font-semibold">Separated explanations</h2>
+          <h2 className="font-semibold">Viability checks</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            The explanation layer summarizes generated teams without influencing
-            assignments.
+            Change team size, weights, consent, and participant profiles to see warnings and score movement.
           </p>
         </Card>
       </section>

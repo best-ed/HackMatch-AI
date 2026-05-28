@@ -5,7 +5,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 ## What It Does
 
 - Collects participant registration fields for roles, skills, interests, preferences, availability, and consent.
-- Lets organizers inspect participants and matching settings.
+- Lets organizers edit participants and matching settings in browser-local MVP storage.
 - Generates balanced teams with deterministic hard constraints and weighted soft constraints.
 - Shows score breakdowns for every team.
 - Exports generated teams to CSV.
@@ -64,6 +64,19 @@ In this Codex workspace, a local `pnpm.exe` runner is included because system
 .\pnpm.exe dev
 ```
 
+## Viability Workflow
+
+Use the MVP to test real matching behavior before adding Supabase persistence:
+
+1. Add participants at `/participant/register`.
+2. Edit or delete active participants at `/admin/participants`.
+3. Tune team size, constraints, and weights at `/admin/settings`.
+4. Check generated assignments and warnings at `/admin/matching`.
+5. Inspect score breakdowns and export edited results at `/admin/teams`.
+
+The editable data is stored in browser `localStorage`, so it survives refreshes
+on the same machine/browser. Use "Reset demo data" to return to the seed data.
+
 ## Test The Project
 
 ```bash
@@ -89,4 +102,4 @@ Tests cover determinism, uniqueness, team sizes, blocked teammates, consent excl
 
 - The MVP uses in-memory demo data rather than live Supabase persistence.
 - shadcn/ui is represented by local Tailwind UI primitives so the app can run immediately.
-- Registration is a UI surface only; wiring writes to Supabase/PostgreSQL is the next persistence step.
+- Registration and admin edits persist in browser-local storage; wiring writes to Supabase/PostgreSQL is the next persistence step.
