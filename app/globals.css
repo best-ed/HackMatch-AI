@@ -32,3 +32,27 @@ a {
 .table-scroll {
   overflow-x: auto;
 }
+
+.assembly-track {
+  animation: assembly-slide 24s linear infinite;
+}
+
+.assembly-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes assembly-slide {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assembly-track {
+    animation: none;
+  }
+}
