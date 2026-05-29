@@ -38,9 +38,13 @@ export function writeCurrentParticipantLookup(value: string) {
 
 export function splitList(value: string): string[] {
   return value
-    .split(",")
+    .split(/[,\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+export function joinListLines(value: string[]): string {
+  return value.join("\n");
 }
 
 export function joinList(value: string[]): string {

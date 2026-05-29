@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
-  joinList,
+  joinListLines,
   splitList,
   useHackMatchData,
   writeCurrentParticipantLookup
@@ -70,13 +70,13 @@ export default function RegisterPage() {
             </select>
           </label>
           <Field label="Primary role" value={form.primaryRole} onChange={(value) => update("primaryRole", value)} />
-          <Field label="Secondary roles" value={joinList(form.secondaryRoles)} onChange={(value) => update("secondaryRoles", splitList(value))} />
-          <Field label="Technical skills" value={joinList(form.technicalSkills)} onChange={(value) => update("technicalSkills", splitList(value))} />
-          <Field label="Non-technical skills" value={joinList(form.nonTechnicalSkills)} onChange={(value) => update("nonTechnicalSkills", splitList(value))} />
-          <Field label="Tools" value={joinList(form.tools)} onChange={(value) => update("tools", splitList(value))} />
-          <Field label="Interests" value={joinList(form.interests)} onChange={(value) => update("interests", splitList(value))} />
-          <Field label="Preferred teammates" value={joinList(form.preferredTeammates)} onChange={(value) => update("preferredTeammates", splitList(value))} />
-          <Field label="Blocked teammates" value={joinList(form.blockedTeammates)} onChange={(value) => update("blockedTeammates", splitList(value))} />
+          <ListField label="Secondary roles" value={joinListLines(form.secondaryRoles)} onChange={(value) => update("secondaryRoles", splitList(value))} />
+          <ListField label="Technical skills" value={joinListLines(form.technicalSkills)} onChange={(value) => update("technicalSkills", splitList(value))} />
+          <ListField label="Non-technical skills" value={joinListLines(form.nonTechnicalSkills)} onChange={(value) => update("nonTechnicalSkills", splitList(value))} />
+          <ListField label="Tools" value={joinListLines(form.tools)} onChange={(value) => update("tools", splitList(value))} />
+          <ListField label="Interests" value={joinListLines(form.interests)} onChange={(value) => update("interests", splitList(value))} />
+          <ListField label="Preferred teammates" value={joinListLines(form.preferredTeammates)} onChange={(value) => update("preferredTeammates", splitList(value))} />
+          <ListField label="Blocked teammates" value={joinListLines(form.blockedTeammates)} onChange={(value) => update("blockedTeammates", splitList(value))} />
           <label className="space-y-2 text-sm font-medium md:col-span-2">
             <span>Availability</span>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -143,6 +143,31 @@ function Field({
     <label className="space-y-2 text-sm font-medium">
       <span>{label}</span>
       <TextInput value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function ListField({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-medium">
+      <span>{label}</span>
+      <TextArea
+        className="min-h-28"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Add one item per line, or separate items with commas"
+      />
+      <span className="block text-xs font-normal text-muted-foreground">
+        Spaces are preserved inside each item.
+      </span>
     </label>
   );
 }
