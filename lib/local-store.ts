@@ -6,6 +6,14 @@ import type {
   MatchingSettings,
   Participant
 } from "@/lib/matching/types";
+import {
+  deleteRemoteParticipant,
+  isSupabaseConfigured,
+  loadRemoteParticipants,
+  loadRemoteSettings,
+  saveRemoteParticipant,
+  saveRemoteSettings
+} from "@/lib/supabase-store";
 import { useEffect, useMemo, useState } from "react";
 
 const participantsKey = "hackmatch.participants.v1";
@@ -94,16 +102,66 @@ export function useHackMatchData() {
   const [participants, setParticipantsState] = useState<Participant[]>(demoParticipants);
   const [settings, setSettingsState] = useState<MatchingSettings>(demoMatchingSettings);
   const [loaded, setLoaded] = useState(false);
+  const [persistenceMode, setPersistenceMode] = useState<"local" | "supabase">("local");
+  const [persistenceWarning, setPersistenceWarning] = useState("");
 
   useEffect(() => {
-    setParticipantsState(readJson(participantsKey, demoParticipants));
-    setSettingsState(readJson(settingsKey, demoMatchingSettings));
-    setLoaded(true);
+    let cancelled = false;
+
+    async function loadData() {
+      const localParticipants = readJson(participantsKey, demoParticipants);
+      const localSettings = readJson(settingsKey, demoMatchingSettings);
+
+      setParticipantsState(localParticipants);
+      setSettingsState(localSettings);
+
+      if (!isSupabaseConfigured()) {
+        setPersistenceMode("local");
+        setLoaded(true);
+        return;
+      }
+
+      try {
+        const [remoteParticipants, remoteSettings] = await Promise.all([
+          loadRemoteParticipants(),
+          loadRemoteSettings()
+        ]);
+
+        if (cancelled) return;
+
+        if (remoteParticipants.length > 0) {
+          setParticipantsState(remoteParticipants);
+          writeJson(participantsKey, remoteParticipants);
+        }
+        if (remoteSettings) {
+          setSettingsState(remoteSettings);
+          writeJson(settingsKey, remoteSettings);
+        }
+        setPersistenceMode("supabase");
+        setPersistenceWarning("");
+      } catch {
+        if (cancelled) return;
+        setPersistenceMode("local");
+        setPersistenceWarning("Supabase could not be reached; using local browser storage.");
+      } finally {
+        if (!cancelled) {
+          setLoaded(true);
+        }
+      }
+    }
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const api = useMemo(
     () => ({
       loaded,
+      persistenceMode,
+      persistenceWarning,
       participants,
       settings,
       setParticipants(next: Participant[]) {
@@ -113,10 +171,18 @@ export function useHackMatchData() {
         }));
         setParticipantsState(normalized);
         writeJson(participantsKey, normalized);
+        if (isSupabaseConfigured()) {
+          void Promise.all(normalized.map((participant) => saveRemoteParticipant(participant)))
+            .catch(() => setPersistenceWarning("Supabase save failed; local browser storage is still updated."));
+        }
       },
       setSettings(next: MatchingSettings) {
         setSettingsState(next);
         writeJson(settingsKey, next);
+        if (isSupabaseConfigured()) {
+          void saveRemoteSettings(next)
+            .catch(() => setPersistenceWarning("Supabase settings save failed; local browser storage is still updated."));
+        }
       },
       saveParticipant(participant: Participant) {
         const timestamp = new Date().toISOString();
@@ -142,21 +208,35 @@ export function useHackMatchData() {
           : [...participants, cleaned];
         setParticipantsState(next);
         writeJson(participantsKey, next);
+        if (isSupabaseConfigured()) {
+          void saveRemoteParticipant(cleaned)
+            .catch(() => setPersistenceWarning("Supabase participant save failed; local browser storage is still updated."));
+        }
         return cleaned;
       },
       deleteParticipant(id: string) {
         const next = participants.filter((participant) => participant.id !== id);
         setParticipantsState(next);
         writeJson(participantsKey, next);
+        if (isSupabaseConfigured()) {
+          void deleteRemoteParticipant(id)
+            .catch(() => setPersistenceWarning("Supabase delete failed; local browser storage is still updated."));
+        }
       },
       resetDemoData() {
         setParticipantsState(demoParticipants);
         setSettingsState(demoMatchingSettings);
         writeJson(participantsKey, demoParticipants);
         writeJson(settingsKey, demoMatchingSettings);
+        if (isSupabaseConfigured()) {
+          void Promise.all([
+            ...demoParticipants.map((participant) => saveRemoteParticipant(participant)),
+            saveRemoteSettings(demoMatchingSettings)
+          ]).catch(() => setPersistenceWarning("Supabase reset failed; local browser storage is still updated."));
+        }
       }
     }),
-    [loaded, participants, settings]
+    [loaded, participants, persistenceMode, persistenceWarning, settings]
   );
 
   return api;

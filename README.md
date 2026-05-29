@@ -95,6 +95,17 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
+## Supabase Persistence
+
+HackMatch AI can run fully offline with browser `localStorage`. To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+When those variables are present, the app loads participants and matching settings from Supabase and mirrors successful edits back to localStorage as a fallback. If Supabase is unavailable, the UI continues with local browser storage and shows a warning in the admin dashboard.
+
 ## Test The Project
 
 ```bash
@@ -118,6 +129,6 @@ Tests cover determinism, uniqueness, team sizes, blocked teammates, consent excl
 
 ## Assumptions
 
-- The MVP uses in-memory demo data rather than live Supabase persistence.
+- The MVP falls back to browser-local demo data when Supabase environment variables are not configured.
 - shadcn/ui is represented by local Tailwind UI primitives so the app can run immediately.
-- Registration and admin edits persist in browser-local storage; wiring writes to Supabase/PostgreSQL is the next persistence step.
+- Registration and admin edits can persist through Supabase when public project credentials are configured.

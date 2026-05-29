@@ -2,22 +2,30 @@
 
 import Link from "next/link";
 import { Download, Settings2, Users } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function AdminPage() {
-  const { participants, settings } = useHackMatchData();
+  const { participants, settings, persistenceMode, persistenceWarning } = useHackMatchData();
   const result = generateTeams(participants, settings);
   const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin dashboard</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Admin dashboard</h1>
+          <Badge className={persistenceMode === "supabase" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"}>
+            {persistenceMode === "supabase" ? "Supabase connected" : "Local storage"}
+          </Badge>
+        </div>
         <p className="mt-2 text-muted-foreground">
           Current editable data, deterministic team generation, and export readiness.
         </p>
+        {persistenceWarning ? (
+          <p className="mt-2 text-sm font-medium text-amber-700">{persistenceWarning}</p>
+        ) : null}
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <AdminLink href="/admin/participants" title="Participants" value={participants.length} icon={<Users size={20} />} />
