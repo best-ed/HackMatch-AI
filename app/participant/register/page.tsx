@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
-  joinListLines,
   splitList,
   useHackMatchData,
   writeCurrentParticipantLookup
@@ -21,22 +20,59 @@ const availabilitySlots: AvailabilitySlot[] = [
   "weekend_evening"
 ];
 
+type ListDrafts = Pick<
+  Participant,
+  | "secondaryRoles"
+  | "technicalSkills"
+  | "nonTechnicalSkills"
+  | "tools"
+  | "interests"
+  | "preferredTeammates"
+  | "blockedTeammates"
+>;
+
+const emptyListDrafts: Record<keyof ListDrafts, string> = {
+  secondaryRoles: "",
+  technicalSkills: "",
+  nonTechnicalSkills: "",
+  tools: "",
+  interests: "",
+  preferredTeammates: "",
+  blockedTeammates: ""
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const { participants, saveParticipant, loaded } = useHackMatchData();
   const blank = useMemo(() => createBlankParticipant(participants), [participants]);
   const [form, setForm] = useState<Participant>(blank);
+  const [listDrafts, setListDrafts] = useState(emptyListDrafts);
   const [saved, setSaved] = useState(false);
 
   function update<K extends keyof Participant>(key: K, value: Participant[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateListDraft(key: keyof ListDrafts, value: string) {
+    setListDrafts((current) => ({ ...current, [key]: value }));
+  }
+
   function submit() {
-    const savedParticipant = saveParticipant(form);
+    const participantToSave: Participant = {
+      ...form,
+      secondaryRoles: splitList(listDrafts.secondaryRoles),
+      technicalSkills: splitList(listDrafts.technicalSkills),
+      nonTechnicalSkills: splitList(listDrafts.nonTechnicalSkills),
+      tools: splitList(listDrafts.tools),
+      interests: splitList(listDrafts.interests),
+      preferredTeammates: splitList(listDrafts.preferredTeammates),
+      blockedTeammates: splitList(listDrafts.blockedTeammates)
+    };
+    const savedParticipant = saveParticipant(participantToSave);
     writeCurrentParticipantLookup(savedParticipant.email);
     setSaved(true);
-    setForm(createBlankParticipant([...participants, form]));
+    setForm(createBlankParticipant([...participants, participantToSave]));
+    setListDrafts(emptyListDrafts);
     router.push(`/participant/team?participant=${encodeURIComponent(savedParticipant.email)}`);
   }
 
@@ -70,13 +106,13 @@ export default function RegisterPage() {
             </select>
           </label>
           <Field label="Primary role" value={form.primaryRole} onChange={(value) => update("primaryRole", value)} />
-          <ListField label="Secondary roles" value={joinListLines(form.secondaryRoles)} onChange={(value) => update("secondaryRoles", splitList(value))} />
-          <ListField label="Technical skills" value={joinListLines(form.technicalSkills)} onChange={(value) => update("technicalSkills", splitList(value))} />
-          <ListField label="Non-technical skills" value={joinListLines(form.nonTechnicalSkills)} onChange={(value) => update("nonTechnicalSkills", splitList(value))} />
-          <ListField label="Tools" value={joinListLines(form.tools)} onChange={(value) => update("tools", splitList(value))} />
-          <ListField label="Interests" value={joinListLines(form.interests)} onChange={(value) => update("interests", splitList(value))} />
-          <ListField label="Preferred teammates" value={joinListLines(form.preferredTeammates)} onChange={(value) => update("preferredTeammates", splitList(value))} />
-          <ListField label="Blocked teammates" value={joinListLines(form.blockedTeammates)} onChange={(value) => update("blockedTeammates", splitList(value))} />
+          <ListField label="Secondary roles" value={listDrafts.secondaryRoles} onChange={(value) => updateListDraft("secondaryRoles", value)} />
+          <ListField label="Technical skills" value={listDrafts.technicalSkills} onChange={(value) => updateListDraft("technicalSkills", value)} />
+          <ListField label="Non-technical skills" value={listDrafts.nonTechnicalSkills} onChange={(value) => updateListDraft("nonTechnicalSkills", value)} />
+          <ListField label="Tools" value={listDrafts.tools} onChange={(value) => updateListDraft("tools", value)} />
+          <ListField label="Interests" value={listDrafts.interests} onChange={(value) => updateListDraft("interests", value)} />
+          <ListField label="Preferred teammates" value={listDrafts.preferredTeammates} onChange={(value) => updateListDraft("preferredTeammates", value)} />
+          <ListField label="Blocked teammates" value={listDrafts.blockedTeammates} onChange={(value) => updateListDraft("blockedTeammates", value)} />
           <label className="space-y-2 text-sm font-medium md:col-span-2">
             <span>Availability</span>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
