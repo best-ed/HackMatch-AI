@@ -67,10 +67,43 @@ export function createParticipantId(participants: Participant[]): string {
   return `p${String(max + 1).padStart(2, "0")}`;
 }
 
+export function createParticipantAccessToken(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(6);
+
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  const token = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+  return `hm-${token}`;
+}
+
+function ensureParticipantAccessToken(participant: Participant): Participant {
+  return {
+    ...participant,
+    accessToken: participant.accessToken || createParticipantAccessToken()
+  };
+}
+
+function normalizeParticipantsForStorage(participants: Participant[]): Participant[] {
+  return participants.map((participant) =>
+    ensureParticipantAccessToken({
+      ...participant,
+      updatedAt: participant.updatedAt || new Date().toISOString()
+    })
+  );
+}
+
 export function createBlankParticipant(participants: Participant[]): Participant {
   const timestamp = new Date().toISOString();
   return {
     id: createParticipantId(participants),
+    accessToken: createParticipantAccessToken(),
     fullName: "",
     email: "",
     phone: "",
@@ -109,11 +142,12 @@ export function useHackMatchData() {
     let cancelled = false;
 
     async function loadData() {
-      const localParticipants = readJson(participantsKey, demoParticipants);
+      const localParticipants = normalizeParticipantsForStorage(readJson(participantsKey, demoParticipants));
       const localSettings = readJson(settingsKey, demoMatchingSettings);
 
       setParticipantsState(localParticipants);
       setSettingsState(localSettings);
+      writeJson(participantsKey, localParticipants);
 
       if (!isSupabaseConfigured()) {
         setPersistenceMode("local");
@@ -130,8 +164,9 @@ export function useHackMatchData() {
         if (cancelled) return;
 
         if (remoteParticipants.length > 0) {
-          setParticipantsState(remoteParticipants);
-          writeJson(participantsKey, remoteParticipants);
+          const normalizedRemoteParticipants = normalizeParticipantsForStorage(remoteParticipants);
+          setParticipantsState(normalizedRemoteParticipants);
+          writeJson(participantsKey, normalizedRemoteParticipants);
         }
         if (remoteSettings) {
           setSettingsState(remoteSettings);
@@ -165,10 +200,7 @@ export function useHackMatchData() {
       participants,
       settings,
       setParticipants(next: Participant[]) {
-        const normalized = next.map((participant) => ({
-          ...participant,
-          updatedAt: participant.updatedAt || new Date().toISOString()
-        }));
+        const normalized = normalizeParticipantsForStorage(next);
         setParticipantsState(normalized);
         writeJson(participantsKey, normalized);
         if (isSupabaseConfigured()) {
@@ -188,6 +220,7 @@ export function useHackMatchData() {
         const timestamp = new Date().toISOString();
         const cleaned: Participant = {
           ...participant,
+          accessToken: participant.accessToken || createParticipantAccessToken(),
           fullName: participant.fullName.trim(),
           email: participant.email.trim(),
           primaryRole: participant.primaryRole.trim() || "Frontend",
@@ -224,13 +257,14 @@ export function useHackMatchData() {
         }
       },
       resetDemoData() {
-        setParticipantsState(demoParticipants);
+        const normalizedDemoParticipants = normalizeParticipantsForStorage(demoParticipants);
+        setParticipantsState(normalizedDemoParticipants);
         setSettingsState(demoMatchingSettings);
-        writeJson(participantsKey, demoParticipants);
+        writeJson(participantsKey, normalizedDemoParticipants);
         writeJson(settingsKey, demoMatchingSettings);
         if (isSupabaseConfigured()) {
           void Promise.all([
-            ...demoParticipants.map((participant) => saveRemoteParticipant(participant)),
+            ...normalizedDemoParticipants.map((participant) => saveRemoteParticipant(participant)),
             saveRemoteSettings(demoMatchingSettings)
           ]).catch(() => setPersistenceWarning("Supabase reset failed; local browser storage is still updated."));
         }

@@ -69,11 +69,11 @@ export default function RegisterPage() {
       blockedTeammates: splitList(listDrafts.blockedTeammates)
     };
     const savedParticipant = saveParticipant(participantToSave);
-    writeCurrentParticipantLookup(savedParticipant.email);
+    writeCurrentParticipantLookup(savedParticipant.accessToken ?? savedParticipant.email);
     setSaved(true);
     setForm(createBlankParticipant([...participants, participantToSave]));
     setListDrafts(emptyListDrafts);
-    router.push(`/participant/team?participant=${encodeURIComponent(savedParticipant.email)}`);
+    router.push(`/participant/team?access=${encodeURIComponent(savedParticipant.accessToken ?? savedParticipant.email)}`);
   }
 
   return (

@@ -10,6 +10,7 @@ export type AvailabilitySlot =
 
 export type Participant = {
   id: string;
+  accessToken?: string;
   fullName: string;
   email: string;
   phone?: string;

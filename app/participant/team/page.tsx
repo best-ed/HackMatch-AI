@@ -22,6 +22,7 @@ export default function ParticipantTeamPage() {
     ? participants.find((item) => {
     const searchableValues = [
       item.id,
+      item.accessToken ?? "",
       item.fullName,
       item.email,
       item.email.split("@")[0]
@@ -43,7 +44,8 @@ export default function ParticipantTeamPage() {
     : false;
 
   useEffect(() => {
-    const participantLookup = new URLSearchParams(window.location.search).get("participant");
+    const params = new URLSearchParams(window.location.search);
+    const participantLookup = params.get("access") ?? params.get("participant");
     const savedLookup = readCurrentParticipantLookup();
     const nextLookup = participantLookup || savedLookup || defaultParticipant?.email || "";
     setLookup(nextLookup);
@@ -62,7 +64,7 @@ export default function ParticipantTeamPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My team</h1>
           <p className="mt-2 text-muted-foreground">
-            Enter a participant email or ID to preview the deterministic assignment.
+            Open your access link or enter a participant name, email, ID, or access token.
           </p>
         </div>
         <Badge>{result.teams.length} generated teams</Badge>
@@ -73,7 +75,7 @@ export default function ParticipantTeamPage() {
           <TextInput
             value={lookup}
             onChange={(event) => updateLookup(event.target.value)}
-            placeholder="Maya Patel, maya.patel@example.com, or p02"
+            placeholder="Access token, Maya Patel, maya.patel@example.com, or p02"
           />
         </label>
         <div className="flex items-end">
@@ -163,7 +165,7 @@ export default function ParticipantTeamPage() {
           <h2 className="font-semibold">No team assignment found</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {!participant
-              ? "No participant matches that name, email, or ID."
+              ? "No participant matches that access token, name, email, or ID."
               : !participant.consentToMatch
                 ? `${participant.fullName} did not consent to matching, so they are excluded.`
                 : isUnassigned

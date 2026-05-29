@@ -21,6 +21,7 @@ export default function AdminParticipantsPage() {
     return participants.filter((participant) => {
       const searchableText = [
         participant.id,
+        participant.accessToken ?? "",
         participant.fullName,
         participant.email,
         participant.primaryRole,
@@ -110,10 +111,10 @@ export default function AdminParticipantsPage() {
         </div>
       </Card>
       <Card className="table-scroll p-0">
-        <table className="w-full min-w-[1100px] border-collapse text-sm">
+        <table className="w-full min-w-[1260px] border-collapse text-sm">
           <thead className="bg-muted text-left">
             <tr>
-              {["Name", "Role", "Experience", "Skills", "Interests", "Consent", "Actions"].map((heading) => (
+              {["Name", "Role", "Experience", "Skills", "Interests", "Consent", "Access", "Actions"].map((heading) => (
                 <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>
               ))}
             </tr>
@@ -155,6 +156,24 @@ export default function AdminParticipantsPage() {
                     Match
                   </label>
                 </td>
+                <td className="space-y-2 px-4 py-3">
+                  <a
+                    className="block rounded-md border border-border bg-white px-3 py-2 text-center text-sm font-semibold text-primary"
+                    href={participant.accessToken ? `/participant/team?access=${encodeURIComponent(participant.accessToken)}` : "/participant/team"}
+                  >
+                    Open team link
+                  </a>
+                  <button
+                    className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold"
+                    onClick={() => copyAccessLink(participant)}
+                    type="button"
+                  >
+                    Copy link
+                  </button>
+                  <div className="break-all text-xs text-muted-foreground">
+                    {participant.accessToken ? formatAccessToken(participant.accessToken) : "Token will be generated on next save"}
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <button className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => deleteParticipant(participant.id)}>
                     Delete
@@ -164,7 +183,7 @@ export default function AdminParticipantsPage() {
             ))}
             {filteredParticipants.length === 0 ? (
               <tr className="border-t border-border">
-                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={7}>
+                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={8}>
                   No participants match the current filters.
                 </td>
               </tr>
@@ -174,6 +193,17 @@ export default function AdminParticipantsPage() {
       </Card>
     </div>
   );
+}
+
+function copyAccessLink(participant: Participant) {
+  if (!participant.accessToken || typeof window === "undefined") return;
+  const url = new URL(`/participant/team?access=${participant.accessToken}`, window.location.origin);
+  void navigator.clipboard?.writeText(url.toString());
+}
+
+function formatAccessToken(token: string) {
+  if (token.length <= 16) return token;
+  return `${token.slice(0, 8)}...${token.slice(-6)}`;
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
