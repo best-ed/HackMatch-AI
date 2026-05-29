@@ -45,7 +45,22 @@ Weights are configured in `defaultMatchingSettings` and can be persisted using t
 
 The MVP includes `lib/matching/explanations.ts`, a deterministic fallback explanation generator. It produces team summaries, strengths, weaknesses, suggested project direction, internal role suggestions, and warnings.
 
-To add real AI explanations later, keep assignment logic unchanged. Add an adapter that accepts generated teams and score breakdowns, checks for provider environment variables, and falls back to the deterministic explanation module when no API key is configured.
+The app also includes an env-gated explanation API at `/api/explanations`. If `OPENAI_API_KEY` is configured, it can ask OpenAI to explain the already-generated teams. If no key is configured, it automatically returns deterministic fallback explanations.
+
+AI never assigns teams. The deterministic matcher generates assignments and score breakdowns first; the AI layer only explains that output.
+
+To enable OpenAI-backed explanations:
+
+```bash
+cp .env.example .env.local
+```
+
+Then set:
+
+```bash
+OPENAI_API_KEY=your_api_key
+OPENAI_EXPLANATION_MODEL=gpt-5.2
+```
 
 ## Run The Project
 

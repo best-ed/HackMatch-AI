@@ -1,15 +1,33 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Card } from "@/components/ui";
+import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
+import type { TeamExplanation } from "@/lib/matching/types";
 
 export default function AdminTeamsPage() {
   const { participants, settings } = useHackMatchData();
-  const result = generateTeams(participants, settings);
+  const result = useMemo(
+    () => generateTeams(participants, settings),
+    [participants, settings]
+  );
   const csv = teamsToCsv(result, participants);
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
+  const [explanations, setExplanations] = useState<TeamExplanation[]>(result.explanations);
+  const [explanationProvider, setExplanationProvider] = useState<"fallback" | "openai">("fallback");
+  const [explanationModel, setExplanationModel] = useState<string | undefined>();
+  const [explanationWarnings, setExplanationWarnings] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setExplanations(result.explanations);
+    setExplanationProvider("fallback");
+    setExplanationModel(undefined);
+    setExplanationWarnings([]);
+  }, [participants, settings, result.explanations]);
 
   function downloadCsv() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -21,6 +39,30 @@ export default function AdminTeamsPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function refreshExplanations() {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch("/api/explanations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ participants, settings })
+      });
+      if (!response.ok) {
+        setExplanationWarnings(["Explanation API request failed; showing deterministic fallback explanations."]);
+        setExplanations(result.explanations);
+        setExplanationProvider("fallback");
+        return;
+      }
+      const payload = (await response.json()) as ExplanationServiceResult;
+      setExplanations(payload.explanations);
+      setExplanationProvider(payload.provider);
+      setExplanationModel(payload.model);
+      setExplanationWarnings(payload.warnings);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -28,13 +70,40 @@ export default function AdminTeamsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Generated teams</h1>
           <p className="mt-2 text-muted-foreground">Assignments, score breakdowns, explanations, and export from edited data.</p>
         </div>
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onClick={downloadCsv}>
-          Download CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={refreshExplanations} disabled={isRefreshing}>
+            {isRefreshing ? "Refreshing..." : "Refresh explanations"}
+          </button>
+          <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onClick={downloadCsv}>
+            Download CSV
+          </button>
+        </div>
       </div>
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Explanation provider</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Team assignment remains deterministic; this layer only explains already-generated teams.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className={explanationProvider === "openai" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800"}>
+            {explanationProvider === "openai" ? "OpenAI" : "Deterministic fallback"}
+          </Badge>
+          {explanationModel ? <Badge>{explanationModel}</Badge> : null}
+        </div>
+      </Card>
+      {explanationWarnings.length > 0 ? (
+        <Card>
+          <h2 className="font-semibold">Explanation warnings</h2>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            {explanationWarnings.map((warning) => <li key={warning}>{warning}</li>)}
+          </ul>
+        </Card>
+      ) : null}
       <div className="grid gap-5">
         {result.teams.map((team) => {
-          const explanation = result.explanations.find((item) => item.teamId === team.id);
+          const explanation = explanations.find((item) => item.teamId === team.id);
           return (
             <Card key={team.id} className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -65,7 +134,9 @@ export default function AdminTeamsPage() {
               ) : null}
               {explanation ? (
                 <div className="rounded-md bg-muted p-4 text-sm">
-                  <div className="font-semibold">Fallback explanation</div>
+                  <div className="font-semibold">
+                    {explanationProvider === "openai" ? "AI explanation" : "Fallback explanation"}
+                  </div>
                   <p className="mt-1 text-muted-foreground">{explanation.summary}</p>
                   <p className="mt-2 text-muted-foreground">{explanation.suggestedProjectDirection}</p>
                 </div>
