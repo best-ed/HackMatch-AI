@@ -49,6 +49,11 @@ To add real AI explanations later, keep assignment logic unchanged. Add an adapt
 
 ## Run The Project
 
+Prerequisites:
+
+- Node.js 20 or newer
+- npm 10 or newer
+
 ```bash
 npm install
 npm run dev
@@ -56,12 +61,10 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-In this Codex workspace, a local `pnpm.exe` runner is included because system
-`npm` was not available:
+For a production check:
 
 ```bash
-.\pnpm.exe install
-.\pnpm.exe dev
+npm run build
 ```
 
 ## Viability Workflow
