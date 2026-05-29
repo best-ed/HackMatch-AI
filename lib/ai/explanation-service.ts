@@ -196,7 +196,6 @@ function validateAndAlignExplanations(
   }
 
   const warnings: string[] = [];
-  const fallbackByTeamId = new Map(fallback.map((item) => [item.teamId, item]));
   const teamsById = new Map(teams.map((team) => [team.id, team]));
   const acceptedByTeamId = new Map<string, TeamExplanation>();
 

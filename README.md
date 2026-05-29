@@ -84,6 +84,8 @@ For a production check:
 npm run build
 ```
 
+Deployment notes live in `DEPLOYMENT.md`.
+
 ## Viability Workflow
 
 Use the MVP to test real matching behavior before adding Supabase persistence:
