@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const participantsKey = "hackmatch.participants.v1";
 const settingsKey = "hackmatch.settings.v1";
+const currentParticipantKey = "hackmatch.currentParticipant.v1";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -24,6 +25,15 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson<T>(key: string, value: T) {
   window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+export function readCurrentParticipantLookup(): string {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(currentParticipantKey) ?? "";
+}
+
+export function writeCurrentParticipantLookup(value: string) {
+  window.localStorage.setItem(currentParticipantKey, value);
 }
 
 export function splitList(value: string): string[] {
@@ -128,6 +138,7 @@ export function useHackMatchData() {
           : [...participants, cleaned];
         setParticipantsState(next);
         writeJson(participantsKey, next);
+        return cleaned;
       },
       deleteParticipant(id: string) {
         const next = participants.filter((participant) => participant.id !== id);

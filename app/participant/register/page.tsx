@@ -1,12 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
   joinList,
   splitList,
-  useHackMatchData
+  useHackMatchData,
+  writeCurrentParticipantLookup
 } from "@/lib/local-store";
 import type { AvailabilitySlot, ExperienceLevel, Participant } from "@/lib/matching/types";
 
@@ -20,6 +22,7 @@ const availabilitySlots: AvailabilitySlot[] = [
 ];
 
 export default function RegisterPage() {
+  const router = useRouter();
   const { participants, saveParticipant, loaded } = useHackMatchData();
   const blank = useMemo(() => createBlankParticipant(participants), [participants]);
   const [form, setForm] = useState<Participant>(blank);
@@ -30,9 +33,11 @@ export default function RegisterPage() {
   }
 
   function submit() {
-    saveParticipant(form);
+    const savedParticipant = saveParticipant(form);
+    writeCurrentParticipantLookup(savedParticipant.email);
     setSaved(true);
     setForm(createBlankParticipant([...participants, form]));
+    router.push(`/participant/team?participant=${encodeURIComponent(savedParticipant.email)}`);
   }
 
   return (
@@ -118,7 +123,7 @@ export default function RegisterPage() {
           >
             Save registration
           </button>
-          {saved ? <p className="self-center text-sm font-medium text-emerald-700">Saved. Generate teams from Admin Matching.</p> : null}
+          {saved ? <p className="self-center text-sm font-medium text-emerald-700">Saved. Opening your team page.</p> : null}
         </form>
       </Card>
     </div>
