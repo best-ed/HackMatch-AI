@@ -49,6 +49,8 @@ The app also includes an env-gated explanation API at `/api/explanations`. If `O
 
 AI never assigns teams. The deterministic matcher generates assignments and score breakdowns first; the AI layer only explains that output.
 
+AI responses are validated before display. Unknown teams are ignored, incomplete explanations fall back to deterministic text, and suggested internal roles must map to participants already assigned by the algorithm.
+
 To enable OpenAI-backed explanations:
 
 ```bash

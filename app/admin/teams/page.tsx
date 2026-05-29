@@ -58,6 +58,11 @@ export default function AdminTeamsPage() {
       setExplanationProvider(payload.provider);
       setExplanationModel(payload.model);
       setExplanationWarnings(payload.warnings);
+    } catch {
+      setExplanationWarnings(["Explanation API request could not be completed; showing deterministic fallback explanations."]);
+      setExplanations(result.explanations);
+      setExplanationProvider("fallback");
+      setExplanationModel(undefined);
     } finally {
       setIsRefreshing(false);
     }
