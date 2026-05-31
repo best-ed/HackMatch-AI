@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
+import { planParticipantCsvImport } from "@/lib/participant-import";
 import type { Participant } from "@/lib/matching/types";
 
 function assignedIds(result: ReturnType<typeof generateTeams>) {
@@ -94,5 +95,38 @@ describe("deterministic matching", () => {
     expect(csv.split("\n")[0]).toContain("participant_id,access_token,cohort");
     expect(csv).toContain("Avery Chen");
     expect(csv).toContain("consent_to_match");
+  });
+
+  it("imports participants from exported CSV and skips duplicates by default", () => {
+    const csv = participantsToCsv([demoParticipants[0]]);
+    const plan = planParticipantCsvImport({
+      csv,
+      existingParticipants: demoParticipants,
+      activeCohort: "General",
+      now: "2026-05-31T00:00:00.000Z"
+    });
+
+    expect(plan.createdCount).toBe(0);
+    expect(plan.skippedCount).toBe(1);
+    expect(plan.errors).toEqual([]);
+    expect(plan.participants).toHaveLength(demoParticipants.length);
+  });
+
+  it("imports new participants and defaults missing cohort to active cohort", () => {
+    const csv = [
+      "full_name,email,primary_role,technical_skills,availability,consent_to_match",
+      "\"Taylor Green\",taylor@example.com,Backend,\"Node; SQL\",weekend_morning,true"
+    ].join("\n");
+    const plan = planParticipantCsvImport({
+      csv,
+      existingParticipants: demoParticipants,
+      activeCohort: "May Hackathon",
+      now: "2026-05-31T00:00:00.000Z"
+    });
+
+    const imported = plan.participants.find((participant) => participant.email === "taylor@example.com");
+    expect(plan.createdCount).toBe(1);
+    expect(imported?.cohort).toBe("May Hackathon");
+    expect(imported?.technicalSkills).toEqual(["Node", "SQL"]);
   });
 });

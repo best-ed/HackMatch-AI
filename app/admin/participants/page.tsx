@@ -5,14 +5,18 @@ import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
 import { participantsToCsv } from "@/lib/export";
 import { joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
+import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 
 export default function AdminParticipantsPage() {
-  const { participants, saveParticipant, deleteParticipant, resetDemoData, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
+  const { participants, setParticipants, saveParticipant, deleteParticipant, resetDemoData, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
   const [consentFilter, setConsentFilter] = useState<"all" | "matchable" | "excluded">("all");
   const [exportStatus, setExportStatus] = useState("");
+  const [importCsv, setImportCsv] = useState("");
+  const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
+  const [importStatus, setImportStatus] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -57,6 +61,15 @@ export default function AdminParticipantsPage() {
   }, [consentFilter, experienceFilter, participants, query, roleFilter]);
   const matchableCount = participants.filter((participant) => participant.consentToMatch).length;
   const advancedCount = participants.filter((participant) => participant.experienceLevel === "advanced").length;
+  const importPlan = useMemo(() => {
+    if (!importCsv.trim()) return null;
+    return planParticipantCsvImport({
+      csv: importCsv,
+      existingParticipants: participants,
+      activeCohort,
+      mode: importMode
+    });
+  }, [activeCohort, importCsv, importMode, participants]);
 
   function updateParticipant<K extends keyof Participant>(
     participant: Participant,
@@ -81,6 +94,27 @@ export default function AdminParticipantsPage() {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setExportStatus(`Exported ${exportParticipants.length} participant${exportParticipants.length === 1 ? "" : "s"} to ${filename}.`);
+  }
+
+  function handleCsvFile(file?: File) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImportCsv(String(reader.result ?? ""));
+      setImportStatus("");
+    };
+    reader.readAsText(file);
+  }
+
+  function applyCsvImport() {
+    if (!importPlan || importPlan.errors.length > 0) return;
+    setParticipants(importPlan.participants);
+    setImportStatus(
+      `Imported ${importPlan.createdCount} new participant${importPlan.createdCount === 1 ? "" : "s"}${
+        importPlan.updatedCount ? ` and updated ${importPlan.updatedCount}` : ""
+      }${importPlan.skippedCount ? `; skipped ${importPlan.skippedCount} duplicate${importPlan.skippedCount === 1 ? "" : "s"}` : ""}.`
+    );
+    setImportCsv("");
   }
 
   return (
@@ -170,6 +204,90 @@ export default function AdminParticipantsPage() {
           </Button>
         </div>
       </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Import participants CSV</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Upload an exported HackMatch CSV or paste matching columns to preview before saving.
+            </p>
+          </div>
+          <label className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold">
+            Choose CSV
+            <input
+              accept=".csv,text/csv"
+              className="sr-only"
+              onChange={(event) => handleCsvFile(event.target.files?.[0])}
+              type="file"
+            />
+          </label>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
+          <label className="space-y-2 text-sm font-medium">
+            <span>CSV contents</span>
+            <TextArea
+              className="min-h-32 font-mono text-xs"
+              onChange={(event) => {
+                setImportCsv(event.target.value);
+                setImportStatus("");
+              }}
+              placeholder="Paste participant CSV here"
+              value={importCsv}
+            />
+          </label>
+          <div className="space-y-3">
+            <FilterSelect label="Duplicate handling" value={importMode} onChange={(value) => setImportMode(value as ParticipantImportMode)}>
+              <option value="skip">Skip duplicates</option>
+              <option value="update">Update duplicates</option>
+            </FilterSelect>
+            {importPlan ? (
+              <div className="rounded-md border border-border bg-muted p-3 text-sm">
+                <div className="font-semibold">Preview</div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                  <PreviewMetric label="New" value={importPlan.createdCount} />
+                  <PreviewMetric label="Updated" value={importPlan.updatedCount} />
+                  <PreviewMetric label="Skipped" value={importPlan.skippedCount} />
+                </div>
+              </div>
+            ) : null}
+            <Button
+              className="w-full"
+              disabled={!importPlan || importPlan.errors.length > 0 || (importPlan.createdCount + importPlan.updatedCount === 0)}
+              onClick={applyCsvImport}
+              type="button"
+            >
+              Import previewed rows
+            </Button>
+            {importCsv ? (
+              <Button
+                className="w-full border border-border bg-white text-foreground hover:bg-muted"
+                onClick={() => {
+                  setImportCsv("");
+                  setImportStatus("");
+                }}
+                type="button"
+              >
+                Clear import
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        {importPlan?.warnings.length ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {importPlan.warnings.join(" ")}
+          </div>
+        ) : null}
+        {importPlan?.errors.length ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            {importPlan.errors.join(" ")}
+          </div>
+        ) : null}
+        {importStatus ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+            {importStatus}
+          </div>
+        ) : null}
+      </Card>
       <Card className="table-scroll p-0">
         <table className="w-full min-w-[1260px] border-collapse text-sm">
           <thead className="bg-muted text-left">
@@ -254,6 +372,15 @@ export default function AdminParticipantsPage() {
           </tbody>
         </table>
       </Card>
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md bg-white p-2">
+      <div className="text-base font-bold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
