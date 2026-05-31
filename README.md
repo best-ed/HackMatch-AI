@@ -6,9 +6,11 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 
 - Collects participant registration fields for roles, skills, interests, preferences, availability, and consent.
 - Lets organizers edit participants and matching settings in browser-local MVP storage.
+- Supports cohorts so separate hackathon groups can be matched independently.
 - Generates balanced teams with deterministic hard constraints and weighted soft constraints.
 - Shows score breakdowns for every team.
-- Exports generated teams to CSV.
+- Saves generated match runs as frozen snapshots for later review.
+- Exports and imports participant CSV files, and exports generated teams to CSV.
 
 ## Deterministic Matching
 
@@ -92,20 +94,33 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 
 1. Add participants at `/participant/register`.
 2. Edit or delete active participants at `/admin/participants`.
-3. Tune team size, constraints, and weights at `/admin/settings`.
-4. Check generated assignments and warnings at `/admin/matching`.
-5. Inspect score breakdowns and export edited results at `/admin/teams`.
+3. Select or create the active cohort at `/admin/matching` or `/admin/participants`.
+4. Tune team size, constraints, and weights at `/admin/settings`.
+5. Check generated assignments and warnings at `/admin/matching`.
+6. Inspect score breakdowns, save match runs, and export results at `/admin/teams`.
 
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
-Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`.
+Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped rows, skip or update duplicates, and default missing cohort values to the active cohort.
 
 Participant registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link and review saved profile details. Admins can open or copy each participant's team link from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
 Participants can be assigned to cohorts such as `General`, `May Hackathon`, or `Workshop A`. Admin matching and team exports use the active cohort, so separate events or groups can be generated independently without changing older saved runs.
+
+## Organizer Workflow
+
+For a realistic event rehearsal:
+
+1. Create or select a cohort for the event.
+2. Register participants manually or import them from CSV.
+3. Use participant search and filters to inspect role, experience, consent, and cohort coverage.
+4. Tune matching settings and generate deterministic teams for the active cohort.
+5. Review score breakdowns, warnings, internal role suggestions, and explanations.
+6. Save the final match run before making later participant edits.
+7. Export teams or participant records as CSV for sharing and operational follow-up.
 
 ## Supabase Persistence
 
@@ -125,7 +140,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, and CSV export.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, and CSV import duplicate handling.
 
 ## Main Routes
 
