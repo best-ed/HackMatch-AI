@@ -50,3 +50,15 @@ create table team_assignments (
   locked boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+create table match_runs (
+  id text primary key,
+  name text not null,
+  participant_count integer not null,
+  assigned_count integer not null,
+  average_score integer not null,
+  settings_snapshot jsonb not null,
+  participants_snapshot jsonb not null,
+  result jsonb not null,
+  created_at timestamptz not null default now()
+);

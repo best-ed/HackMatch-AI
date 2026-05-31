@@ -4,7 +4,9 @@ import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import type {
   AvailabilitySlot,
   MatchingSettings,
-  Participant
+  MatchingResult,
+  Participant,
+  SavedMatchRun
 } from "@/lib/matching/types";
 import {
   deleteRemoteParticipant,
@@ -18,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const participantsKey = "hackmatch.participants.v1";
 const settingsKey = "hackmatch.settings.v1";
+const savedMatchRunsKey = "hackmatch.savedMatchRuns.v1";
 const currentParticipantKey = "hackmatch.currentParticipant.v1";
 
 function readJson<T>(key: string, fallback: T): T {
@@ -99,6 +102,13 @@ function normalizeParticipantsForStorage(participants: Participant[]): Participa
   );
 }
 
+function normalizeSavedRunsForStorage(runs: SavedMatchRun[]): SavedMatchRun[] {
+  return runs.map((run) => ({
+    ...run,
+    participantsSnapshot: normalizeParticipantsForStorage(run.participantsSnapshot)
+  }));
+}
+
 export function createBlankParticipant(participants: Participant[]): Participant {
   const timestamp = new Date().toISOString();
   return {
@@ -134,6 +144,7 @@ export function createBlankParticipant(participants: Participant[]): Participant
 export function useHackMatchData() {
   const [participants, setParticipantsState] = useState<Participant[]>(demoParticipants);
   const [settings, setSettingsState] = useState<MatchingSettings>(demoMatchingSettings);
+  const [savedMatchRuns, setSavedMatchRunsState] = useState<SavedMatchRun[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [persistenceMode, setPersistenceMode] = useState<"local" | "supabase">("local");
   const [persistenceWarning, setPersistenceWarning] = useState("");
@@ -144,10 +155,13 @@ export function useHackMatchData() {
     async function loadData() {
       const localParticipants = normalizeParticipantsForStorage(readJson(participantsKey, demoParticipants));
       const localSettings = readJson(settingsKey, demoMatchingSettings);
+      const localSavedRuns = normalizeSavedRunsForStorage(readJson(savedMatchRunsKey, []));
 
       setParticipantsState(localParticipants);
       setSettingsState(localSettings);
+      setSavedMatchRunsState(localSavedRuns);
       writeJson(participantsKey, localParticipants);
+      writeJson(savedMatchRunsKey, localSavedRuns);
 
       if (!isSupabaseConfigured()) {
         setPersistenceMode("local");
@@ -199,6 +213,7 @@ export function useHackMatchData() {
       persistenceWarning,
       participants,
       settings,
+      savedMatchRuns,
       setParticipants(next: Participant[]) {
         const normalized = normalizeParticipantsForStorage(next);
         setParticipantsState(normalized);
@@ -256,12 +271,43 @@ export function useHackMatchData() {
             .catch(() => setPersistenceWarning("Supabase delete failed; local browser storage is still updated."));
         }
       },
+      saveMatchRun(result: MatchingResult, name?: string) {
+        const timestamp = new Date().toISOString();
+        const assignedCount = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
+        const scoredTeams = result.teams.filter((team) => typeof team.score?.totalScore === "number");
+        const averageScore =
+          scoredTeams.length > 0
+            ? Math.round(scoredTeams.reduce((sum, team) => sum + (team.score?.totalScore ?? 0), 0) / scoredTeams.length)
+            : 0;
+        const run: SavedMatchRun = {
+          id: `run-${timestamp.replace(/[^0-9]/g, "")}`,
+          name: name?.trim() || `Match run ${savedMatchRuns.length + 1}`,
+          createdAt: timestamp,
+          participantCount: participants.length,
+          assignedCount,
+          averageScore,
+          settingsSnapshot: settings,
+          participantsSnapshot: participants,
+          result
+        };
+        const next = [run, ...savedMatchRuns].slice(0, 20);
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+        return run;
+      },
+      deleteMatchRun(id: string) {
+        const next = savedMatchRuns.filter((run) => run.id !== id);
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+      },
       resetDemoData() {
         const normalizedDemoParticipants = normalizeParticipantsForStorage(demoParticipants);
         setParticipantsState(normalizedDemoParticipants);
         setSettingsState(demoMatchingSettings);
+        setSavedMatchRunsState([]);
         writeJson(participantsKey, normalizedDemoParticipants);
         writeJson(settingsKey, demoMatchingSettings);
+        writeJson(savedMatchRunsKey, []);
         if (isSupabaseConfigured()) {
           void Promise.all([
             ...normalizedDemoParticipants.map((participant) => saveRemoteParticipant(participant)),
@@ -270,7 +316,7 @@ export function useHackMatchData() {
         }
       }
     }),
-    [loaded, participants, persistenceMode, persistenceWarning, settings]
+    [loaded, participants, persistenceMode, persistenceWarning, savedMatchRuns, settings]
   );
 
   return api;

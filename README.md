@@ -101,6 +101,8 @@ on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
 Participant registrations receive an access token and redirect to `/participant/team?access=...`. Admins can open or copy each participant's team link from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
+Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
+
 ## Supabase Persistence
 
 HackMatch AI can run fully offline with browser `localStorage`. To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:

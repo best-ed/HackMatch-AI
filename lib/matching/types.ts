@@ -106,6 +106,18 @@ export type MatchingResult = {
   unassignedParticipants: string[];
 };
 
+export type SavedMatchRun = {
+  id: string;
+  name: string;
+  createdAt: string;
+  participantCount: number;
+  assignedCount: number;
+  averageScore: number;
+  settingsSnapshot: MatchingSettings;
+  participantsSnapshot: Participant[];
+  result: MatchingResult;
+};
+
 export const defaultMatchingSettings: MatchingSettings = {
   desiredTeamSize: 4,
   minTeamSize: 3,
