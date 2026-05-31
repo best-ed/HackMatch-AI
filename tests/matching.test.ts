@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { teamsToCsv } from "@/lib/export";
+import { participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { Participant } from "@/lib/matching/types";
@@ -87,5 +87,12 @@ describe("deterministic matching", () => {
     const csv = teamsToCsv(result, demoParticipants);
     expect(csv.split("\n")[0]).toContain("team_id,team_name,team_score");
     expect(csv).toContain("Avery Chen");
+  });
+
+  it("exports participants as CSV", () => {
+    const csv = participantsToCsv(demoParticipants);
+    expect(csv.split("\n")[0]).toContain("participant_id,access_token,cohort");
+    expect(csv).toContain("Avery Chen");
+    expect(csv).toContain("consent_to_match");
   });
 });

@@ -99,6 +99,8 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
+Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`.
+
 Participant registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link and review saved profile details. Admins can open or copy each participant's team link from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.

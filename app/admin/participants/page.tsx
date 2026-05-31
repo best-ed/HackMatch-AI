@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
+import { participantsToCsv } from "@/lib/export";
 import { joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 
@@ -11,6 +12,7 @@ export default function AdminParticipantsPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
   const [consentFilter, setConsentFilter] = useState<"all" | "matchable" | "excluded">("all");
+  const [exportStatus, setExportStatus] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -25,10 +27,23 @@ export default function AdminParticipantsPage() {
         participant.cohort ?? "",
         participant.fullName,
         participant.email,
+        participant.phone ?? "",
+        participant.institution ?? "",
+        participant.githubUrl ?? "",
+        participant.linkedinUrl ?? "",
+        participant.portfolioUrl ?? "",
         participant.primaryRole,
         participant.experienceLevel,
+        ...participant.secondaryRoles,
         ...participant.technicalSkills,
-        ...participant.interests
+        ...participant.nonTechnicalSkills,
+        ...participant.tools,
+        ...participant.interests,
+        participant.projectIdeas ?? "",
+        ...participant.preferredTeammates,
+        ...participant.blockedTeammates,
+        ...participant.availability,
+        participant.personalStatement ?? ""
       ].join(" ").toLowerCase();
       const matchesQuery = !normalizedQuery || searchableText.includes(normalizedQuery);
       const matchesRole = roleFilter === "all" || participant.primaryRole === roleFilter;
@@ -51,6 +66,23 @@ export default function AdminParticipantsPage() {
     saveParticipant({ ...participant, [key]: value });
   }
 
+  function downloadParticipantsCsv(scope: "all" | "filtered") {
+    const exportParticipants = scope === "all" ? participants : filteredParticipants;
+    const csv = participantsToCsv(exportParticipants);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = scope === "all" ? "hackmatch-participants.csv" : "hackmatch-participants-filtered.csv";
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setExportStatus(`Exported ${exportParticipants.length} participant${exportParticipants.length === 1 ? "" : "s"} to ${filename}.`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -60,10 +92,23 @@ export default function AdminParticipantsPage() {
             Edit the active participant set used by matching in this browser.
           </p>
         </div>
-        <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={resetDemoData}>
-          Reset demo data
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadParticipantsCsv("filtered")}>
+            Export filtered CSV
+          </button>
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadParticipantsCsv("all")}>
+            Export all CSV
+          </button>
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={resetDemoData}>
+            Reset demo data
+          </button>
+        </div>
       </div>
+      {exportStatus ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+          {exportStatus}
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-4">
         <Metric label="Total" value={participants.length} />
         <Metric label="Showing" value={filteredParticipants.length} />
