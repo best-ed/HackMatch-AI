@@ -53,7 +53,7 @@ AI only explains deterministic team assignments. It never assigns or changes tea
 
 1. Open `/`.
 2. Register a participant at `/participant/register`.
-3. Confirm redirect to `/participant/team?access=...`.
+3. Confirm redirect to `/participant/confirmation?access=...`.
 4. Open `/admin/participants` and confirm the participant appears.
 5. Open `/admin/matching` and check viability warnings.
 6. Open `/admin/teams` and download CSV.

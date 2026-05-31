@@ -73,7 +73,7 @@ export default function RegisterPage() {
     setSaved(true);
     setForm(createBlankParticipant([...participants, participantToSave]));
     setListDrafts(emptyListDrafts);
-    router.push(`/participant/team?access=${encodeURIComponent(savedParticipant.accessToken ?? savedParticipant.email)}`);
+    router.push(`/participant/confirmation?access=${encodeURIComponent(savedParticipant.accessToken ?? savedParticipant.email)}`);
   }
 
   return (
@@ -171,7 +171,7 @@ export default function RegisterPage() {
           >
             Save registration
           </button>
-          {saved ? <p className="self-center text-sm font-medium text-emerald-700">Saved. Opening your team page.</p> : null}
+          {saved ? <p className="self-center text-sm font-medium text-emerald-700">Saved. Opening confirmation.</p> : null}
         </form>
       </Card>
     </div>
