@@ -21,7 +21,9 @@ import { useEffect, useMemo, useState } from "react";
 const participantsKey = "hackmatch.participants.v1";
 const settingsKey = "hackmatch.settings.v1";
 const savedMatchRunsKey = "hackmatch.savedMatchRuns.v1";
+const activeCohortKey = "hackmatch.activeCohort.v1";
 const currentParticipantKey = "hackmatch.currentParticipant.v1";
+const defaultCohort = "General";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -89,7 +91,8 @@ export function createParticipantAccessToken(): string {
 function ensureParticipantAccessToken(participant: Participant): Participant {
   return {
     ...participant,
-    accessToken: participant.accessToken || createParticipantAccessToken()
+    accessToken: participant.accessToken || createParticipantAccessToken(),
+    cohort: participant.cohort?.trim() || defaultCohort
   };
 }
 
@@ -114,6 +117,7 @@ export function createBlankParticipant(participants: Participant[]): Participant
   return {
     id: createParticipantId(participants),
     accessToken: createParticipantAccessToken(),
+    cohort: readActiveCohort(),
     fullName: "",
     email: "",
     phone: "",
@@ -141,10 +145,16 @@ export function createBlankParticipant(participants: Participant[]): Participant
   };
 }
 
+export function readActiveCohort(): string {
+  if (typeof window === "undefined") return defaultCohort;
+  return window.localStorage.getItem(activeCohortKey) || defaultCohort;
+}
+
 export function useHackMatchData() {
   const [participants, setParticipantsState] = useState<Participant[]>(demoParticipants);
   const [settings, setSettingsState] = useState<MatchingSettings>(demoMatchingSettings);
   const [savedMatchRuns, setSavedMatchRunsState] = useState<SavedMatchRun[]>([]);
+  const [activeCohort, setActiveCohortState] = useState(defaultCohort);
   const [loaded, setLoaded] = useState(false);
   const [persistenceMode, setPersistenceMode] = useState<"local" | "supabase">("local");
   const [persistenceWarning, setPersistenceWarning] = useState("");
@@ -156,10 +166,12 @@ export function useHackMatchData() {
       const localParticipants = normalizeParticipantsForStorage(readJson(participantsKey, demoParticipants));
       const localSettings = readJson(settingsKey, demoMatchingSettings);
       const localSavedRuns = normalizeSavedRunsForStorage(readJson(savedMatchRunsKey, []));
+      const localActiveCohort = readActiveCohort();
 
       setParticipantsState(localParticipants);
       setSettingsState(localSettings);
       setSavedMatchRunsState(localSavedRuns);
+      setActiveCohortState(localActiveCohort);
       writeJson(participantsKey, localParticipants);
       writeJson(savedMatchRunsKey, localSavedRuns);
 
@@ -214,6 +226,17 @@ export function useHackMatchData() {
       participants,
       settings,
       savedMatchRuns,
+      activeCohort,
+      cohorts: Array.from(new Set([defaultCohort, ...participants.map((participant) => participant.cohort || defaultCohort)])).sort(),
+      cohortParticipants:
+        activeCohort === "All"
+          ? participants
+          : participants.filter((participant) => (participant.cohort || defaultCohort) === activeCohort),
+      setActiveCohort(next: string) {
+        const cleaned = next.trim() || defaultCohort;
+        setActiveCohortState(cleaned);
+        window.localStorage.setItem(activeCohortKey, cleaned);
+      },
       setParticipants(next: Participant[]) {
         const normalized = normalizeParticipantsForStorage(next);
         setParticipantsState(normalized);
@@ -236,6 +259,7 @@ export function useHackMatchData() {
         const cleaned: Participant = {
           ...participant,
           accessToken: participant.accessToken || createParticipantAccessToken(),
+          cohort: participant.cohort?.trim() || activeCohort || defaultCohort,
           fullName: participant.fullName.trim(),
           email: participant.email.trim(),
           primaryRole: participant.primaryRole.trim() || "Frontend",
@@ -273,6 +297,10 @@ export function useHackMatchData() {
       },
       saveMatchRun(result: MatchingResult, name?: string) {
         const timestamp = new Date().toISOString();
+        const runParticipants =
+          activeCohort === "All"
+            ? participants
+            : participants.filter((participant) => (participant.cohort || defaultCohort) === activeCohort);
         const assignedCount = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
         const scoredTeams = result.teams.filter((team) => typeof team.score?.totalScore === "number");
         const averageScore =
@@ -283,11 +311,12 @@ export function useHackMatchData() {
           id: `run-${timestamp.replace(/[^0-9]/g, "")}`,
           name: name?.trim() || `Match run ${savedMatchRuns.length + 1}`,
           createdAt: timestamp,
-          participantCount: participants.length,
+          participantCount: runParticipants.length,
           assignedCount,
           averageScore,
           settingsSnapshot: settings,
-          participantsSnapshot: participants,
+          cohort: activeCohort,
+          participantsSnapshot: runParticipants,
           result
         };
         const next = [run, ...savedMatchRuns].slice(0, 20);
@@ -316,7 +345,7 @@ export function useHackMatchData() {
         }
       }
     }),
-    [loaded, participants, persistenceMode, persistenceWarning, savedMatchRuns, settings]
+    [activeCohort, loaded, participants, persistenceMode, persistenceWarning, savedMatchRuns, settings]
   );
 
   return api;

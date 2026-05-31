@@ -13,6 +13,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 type ParticipantRow = {
   id: string;
   access_token: string | null;
+  cohort: string | null;
   full_name: string;
   email: string;
   phone: string | null;
@@ -133,6 +134,7 @@ function rowToParticipant(row: ParticipantRow): Participant {
   return {
     id: row.id,
     accessToken: row.access_token ?? undefined,
+    cohort: row.cohort ?? undefined,
     fullName: row.full_name,
     email: row.email,
     phone: row.phone ?? "",
@@ -164,6 +166,7 @@ function participantToRow(participant: Participant): ParticipantRow {
   return {
     id: participant.id,
     access_token: participant.accessToken ?? null,
+    cohort: participant.cohort ?? null,
     full_name: participant.fullName,
     email: participant.email,
     phone: participant.phone ?? null,

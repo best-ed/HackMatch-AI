@@ -10,20 +10,23 @@ import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from
 
 export default function AdminTeamsPage() {
   const {
-    participants,
+    cohortParticipants,
     settings,
     savedMatchRuns,
     saveMatchRun,
-    deleteMatchRun
+    deleteMatchRun,
+    activeCohort,
+    setActiveCohort,
+    cohorts
   } = useHackMatchData();
   const result = useMemo(
-    () => generateTeams(participants, settings),
-    [participants, settings]
+    () => generateTeams(cohortParticipants, settings),
+    [cohortParticipants, settings]
   );
   const [activeRunId, setActiveRunId] = useState("live");
   const activeRun = savedMatchRuns.find((run) => run.id === activeRunId);
   const activeResult = activeRun?.result ?? result;
-  const activeParticipants = activeRun?.participantsSnapshot ?? participants;
+  const activeParticipants = activeRun?.participantsSnapshot ?? cohortParticipants;
   const isViewingSavedRun = Boolean(activeRun);
   const heading = activeRun?.name ?? "Generated teams";
   const csv = teamsToCsv(activeResult, activeParticipants);
@@ -63,7 +66,7 @@ export default function AdminTeamsPage() {
       const response = await fetch("/api/explanations", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ participants, settings })
+        body: JSON.stringify({ participants: cohortParticipants, settings })
       });
       if (!response.ok) {
         setExplanationWarnings(["Explanation API request failed; showing deterministic fallback explanations."]);
@@ -130,6 +133,26 @@ export default function AdminTeamsPage() {
           </button>
         </div>
       </div>
+      <Card className="flex flex-wrap items-end justify-between gap-4">
+        <label className="space-y-2 text-sm font-medium">
+          <span>Active cohort</span>
+          <input
+            className="w-72 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+            list="teams-cohorts"
+            value={activeCohort}
+            onChange={(event) => setActiveCohort(event.target.value)}
+            disabled={isViewingSavedRun}
+          />
+          <datalist id="teams-cohorts">
+            {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
+          </datalist>
+        </label>
+        <Badge>
+          {isViewingSavedRun
+            ? `${activeRun?.cohort ?? "Saved cohort"} snapshot`
+            : `${cohortParticipants.length} participant(s) in cohort`}
+        </Badge>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

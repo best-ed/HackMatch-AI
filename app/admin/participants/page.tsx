@@ -6,7 +6,7 @@ import { joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 
 export default function AdminParticipantsPage() {
-  const { participants, saveParticipant, deleteParticipant, resetDemoData } = useHackMatchData();
+  const { participants, saveParticipant, deleteParticipant, resetDemoData, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
@@ -22,6 +22,7 @@ export default function AdminParticipantsPage() {
       const searchableText = [
         participant.id,
         participant.accessToken ?? "",
+        participant.cohort ?? "",
         participant.fullName,
         participant.email,
         participant.primaryRole,
@@ -84,6 +85,20 @@ export default function AdminParticipantsPage() {
             <option key={role} value={role}>{role}</option>
           ))}
         </FilterSelect>
+        <label className="space-y-2 text-sm font-medium lg:col-span-2">
+          <span>Active matching cohort</span>
+          <div className="flex gap-2">
+            <TextInput
+              list="admin-cohorts"
+              value={activeCohort}
+              onChange={(event) => setActiveCohort(event.target.value)}
+              placeholder="General"
+            />
+            <datalist id="admin-cohorts">
+              {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
+            </datalist>
+          </div>
+        </label>
         <FilterSelect label="Experience" value={experienceFilter} onChange={(value) => setExperienceFilter(value as "all" | ExperienceLevel)}>
           <option value="all">All levels</option>
           <option value="beginner">Beginner</option>
@@ -114,7 +129,7 @@ export default function AdminParticipantsPage() {
         <table className="w-full min-w-[1260px] border-collapse text-sm">
           <thead className="bg-muted text-left">
             <tr>
-              {["Name", "Role", "Experience", "Skills", "Interests", "Consent", "Access", "Actions"].map((heading) => (
+              {["Name", "Cohort", "Role", "Experience", "Skills", "Interests", "Consent", "Access", "Actions"].map((heading) => (
                 <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>
               ))}
             </tr>
@@ -126,6 +141,9 @@ export default function AdminParticipantsPage() {
                   <TextInput value={participant.fullName} onChange={(event) => updateParticipant(participant, "fullName", event.target.value)} />
                   <TextInput value={participant.email} onChange={(event) => updateParticipant(participant, "email", event.target.value)} />
                   <div className="text-xs text-muted-foreground">{participant.id}</div>
+                </td>
+                <td className="px-4 py-3">
+                  <TextInput value={participant.cohort ?? "General"} onChange={(event) => updateParticipant(participant, "cohort", event.target.value)} />
                 </td>
                 <td className="px-4 py-3">
                   <TextInput value={participant.primaryRole} onChange={(event) => updateParticipant(participant, "primaryRole", event.target.value)} />
@@ -183,7 +201,7 @@ export default function AdminParticipantsPage() {
             ))}
             {filteredParticipants.length === 0 ? (
               <tr className="border-t border-border">
-                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={8}>
+                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={9}>
                   No participants match the current filters.
                 </td>
               </tr>

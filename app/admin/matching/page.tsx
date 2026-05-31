@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
@@ -8,9 +9,10 @@ import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult } from "@/lib/matching/types";
 
 export default function AdminMatchingPage() {
-  const { participants, settings } = useHackMatchData();
-  const result = generateTeams(participants, settings);
-  const eligible = participants.filter((participant) => participant.consentToMatch);
+  const { cohortParticipants, settings, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
+  const [newCohort, setNewCohort] = useState("");
+  const result = generateTeams(cohortParticipants, settings);
+  const eligible = cohortParticipants.filter((participant) => participant.consentToMatch);
   const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
   const scores = result.teams.map((team) => team.score?.totalScore ?? 0);
   const averageScore =
@@ -39,13 +41,78 @@ export default function AdminMatchingPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Generate teams</h1>
           <p className="mt-2 text-muted-foreground">
-            Deterministic output from the editable participant set and current settings.
+            Deterministic output from the active cohort and current settings.
           </p>
         </div>
         <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/teams">
           View teams
         </Link>
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Active matching cohort</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pick an existing group or type a new cohort name to isolate matching runs.
+            </p>
+          </div>
+          <Badge>{cohortParticipants.length} participant(s) in {activeCohort}</Badge>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <label className="space-y-2 text-sm font-medium">
+            <span>Active cohort name</span>
+            <input
+              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+              value={activeCohort}
+              onChange={(event) => setActiveCohort(event.target.value)}
+              placeholder="May Hackathon, Finals Group A, Nairobi Build Night"
+            />
+            <span className="block text-xs font-normal text-muted-foreground">
+              Free-form names are allowed.
+            </span>
+          </label>
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+            <label className="space-y-2 text-sm font-medium">
+              <span>Create or switch cohort</span>
+              <input
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+                value={newCohort}
+                onChange={(event) => setNewCohort(event.target.value)}
+                placeholder="May Hackathon"
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                onClick={() => {
+                  if (!newCohort.trim()) return;
+                  setActiveCohort(newCohort);
+                  setNewCohort("");
+                }}
+                type="button"
+              >
+                Use cohort
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {cohorts.map((cohort) => (
+            <button
+              key={cohort}
+              className={`rounded-md border px-3 py-1.5 text-sm font-semibold ${
+                cohort === activeCohort
+                  ? "border-primary bg-emerald-50 text-foreground"
+                  : "border-border bg-white text-muted-foreground"
+              }`}
+              onClick={() => setActiveCohort(cohort)}
+              type="button"
+            >
+              {cohort}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card className="space-y-5">
@@ -97,7 +164,7 @@ export default function AdminMatchingPage() {
       </section>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card><Metric label="Participants" value={participants.length} icon={<Users size={16} />} /></Card>
+        <Card><Metric label="Participants" value={cohortParticipants.length} icon={<Users size={16} />} /></Card>
         <Card><Metric label="Desired size" value={settings.desiredTeamSize} icon={<Settings2 size={16} />} /></Card>
         <Card><Metric label="Max size" value={settings.maxTeamSize} icon={<Settings2 size={16} />} /></Card>
         <Card><Metric label="Unassigned" value={result.unassignedParticipants.length} icon={<AlertTriangle size={16} />} /></Card>
@@ -106,7 +173,7 @@ export default function AdminMatchingPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {result.teams.map((team) => {
           const members = team.participantIds
-            .map((id) => participants.find((participant) => participant.id === id))
+            .map((id) => cohortParticipants.find((participant) => participant.id === id))
             .filter(Boolean);
           return (
           <Card key={team.id} className="space-y-4">

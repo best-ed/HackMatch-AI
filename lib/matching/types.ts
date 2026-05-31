@@ -11,6 +11,7 @@ export type AvailabilitySlot =
 export type Participant = {
   id: string;
   accessToken?: string;
+  cohort?: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -113,6 +114,7 @@ export type SavedMatchRun = {
   participantCount: number;
   assignedCount: number;
   averageScore: number;
+  cohort?: string;
   settingsSnapshot: MatchingSettings;
   participantsSnapshot: Participant[];
   result: MatchingResult;

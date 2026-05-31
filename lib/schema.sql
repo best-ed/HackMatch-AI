@@ -1,6 +1,7 @@
 create table participants (
   id text primary key,
   access_token text unique,
+  cohort text not null default 'General',
   full_name text not null,
   email text not null unique,
   phone text,

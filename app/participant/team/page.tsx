@@ -11,10 +11,6 @@ import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function ParticipantTeamPage() {
   const { participants, settings } = useHackMatchData();
-  const result = useMemo(
-    () => generateTeams(participants, settings),
-    [participants, settings]
-  );
   const defaultParticipant = participants.find((item) => item.consentToMatch) ?? participants[0];
   const [lookup, setLookup] = useState(defaultParticipant?.email ?? "");
   const normalizedLookup = normalizeLookupValue(lookup);
@@ -32,6 +28,13 @@ export default function ParticipantTeamPage() {
     );
   })
     : undefined;
+  const teamParticipants = participant
+    ? participants.filter((item) => (item.cohort ?? "General") === (participant.cohort ?? "General"))
+    : participants;
+  const result = useMemo(
+    () => generateTeams(teamParticipants, settings),
+    [teamParticipants, settings]
+  );
   const team = participant?.consentToMatch
     ? result.teams.find((candidate) => candidate.participantIds.includes(participant.id))
     : undefined;

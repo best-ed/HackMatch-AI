@@ -43,7 +43,7 @@ const emptyListDrafts: Record<keyof ListDrafts, string> = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { participants, saveParticipant, loaded } = useHackMatchData();
+  const { participants, saveParticipant, loaded, activeCohort, cohorts } = useHackMatchData();
   const blank = useMemo(() => createBlankParticipant(participants), [participants]);
   const [form, setForm] = useState<Participant>(blank);
   const [listDrafts, setListDrafts] = useState(emptyListDrafts);
@@ -88,6 +88,18 @@ export default function RegisterPage() {
         <form className="grid gap-4 md:grid-cols-2">
           <Field label="Full name" value={form.fullName} onChange={(value) => update("fullName", value)} />
           <Field label="Email" value={form.email} onChange={(value) => update("email", value)} />
+          <label className="space-y-2 text-sm font-medium">
+            <span>Cohort</span>
+            <TextInput
+              list="registration-cohorts"
+              value={form.cohort ?? activeCohort}
+              onChange={(event) => update("cohort", event.target.value)}
+              placeholder="General, May Hackathon, Workshop A"
+            />
+            <datalist id="registration-cohorts">
+              {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
+            </datalist>
+          </label>
           <Field label="Phone" value={form.phone ?? ""} onChange={(value) => update("phone", value)} />
           <Field label="Institution" value={form.institution ?? ""} onChange={(value) => update("institution", value)} />
           <Field label="GitHub URL" value={form.githubUrl ?? ""} onChange={(value) => update("githubUrl", value)} />
