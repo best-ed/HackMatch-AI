@@ -102,6 +102,21 @@ export default function AdminTeamsPage() {
     }
   }
 
+  async function copyTeamSummary(
+    teamName: string,
+    members: Participant[],
+    explanation?: TeamExplanation
+  ) {
+    const summary = [
+      `${teamName}`,
+      `Members: ${members.map((member) => `${member.fullName} (${member.primaryRole})`).join(", ")}`,
+      explanation ? `Why this team: ${explanation.summary}` : "",
+      explanation ? `Suggested direction: ${explanation.suggestedProjectDirection}` : ""
+    ].filter(Boolean).join("\n");
+
+    await navigator.clipboard?.writeText(summary);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -232,41 +247,86 @@ export default function AdminTeamsPage() {
       <div className="grid gap-5">
         {activeResult.teams.map((team) => {
           const explanation = explanations.find((item) => item.teamId === team.id);
+          const members = team.participantIds
+            .map((id) => activeParticipants.find((item) => item.id === id))
+            .filter((participant): participant is Participant => Boolean(participant));
+          const risks = getTeamRisks(team.score?.totalScore ?? 0, explanation);
           return (
             <Card key={team.id} className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold">{team.name}</h2>
-                <Badge>Overall {team.score?.totalScore}</Badge>
+                <div>
+                  <h2 className="text-xl font-semibold">{team.name}</h2>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge className={scoreBadgeClass(team.score?.totalScore ?? 0)}>
+                      Overall {team.score?.totalScore}
+                    </Badge>
+                    {risks.map((risk) => (
+                      <Badge key={risk} className="bg-amber-100 text-amber-800">{risk}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  className="rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
+                  onClick={() => void copyTeamSummary(team.name, members, explanation)}
+                  type="button"
+                >
+                  Copy summary
+                </button>
               </div>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                {team.participantIds.map((id) => {
-                  const participant = activeParticipants.find((item) => item.id === id);
-                  return participant ? (
-                    <div key={id} className="rounded-md border border-border p-3">
-                      <div className="font-medium">{participant.fullName}</div>
-                      <div className="text-sm text-muted-foreground">{participant.primaryRole} - {participant.experienceLevel}</div>
+                {members.map((participant) => (
+                  <div key={participant.id} className="rounded-md border border-border p-3">
+                    <div className="font-medium">{participant.fullName}</div>
+                    <div className="text-sm text-muted-foreground">{participant.primaryRole} - {participant.experienceLevel}</div>
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {participant.technicalSkills.slice(0, 3).map((skill) => (
+                        <Badge key={skill}>{skill}</Badge>
+                      ))}
                     </div>
-                  ) : null;
-                })}
+                  </div>
+                ))}
               </div>
               {team.score ? (
-                <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                  <Score label="Role" value={team.score.roleCoverageScore} />
-                  <Score label="Skill" value={team.score.skillCoverageScore} />
-                  <Score label="Experience" value={team.score.experienceBalanceScore} />
-                  <Score label="Interest" value={team.score.interestAlignmentScore} />
-                  <Score label="Availability" value={team.score.availabilityCompatibilityScore} />
-                  <Score label="Preferences" value={team.score.preferenceSatisfactionScore} />
-                  <Score label="Penalty" value={team.score.constraintPenalty} />
+                <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                  <ScoreBar label="Role coverage" value={team.score.roleCoverageScore} />
+                  <ScoreBar label="Skill coverage" value={team.score.skillCoverageScore} />
+                  <ScoreBar label="Experience balance" value={team.score.experienceBalanceScore} />
+                  <ScoreBar label="Interest alignment" value={team.score.interestAlignmentScore} />
+                  <ScoreBar label="Availability" value={team.score.availabilityCompatibilityScore} />
+                  <ScoreBar label="Preferences" value={team.score.preferenceSatisfactionScore} />
+                  <ScoreBar label="Penalty" value={team.score.constraintPenalty} invert />
                 </div>
               ) : null}
               {explanation ? (
-                <div className="rounded-md bg-muted p-4 text-sm">
-                  <div className="font-semibold">
-                    {explanationProvider === "openai" ? "AI explanation" : "Fallback explanation"}
+                <div className="grid gap-4 rounded-md bg-muted p-4 text-sm lg:grid-cols-[1fr_1fr]">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="font-semibold">
+                        {explanationProvider === "openai" ? "AI explanation" : "Fallback explanation"}
+                      </div>
+                      <p className="mt-1 text-muted-foreground">{explanation.summary}</p>
+                    </div>
+                    <ReviewList title="Strengths" items={explanation.strengths} />
+                    <ReviewList title="Watch points" items={explanation.weaknesses} />
+                    {explanation.warnings.length > 0 ? <ReviewList title="Warnings" items={explanation.warnings} /> : null}
                   </div>
-                  <p className="mt-1 text-muted-foreground">{explanation.summary}</p>
-                  <p className="mt-2 text-muted-foreground">{explanation.suggestedProjectDirection}</p>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="font-semibold">Suggested direction</div>
+                      <p className="mt-1 text-muted-foreground">{explanation.suggestedProjectDirection}</p>
+                    </div>
+                    <div>
+                      <div className="font-semibold">Suggested internal roles</div>
+                      <div className="mt-2 grid gap-2">
+                        {Object.entries(explanation.suggestedInternalRoles).map(([name, role]) => (
+                          <div key={name} className="flex justify-between gap-3 rounded-md bg-white px-3 py-2">
+                            <span>{name}</span>
+                            <span className="text-right text-muted-foreground">{role}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </Card>
@@ -281,13 +341,48 @@ export default function AdminTeamsPage() {
   );
 }
 
-function Score({ label, value }: { label: string; value: number }) {
+function ScoreBar({ label, value, invert = false }: { label: string; value: number; invert?: boolean }) {
+  const normalized = Math.max(0, Math.min(100, value));
+  const healthy = invert ? value <= 10 : value >= 75;
   return (
     <div className="rounded-md border border-border bg-white p-3">
-      <div className="font-semibold">{value}</div>
-      <div className="text-muted-foreground">{label}</div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="font-medium">{label}</div>
+        <div className={healthy ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{value}</div>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full ${healthy ? "bg-primary" : "bg-amber-500"}`}
+          style={{ width: `${normalized}%` }}
+        />
+      </div>
     </div>
   );
+}
+
+function ReviewList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <div className="font-semibold">{title}</div>
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+        {items.map((item) => <li key={item}>{item}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function getTeamRisks(score: number, explanation?: TeamExplanation) {
+  const risks: string[] = [];
+  if (score < 75) risks.push("Review score");
+  if (explanation?.warnings.length) risks.push("Has warnings");
+  if ((explanation?.weaknesses.length ?? 0) >= 2) risks.push("Watch points");
+  return risks;
+}
+
+function scoreBadgeClass(score: number) {
+  if (score >= 85) return "bg-emerald-100 text-emerald-800";
+  if (score >= 75) return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
 }
 
 function formatDate(value: string) {
