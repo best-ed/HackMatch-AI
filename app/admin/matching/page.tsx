@@ -96,22 +96,23 @@ export default function AdminMatchingPage() {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {cohorts.map((cohort) => (
-            <button
-              key={cohort}
-              className={`rounded-md border px-3 py-1.5 text-sm font-semibold ${
-                cohort === activeCohort
-                  ? "border-primary bg-emerald-50 text-foreground"
-                  : "border-border bg-white text-muted-foreground"
-              }`}
-              onClick={() => setActiveCohort(cohort)}
-              type="button"
-            >
-              {cohort}
-            </button>
-          ))}
-        </div>
+        <label className="block space-y-2 text-sm font-medium">
+          <span>Switch to existing cohort</span>
+          <select
+            className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+            value={cohorts.includes(activeCohort) ? activeCohort : ""}
+            onChange={(event) => setActiveCohort(event.target.value)}
+          >
+            <option value="" disabled>
+              Select saved cohort
+            </option>
+            {cohorts.map((cohort) => (
+              <option key={cohort} value={cohort}>
+                {cohort}
+              </option>
+            ))}
+          </select>
+        </label>
       </Card>
 
       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
