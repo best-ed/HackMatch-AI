@@ -9,6 +9,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Supports cohorts so separate hackathon groups can be matched independently.
 - Generates balanced teams with deterministic hard constraints and weighted soft constraints.
 - Shows score breakdowns for every team.
+- Provides matching settings presets and health checks before generation.
 - Saves generated match runs as frozen snapshots for later review.
 - Exports and imports participant CSV files, and exports generated teams to CSV.
 
@@ -95,7 +96,7 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 1. Add participants at `/participant/register`.
 2. Edit or delete active participants at `/admin/participants`.
 3. Select or create the active cohort at `/admin/matching` or `/admin/participants`.
-4. Tune team size, constraints, and weights at `/admin/settings`.
+4. Tune team size, constraints, presets, and weights at `/admin/settings`.
 5. Check generated assignments and warnings at `/admin/matching`.
 6. Inspect score breakdowns, save match runs, and export results at `/admin/teams`.
 
@@ -122,6 +123,8 @@ For a realistic event rehearsal:
 6. Save the final match run before making later participant edits.
 7. Export teams or participant records as CSV for sharing and operational follow-up.
 
+The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. It also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals.
+
 ## Supabase Persistence
 
 HackMatch AI can run fully offline with browser `localStorage`. To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:
@@ -140,7 +143,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, and CSV import duplicate handling.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, CSV import duplicate handling, settings presets, and settings validation.
 
 ## Main Routes
 
