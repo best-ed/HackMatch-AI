@@ -1,12 +1,17 @@
 "use client";
 
-import { Card, TextInput } from "@/components/ui";
+import { useMemo } from "react";
+import { Badge, Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import type { MatchingSettings } from "@/lib/matching/types";
-import { matchingPresets } from "@/lib/settings-guardrails";
+import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 
 export default function AdminSettingsPage() {
-  const { settings, setSettings, resetDemoData } = useHackMatchData();
+  const { settings, setSettings, resetDemoData, cohortParticipants, activeCohort } = useHackMatchData();
+  const health = useMemo(
+    () => validateMatchingSettings(settings, cohortParticipants),
+    [cohortParticipants, settings]
+  );
 
   function update<K extends keyof MatchingSettings>(key: K, value: MatchingSettings[K]) {
     setSettings({ ...settings, [key]: value });
@@ -35,6 +40,46 @@ export default function AdminSettingsPage() {
           Reset demo data
         </button>
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Settings health</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Guardrails for the active cohort: {activeCohort}.
+            </p>
+          </div>
+          <Badge className={healthBadgeClass(health.status)}>
+            {health.status === "healthy" ? "Healthy" : health.status === "warning" ? "Needs review" : "Invalid"}
+          </Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <HealthMetric label="Participants" value={cohortParticipants.length} />
+          <HealthMetric label="Matchable" value={cohortParticipants.filter((participant) => participant.consentToMatch).length} />
+          <HealthMetric label="Desired size" value={settings.desiredTeamSize} />
+          <HealthMetric label="Team range" value={`${settings.minTeamSize}-${settings.maxTeamSize}`} />
+        </div>
+        {health.errors.length > 0 ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <div className="font-semibold">Fix before matching</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {health.errors.map((error) => <li key={error}>{error}</li>)}
+            </ul>
+          </div>
+        ) : null}
+        {health.warnings.length > 0 ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="font-semibold">Review before matching</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {health.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          </div>
+        ) : null}
+        {health.status === "healthy" ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+            Settings look viable for the current matchable cohort.
+          </div>
+        ) : null}
+      </Card>
       <Card className="space-y-4">
         <div>
           <h2 className="font-semibold">Presets</h2>
@@ -84,6 +129,21 @@ export default function AdminSettingsPage() {
       </div>
     </div>
   );
+}
+
+function HealthMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+function healthBadgeClass(status: "healthy" | "warning" | "error") {
+  if (status === "healthy") return "bg-emerald-100 text-emerald-800";
+  if (status === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
 }
 
 function NumberField({

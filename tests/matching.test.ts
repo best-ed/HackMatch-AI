@@ -3,7 +3,7 @@ import { participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
-import { matchingPresets } from "@/lib/settings-guardrails";
+import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
 function assignedIds(result: ReturnType<typeof generateTeams>) {
@@ -140,6 +140,26 @@ describe("deterministic matching", () => {
     ]);
     expect(matchingPresets.find((preset) => preset.id === "skill-heavy")?.settings.weights.skillBalance)
       .toBeGreaterThan(demoMatchingSettings.weights.skillBalance);
+  });
+
+  it("validates impossible matching settings", () => {
+    const health = validateMatchingSettings(
+      {
+        ...demoMatchingSettings,
+        desiredTeamSize: 6,
+        minTeamSize: 7,
+        maxTeamSize: 5,
+        weights: {
+          ...demoMatchingSettings.weights,
+          roleCoverage: -1
+        }
+      },
+      demoParticipants
+    );
+
+    expect(health.status).toBe("error");
+    expect(health.errors.some((error) => error.includes("Minimum team size"))).toBe(true);
+    expect(health.errors.some((error) => error.includes("Weights cannot be negative"))).toBe(true);
   });
 
 });
