@@ -37,6 +37,11 @@ export default function AdminTeamsPage() {
   const [explanationWarnings, setExplanationWarnings] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [runName, setRunName] = useState("");
+  const [compareRunId, setCompareRunId] = useState("");
+  const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
+  const comparison = compareRun
+    ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
+    : null;
 
   useEffect(() => {
     setExplanations(activeResult.explanations);
@@ -44,6 +49,16 @@ export default function AdminTeamsPage() {
     setExplanationModel(undefined);
     setExplanationWarnings([]);
   }, [activeResult.explanations]);
+
+  useEffect(() => {
+    if (!savedMatchRuns.length) {
+      setCompareRunId("");
+      return;
+    }
+    if (!savedMatchRuns.some((run) => run.id === compareRunId)) {
+      setCompareRunId(savedMatchRuns[0].id);
+    }
+  }, [compareRunId, savedMatchRuns]);
 
   function downloadCsv() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -222,6 +237,84 @@ export default function AdminTeamsPage() {
           </div>
         </div>
       </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Run comparison</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Compare the current live generated teams against a saved run before choosing which one to use.
+            </p>
+          </div>
+          <label className="space-y-2 text-sm font-medium">
+            <span>Saved run</span>
+            <select
+              className="w-72 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+              disabled={!savedMatchRuns.length}
+              onChange={(event) => setCompareRunId(event.target.value)}
+              value={compareRun?.id ?? ""}
+            >
+              {savedMatchRuns.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {run.name} - {formatDate(run.createdAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {comparison && compareRun ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+              <CompareMetric label="Average score" current={comparison.live.averageScore} saved={comparison.saved.averageScore} />
+              <CompareMetric label="Assigned" current={comparison.live.assignedCount} saved={comparison.saved.assignedCount} />
+              <CompareMetric label="Unassigned" current={comparison.live.unassignedCount} saved={comparison.saved.unassignedCount} invert />
+              <CompareMetric label="Teams" current={comparison.live.teamCount} saved={comparison.saved.teamCount} />
+              <CompareMetric label="Warnings" current={comparison.live.warningCount} saved={comparison.saved.warningCount} invert />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+              <div className="rounded-md border border-border bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">Quality read</h3>
+                  <Badge className={comparison.scoreDelta >= 0 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                    {comparison.scoreDelta >= 0 ? "+" : ""}{comparison.scoreDelta} avg score
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {describeComparison(comparison, compareRun.name)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">Moved participants</h3>
+                  <Badge>{comparison.movedParticipants.length} moved</Badge>
+                </div>
+                {comparison.movedParticipants.length ? (
+                  <div className="mt-3 max-h-40 space-y-2 overflow-auto text-sm">
+                    {comparison.movedParticipants.slice(0, 8).map((move) => (
+                      <div key={move.id} className="flex flex-wrap justify-between gap-2 rounded-md bg-muted px-3 py-2">
+                        <span className="font-medium">{move.name}</span>
+                        <span className="text-muted-foreground">{move.savedTeam} {"->"} {move.liveTeam}</span>
+                      </div>
+                    ))}
+                    {comparison.movedParticipants.length > 8 ? (
+                      <div className="text-xs text-muted-foreground">
+                        +{comparison.movedParticipants.length - 8} more moved participants
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No participant team changes against {compareRun.name}.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+            Save a match run to compare it against the current live generated teams.
+          </div>
+        )}
+      </Card>
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">Explanation provider</h2>
@@ -341,6 +434,38 @@ export default function AdminTeamsPage() {
   );
 }
 
+function CompareMetric({
+  label,
+  current,
+  saved,
+  invert = false
+}: {
+  label: string;
+  current: number;
+  saved: number;
+  invert?: boolean;
+}) {
+  const delta = current - saved;
+  const isImprovement = invert ? delta <= 0 : delta >= 0;
+  return (
+    <div className="rounded-md border border-border bg-white p-4">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-2xl font-bold">{current}</div>
+          <div className="text-xs text-muted-foreground">Live</div>
+        </div>
+        <div className="text-right">
+          <div className={isImprovement ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
+            {delta >= 0 ? "+" : ""}{delta}
+          </div>
+          <div className="text-xs text-muted-foreground">vs saved {saved}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScoreBar({ label, value, invert = false }: { label: string; value: number; invert?: boolean }) {
   const normalized = Math.max(0, Math.min(100, value));
   const healthy = invert ? value <= 10 : value >= 75;
@@ -396,4 +521,109 @@ function runButtonClass(active: boolean) {
   return `rounded-md border px-4 py-3 text-left text-sm font-semibold ${
     active ? "border-primary bg-emerald-50 text-foreground" : "border-border bg-white text-muted-foreground"
   }`;
+}
+
+function summarizeResult(result: MatchingResult) {
+  const scoredTeams = result.teams.filter((team) => typeof team.score?.totalScore === "number");
+  const assignedCount = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
+  return {
+    averageScore: scoredTeams.length
+      ? Math.round(scoredTeams.reduce((sum, team) => sum + (team.score?.totalScore ?? 0), 0) / scoredTeams.length)
+      : 0,
+    assignedCount,
+    teamCount: result.teams.length,
+    unassignedCount: result.unassignedParticipants.length,
+    warningCount: result.warnings.length
+  };
+}
+
+function participantTeamMap(result: MatchingResult, participants: Participant[]) {
+  const participantsById = new Map(participants.map((participant) => [participant.id, participant]));
+  const map = new Map<string, { id: string; name: string; team: string }>();
+  result.teams.forEach((team) => {
+    team.participantIds.forEach((participantId) => {
+      const participant = participantsById.get(participantId);
+      map.set(participantId, {
+        id: participantId,
+        name: participant?.fullName ?? participantId,
+        team: team.name
+      });
+    });
+  });
+  result.unassignedParticipants.forEach((participantId) => {
+    const participant = participantsById.get(participantId);
+    map.set(participantId, {
+      id: participantId,
+      name: participant?.fullName ?? participantId,
+      team: "Unassigned"
+    });
+  });
+  return map;
+}
+
+function compareRuns(
+  liveResult: MatchingResult,
+  liveParticipants: Participant[],
+  savedResult: MatchingResult,
+  savedParticipants: Participant[]
+) {
+  const live = summarizeResult(liveResult);
+  const saved = summarizeResult(savedResult);
+  const liveTeams = participantTeamMap(liveResult, liveParticipants);
+  const savedTeams = participantTeamMap(savedResult, savedParticipants);
+  const movedParticipants = Array.from(liveTeams.values())
+    .map((liveParticipant) => {
+      const savedParticipant = savedTeams.get(liveParticipant.id);
+      if (!savedParticipant || savedParticipant.team === liveParticipant.team) return null;
+      return {
+        id: liveParticipant.id,
+        name: liveParticipant.name,
+        liveTeam: liveParticipant.team,
+        savedTeam: savedParticipant.team
+      };
+    })
+    .filter((move): move is { id: string; name: string; liveTeam: string; savedTeam: string } => Boolean(move))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  return {
+    live,
+    saved,
+    scoreDelta: live.averageScore - saved.averageScore,
+    assignedDelta: live.assignedCount - saved.assignedCount,
+    unassignedDelta: live.unassignedCount - saved.unassignedCount,
+    warningDelta: live.warningCount - saved.warningCount,
+    movedParticipants
+  };
+}
+
+function describeComparison(
+  comparison: ReturnType<typeof compareRuns>,
+  savedRunName: string
+) {
+  const notes: string[] = [];
+  if (comparison.scoreDelta > 0) {
+    notes.push(`Live teams average ${comparison.scoreDelta} points higher than ${savedRunName}.`);
+  } else if (comparison.scoreDelta < 0) {
+    notes.push(`${savedRunName} averages ${Math.abs(comparison.scoreDelta)} points higher than the live teams.`);
+  } else {
+    notes.push(`Live teams and ${savedRunName} have the same average score.`);
+  }
+
+  if (comparison.assignedDelta > 0) {
+    notes.push(`Live assigns ${comparison.assignedDelta} more participant${comparison.assignedDelta === 1 ? "" : "s"}.`);
+  } else if (comparison.assignedDelta < 0) {
+    notes.push(`${savedRunName} assigns ${Math.abs(comparison.assignedDelta)} more participant${comparison.assignedDelta === -1 ? "" : "s"}.`);
+  }
+
+  if (comparison.warningDelta > 0) {
+    notes.push(`Live has ${comparison.warningDelta} more warning${comparison.warningDelta === 1 ? "" : "s"} to review.`);
+  } else if (comparison.warningDelta < 0) {
+    notes.push(`Live has ${Math.abs(comparison.warningDelta)} fewer warning${comparison.warningDelta === -1 ? "" : "s"}.`);
+  }
+
+  if (comparison.movedParticipants.length > 0) {
+    notes.push(`${comparison.movedParticipants.length} participant${comparison.movedParticipants.length === 1 ? " has" : "s have"} moved teams.`);
+  }
+
+  return notes.join(" ");
 }
