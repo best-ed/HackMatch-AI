@@ -3,6 +3,7 @@
 import { Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import type { MatchingSettings } from "@/lib/matching/types";
+import { matchingPresets } from "@/lib/settings-guardrails";
 
 export default function AdminSettingsPage() {
   const { settings, setSettings, resetDemoData } = useHackMatchData();
@@ -34,6 +35,27 @@ export default function AdminSettingsPage() {
           Reset demo data
         </button>
       </div>
+      <Card className="space-y-4">
+        <div>
+          <h2 className="font-semibold">Presets</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Apply explicit deterministic settings. You can still edit every value afterward.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {matchingPresets.map((preset) => (
+            <button
+              className="rounded-md border border-border bg-white p-4 text-left transition hover:border-primary hover:bg-emerald-50"
+              key={preset.id}
+              onClick={() => setSettings(preset.settings)}
+              type="button"
+            >
+              <div className="font-semibold">{preset.name}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
+            </button>
+          ))}
+        </div>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-4">
           <h2 className="font-semibold">Constraints</h2>

@@ -3,6 +3,7 @@ import { participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
+import { matchingPresets } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
 function assignedIds(result: ReturnType<typeof generateTeams>) {
@@ -129,4 +130,16 @@ describe("deterministic matching", () => {
     expect(imported?.cohort).toBe("May Hackathon");
     expect(imported?.technicalSkills).toEqual(["Node", "SQL"]);
   });
+
+  it("provides deterministic matching settings presets", () => {
+    expect(matchingPresets.map((preset) => preset.id)).toEqual([
+      "balanced",
+      "skill-heavy",
+      "beginner-friendly",
+      "strict-constraints"
+    ]);
+    expect(matchingPresets.find((preset) => preset.id === "skill-heavy")?.settings.weights.skillBalance)
+      .toBeGreaterThan(demoMatchingSettings.weights.skillBalance);
+  });
+
 });
