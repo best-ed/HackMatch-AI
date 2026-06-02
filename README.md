@@ -103,7 +103,7 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
-Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped rows, skip or update duplicates, and default missing cohort values to the active cohort.
+Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, and default missing cohort values to the active cohort.
 
 Participant registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link and review saved profile details. Admins can open or copy each participant's team link from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
@@ -147,7 +147,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, CSV import duplicate handling, settings presets, and settings validation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, CSV import duplicate handling, CSV import validation, settings presets, and settings validation.
 
 ## Main Routes
 
