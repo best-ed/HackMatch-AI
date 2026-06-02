@@ -10,6 +10,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Generates balanced teams with deterministic hard constraints and weighted soft constraints.
 - Shows score breakdowns for every team.
 - Provides matching settings presets and health checks before generation.
+- Lets organizers lock live teams so their membership is preserved during later regeneration.
 - Saves generated match runs as frozen snapshots for later review.
 - Exports and imports participant CSV files, and exports generated teams to CSV.
 
@@ -109,6 +110,8 @@ Participant registrations receive an access token and redirect to `/participant/
 
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
+Live teams can also be locked from `/admin/teams`. Locked teams are passed back into the deterministic matcher through explicit settings, so their participants stay together while the rest of the cohort can be regenerated and optimized.
+
 Participants can be assigned to cohorts such as `General`, `May Hackathon`, or `Workshop A`. Admin matching and team exports use the active cohort, so separate events or groups can be generated independently without changing older saved runs.
 
 ## Organizer Workflow
@@ -147,7 +150,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, score breakdowns, CSV export, CSV import duplicate handling, CSV import validation, settings presets, and settings validation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, CSV import duplicate handling, CSV import validation, settings presets, and settings validation.
 
 ## Main Routes
 
