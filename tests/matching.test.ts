@@ -131,6 +131,43 @@ describe("deterministic matching", () => {
     expect(imported?.technicalSkills).toEqual(["Node", "SQL"]);
   });
 
+  it("flags invalid participant import rows", () => {
+    const csv = [
+      "full_name,email,experience_level,availability",
+      "Broken Row,not-an-email,expert,moonlight"
+    ].join("\n");
+    const plan = planParticipantCsvImport({
+      csv,
+      existingParticipants: demoParticipants,
+      activeCohort: "General",
+      now: "2026-05-31T00:00:00.000Z"
+    });
+
+    expect(plan.invalidCount).toBe(1);
+    expect(plan.createdCount).toBe(0);
+    expect(plan.rowPreviews[0].action).toBe("error");
+    expect(plan.errors.join(" ")).toContain("email must use a valid address format");
+    expect(plan.errors.join(" ")).toContain("availability contains invalid slot");
+  });
+
+  it("previews duplicate imports as updates when requested", () => {
+    const csv = [
+      "full_name,email,primary_role,technical_skills,availability,consent_to_match",
+      "\"Avery Chen\",avery.chen@example.com,Backend,\"Node; SQL\",weekend_morning,true"
+    ].join("\n");
+    const plan = planParticipantCsvImport({
+      csv,
+      existingParticipants: demoParticipants,
+      activeCohort: "General",
+      mode: "update",
+      now: "2026-05-31T00:00:00.000Z"
+    });
+
+    expect(plan.updatedCount).toBe(1);
+    expect(plan.rowPreviews[0].action).toBe("update");
+    expect(plan.rowPreviews[0].duplicateName).toBe("Avery Chen");
+  });
+
   it("provides deterministic matching settings presets", () => {
     expect(matchingPresets.map((preset) => preset.id)).toEqual([
       "balanced",

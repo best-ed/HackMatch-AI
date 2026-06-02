@@ -260,10 +260,11 @@ export default function AdminParticipantsPage() {
             {importPlan ? (
               <div className="rounded-md border border-border bg-muted p-3 text-sm">
                 <div className="font-semibold">Preview</div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                <div className="mt-2 grid grid-cols-2 gap-2 text-center">
                   <PreviewMetric label="New" value={importPlan.createdCount} />
                   <PreviewMetric label="Updated" value={importPlan.updatedCount} />
                   <PreviewMetric label="Skipped" value={importPlan.skippedCount} />
+                  <PreviewMetric label="Invalid" value={importPlan.invalidCount} />
                 </div>
               </div>
             ) : null}
@@ -292,6 +293,50 @@ export default function AdminParticipantsPage() {
         {importPlan?.warnings.length ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {importPlan.warnings.join(" ")}
+          </div>
+        ) : null}
+        {importPlan?.rowPreviews.length ? (
+          <div className="overflow-hidden rounded-md border border-border">
+            <div className="bg-muted px-4 py-3 text-sm font-semibold">Row preview</div>
+            <div className="max-h-72 overflow-auto">
+              <table className="w-full min-w-[760px] border-collapse text-sm">
+                <thead className="bg-white text-left">
+                  <tr>
+                    {["Row", "Action", "Participant", "Notes"].map((heading) => (
+                      <th key={heading} className="border-t border-border px-4 py-2 font-semibold">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPlan.rowPreviews.map((row) => (
+                    <tr key={row.rowNumber} className="border-t border-border align-top">
+                      <td className="px-4 py-3">{row.rowNumber}</td>
+                      <td className="px-4 py-3">
+                        <Badge className={importActionClass(row.action)}>{row.action}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{row.fullName || "Missing name"}</div>
+                        <div className="text-xs text-muted-foreground">{row.email || "Missing email"}</div>
+                        {row.duplicateName ? (
+                          <div className="mt-1 text-xs text-muted-foreground">Duplicate: {row.duplicateName}</div>
+                        ) : null}
+                      </td>
+                      <td className="space-y-1 px-4 py-3">
+                        {row.errors.map((error) => (
+                          <div key={error} className="text-xs font-medium text-rose-700">{error}</div>
+                        ))}
+                        {row.warnings.map((warning) => (
+                          <div key={warning} className="text-xs text-amber-700">{warning}</div>
+                        ))}
+                        {row.errors.length === 0 && row.warnings.length === 0 ? (
+                          <div className="text-xs text-muted-foreground">Ready</div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
         {importPlan?.errors.length ? (
@@ -400,6 +445,13 @@ function PreviewMetric({ label, value }: { label: string; value: number }) {
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
+}
+
+function importActionClass(action: "create" | "update" | "skip" | "error") {
+  if (action === "create") return "bg-emerald-100 text-emerald-800";
+  if (action === "update") return "bg-sky-100 text-sky-800";
+  if (action === "skip") return "bg-slate-100 text-slate-800";
+  return "bg-rose-100 text-rose-800";
 }
 
 function copyAccessLink(participant: Participant) {

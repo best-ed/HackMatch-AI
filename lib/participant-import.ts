@@ -7,6 +7,18 @@ export type ParticipantImportPlan = {
   createdCount: number;
   updatedCount: number;
   skippedCount: number;
+  invalidCount: number;
+  errors: string[];
+  warnings: string[];
+  rowPreviews: ParticipantImportRowPreview[];
+};
+
+export type ParticipantImportRowPreview = {
+  rowNumber: number;
+  fullName: string;
+  email: string;
+  action: "create" | "update" | "skip" | "error";
+  duplicateName?: string;
   errors: string[];
   warnings: string[];
 };
@@ -148,6 +160,10 @@ function parseExperienceLevel(value: string): ExperienceLevel {
     : "beginner";
 }
 
+function invalidAvailabilitySlots(value: string): string[] {
+  return splitCsvList(value).filter((item) => !availabilitySlots.includes(item as AvailabilitySlot));
+}
+
 function parseAvailability(value: string): AvailabilitySlot[] {
   const slots = splitCsvList(value).filter((item): item is AvailabilitySlot =>
     availabilitySlots.includes(item as AvailabilitySlot)
@@ -157,6 +173,10 @@ function parseAvailability(value: string): AvailabilitySlot[] {
 
 function getRowValue(row: Record<string, string>, key: string): string {
   return row[key]?.trim() ?? "";
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function findDuplicate(participant: Participant, participants: Participant[]): Participant | undefined {
@@ -186,6 +206,7 @@ export function planParticipantCsvImport({
   const rows = parseCsvRows(csv);
   const errors: string[] = [];
   const warnings: string[] = [];
+  const rowPreviews: ParticipantImportRowPreview[] = [];
 
   if (rows.length < 2) {
     return {
@@ -193,8 +214,10 @@ export function planParticipantCsvImport({
       createdCount: 0,
       updatedCount: 0,
       skippedCount: 0,
+      invalidCount: 0,
       errors: ["CSV must include a header row and at least one participant row."],
-      warnings
+      warnings,
+      rowPreviews
     };
   }
 
@@ -203,6 +226,7 @@ export function planParticipantCsvImport({
   let createdCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
+  let invalidCount = 0;
 
   rows.slice(1).forEach((cells, rowIndex) => {
     const rowNumber = rowIndex + 2;
@@ -212,9 +236,38 @@ export function planParticipantCsvImport({
     }, {});
     const fullName = getRowValue(row, "full_name");
     const email = getRowValue(row, "email");
+    const rowErrors: string[] = [];
+    const rowWarnings: string[] = [];
 
-    if (!fullName || !email) {
-      errors.push(`Row ${rowNumber}: full_name and email are required.`);
+    if (!fullName) rowErrors.push("full_name is required.");
+    if (!email) rowErrors.push("email is required.");
+    if (email && !isValidEmail(email)) rowErrors.push("email must use a valid address format.");
+
+    const rawExperience = getRowValue(row, "experience_level");
+    if (rawExperience && !experienceLevels.includes(rawExperience.toLowerCase() as ExperienceLevel)) {
+      rowErrors.push(`experience_level must be one of ${experienceLevels.join(", ")}.`);
+    }
+
+    const badAvailability = invalidAvailabilitySlots(getRowValue(row, "availability"));
+    if (badAvailability.length > 0) {
+      rowErrors.push(`availability contains invalid slot(s): ${badAvailability.join(", ")}.`);
+    }
+
+    if (!getRowValue(row, "primary_role")) rowWarnings.push("primary_role is missing; Frontend will be used.");
+    if (!getRowValue(row, "technical_skills")) rowWarnings.push("technical_skills is empty.");
+    if (!getRowValue(row, "consent_to_match")) rowWarnings.push("consent_to_match is missing; true will be used.");
+
+    if (rowErrors.length > 0) {
+      invalidCount += 1;
+      errors.push(`Row ${rowNumber}: ${rowErrors.join(" ")}`);
+      rowPreviews.push({
+        rowNumber,
+        fullName,
+        email,
+        action: "error",
+        errors: rowErrors,
+        warnings: rowWarnings
+      });
       return;
     }
 
@@ -252,6 +305,15 @@ export function planParticipantCsvImport({
     if (duplicate) {
       if (mode === "skip") {
         skippedCount += 1;
+        rowPreviews.push({
+          rowNumber,
+          fullName,
+          email,
+          action: "skip",
+          duplicateName: duplicate.fullName,
+          errors: [],
+          warnings: rowWarnings
+        });
         return;
       }
 
@@ -267,11 +329,28 @@ export function planParticipantCsvImport({
       const duplicateIndex = planned.findIndex((item) => item.id === duplicate.id);
       planned[duplicateIndex] = updated;
       updatedCount += 1;
+      rowPreviews.push({
+        rowNumber,
+        fullName,
+        email,
+        action: "update",
+        duplicateName: duplicate.fullName,
+        errors: [],
+        warnings: rowWarnings
+      });
       return;
     }
 
     planned.push(participant);
     createdCount += 1;
+    rowPreviews.push({
+      rowNumber,
+      fullName,
+      email,
+      action: "create",
+      errors: [],
+      warnings: rowWarnings
+    });
   });
 
   if (!headers.includes("cohort")) {
@@ -283,7 +362,9 @@ export function planParticipantCsvImport({
     createdCount,
     updatedCount,
     skippedCount,
+    invalidCount,
     errors,
-    warnings
+    warnings,
+    rowPreviews
   };
 }
