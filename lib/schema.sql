@@ -28,6 +28,9 @@ create table participants (
   updated_at timestamptz not null default now()
 );
 
+create index participants_cohort_idx on participants (cohort);
+create index participants_consent_to_match_idx on participants (consent_to_match);
+
 create table matching_settings (
   id text primary key default 'default',
   desired_team_size integer not null default 4,
@@ -55,6 +58,7 @@ create table team_assignments (
 create table match_runs (
   id text primary key,
   name text not null,
+  cohort text not null default 'General',
   participant_count integer not null,
   assigned_count integer not null,
   average_score integer not null,
