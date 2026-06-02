@@ -13,6 +13,7 @@ export default function AdminTeamsPage() {
   const {
     cohortParticipants,
     settings,
+    setSettings,
     savedMatchRuns,
     saveMatchRun,
     deleteMatchRun,
@@ -26,6 +27,7 @@ export default function AdminTeamsPage() {
     () => generateTeams(cohortParticipants, settings),
     [cohortParticipants, settings]
   );
+  const lockedTeams = settings.lockedTeams ?? [];
   const [activeRunId, setActiveRunId] = useState("live");
   const activeRun = savedMatchRuns.find((run) => run.id === activeRunId);
   const activeResult = activeRun?.result ?? result;
@@ -113,6 +115,33 @@ export default function AdminTeamsPage() {
     setActiveRunId(run.id);
   }
 
+  function toggleTeamLock(teamId: string) {
+    const currentLockedTeams = settings.lockedTeams ?? [];
+    const isLocked = currentLockedTeams.some((team) => team.id === teamId);
+    if (isLocked) {
+      setSettings({
+        ...settings,
+        lockedTeams: currentLockedTeams.filter((team) => team.id !== teamId)
+      });
+      return;
+    }
+
+    const teamToLock = result.teams.find((team) => team.id === teamId);
+    if (!teamToLock) return;
+    setSettings({
+      ...settings,
+      lockedTeams: [
+        ...currentLockedTeams,
+        {
+          id: teamToLock.id,
+          name: teamToLock.name,
+          participantIds: [...teamToLock.participantIds].sort(),
+          locked: true
+        }
+      ].sort((left, right) => left.id.localeCompare(right.id))
+    });
+  }
+
   function removeRun(run: SavedMatchRun) {
     deleteMatchRun(run.id);
     if (activeRunId === run.id) {
@@ -191,6 +220,17 @@ export default function AdminTeamsPage() {
             : `${cohortParticipants.length} participant(s) in cohort`}
         </Badge>
       </Card>
+      {!isViewingSavedRun ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Team locks</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Lock a live team to preserve its exact membership while regenerating the rest.
+            </p>
+          </div>
+          <Badge>{lockedTeams.length} locked</Badge>
+        </Card>
+      ) : null}
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -358,6 +398,9 @@ export default function AdminTeamsPage() {
                 <div>
                   <h2 className="text-xl font-semibold">{team.name}</h2>
                   <div className="mt-2 flex flex-wrap gap-2">
+                    {team.locked ? (
+                      <Badge className="bg-sky-100 text-sky-800">Locked</Badge>
+                    ) : null}
                     <Badge className={scoreBadgeClass(team.score?.totalScore ?? 0)}>
                       Overall {team.score?.totalScore}
                     </Badge>
@@ -366,13 +409,26 @@ export default function AdminTeamsPage() {
                     ))}
                   </div>
                 </div>
-                <button
-                  className="rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
-                  onClick={() => void copyTeamSummary(team.name, members, explanation)}
-                  type="button"
-                >
-                  Copy summary
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  {!isViewingSavedRun ? (
+                    <button
+                      className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                        team.locked ? "border-sky-200 bg-sky-50 text-sky-800" : "border-border bg-white"
+                      }`}
+                      onClick={() => toggleTeamLock(team.id)}
+                      type="button"
+                    >
+                      {team.locked ? "Unlock team" : "Lock team"}
+                    </button>
+                  ) : null}
+                  <button
+                    className="rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
+                    onClick={() => void copyTeamSummary(team.name, members, explanation)}
+                    type="button"
+                  >
+                    Copy summary
+                  </button>
+                </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {members.map((participant) => (

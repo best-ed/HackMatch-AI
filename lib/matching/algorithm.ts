@@ -93,6 +93,32 @@ function createEmptyTeams(count: number, lockedTeams: TeamAssignment[]): TeamAss
   return teams;
 }
 
+function restoreLockedTeams(
+  teams: TeamAssignment[],
+  lockedTeams: TeamAssignment[]
+): TeamAssignment[] {
+  const lockedById = new Map(
+    lockedTeams.map((team) => [
+      team.id,
+      {
+        ...team,
+        participantIds: [...team.participantIds].sort(),
+        locked: true
+      }
+    ])
+  );
+
+  return teams.map((team) => {
+    const lockedTeam = lockedById.get(team.id);
+    return lockedTeam
+      ? {
+          ...team,
+          ...lockedTeam
+        }
+      : team;
+  });
+}
+
 function contributionScore(
   participant: NormalizedParticipant,
   team: TeamAssignment,
@@ -218,8 +244,9 @@ export function generateTeams(
     settings
   );
 
-  const scoreBreakdowns = scoreTeams(optimized, participantsById, settings);
-  const finalTeams = optimized.map((team) => ({
+  const lockedRestored = restoreLockedTeams(optimized, lockedTeams);
+  const scoreBreakdowns = scoreTeams(lockedRestored, participantsById, settings);
+  const finalTeams = lockedRestored.map((team) => ({
     ...team,
     score: scoreBreakdowns[team.id]
   }));

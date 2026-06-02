@@ -84,6 +84,47 @@ describe("deterministic matching", () => {
     }
   });
 
+  it("preserves locked team membership", () => {
+    const baseline = generateTeams(demoParticipants, demoMatchingSettings);
+    const lockedTeam = baseline.teams[0];
+    const result = generateTeams(demoParticipants, {
+      ...demoMatchingSettings,
+      lockedTeams: [{
+        id: lockedTeam.id,
+        name: lockedTeam.name,
+        participantIds: lockedTeam.participantIds,
+        locked: true
+      }]
+    });
+    const preserved = result.teams.find((team) => team.id === lockedTeam.id);
+
+    expect(preserved?.locked).toBe(true);
+    expect(preserved?.participantIds).toEqual([...lockedTeam.participantIds].sort());
+  });
+
+  it("does not reassign locked participants to another team", () => {
+    const baseline = generateTeams(demoParticipants, demoMatchingSettings);
+    const lockedTeam = baseline.teams[0];
+    const result = generateTeams(demoParticipants, {
+      ...demoMatchingSettings,
+      lockedTeams: [{
+        id: lockedTeam.id,
+        name: lockedTeam.name,
+        participantIds: lockedTeam.participantIds,
+        locked: true
+      }]
+    });
+    const lockedIds = new Set(lockedTeam.participantIds);
+    const appearances = result.teams.flatMap((team) =>
+      team.participantIds
+        .filter((participantId) => lockedIds.has(participantId))
+        .map((participantId) => `${participantId}:${team.id}`)
+    );
+
+    expect(appearances).toHaveLength(lockedTeam.participantIds.length);
+    expect(appearances.every((appearance) => appearance.endsWith(`:${lockedTeam.id}`))).toBe(true);
+  });
+
   it("exports generated teams as CSV", () => {
     const result = generateTeams(demoParticipants, demoMatchingSettings);
     const csv = teamsToCsv(result, demoParticipants);
