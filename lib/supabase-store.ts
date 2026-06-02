@@ -51,6 +51,7 @@ type SettingsRow = {
   require_presenter: boolean;
   prevent_beginner_only_teams: boolean;
   distribute_advanced_participants: boolean;
+  locked_teams: MatchingSettings["lockedTeams"] | null;
   weights: MatchingSettings["weights"];
   updated_at: string;
 };
@@ -205,6 +206,7 @@ function rowToSettings(row: SettingsRow): MatchingSettings {
     requirePresenter: row.require_presenter,
     preventBeginnerOnlyTeams: row.prevent_beginner_only_teams,
     distributeAdvancedParticipants: row.distribute_advanced_participants,
+    lockedTeams: row.locked_teams ?? [],
     weights: row.weights
   };
 }
@@ -221,6 +223,7 @@ function settingsToRow(settings: MatchingSettings): SettingsRow {
     require_presenter: settings.requirePresenter,
     prevent_beginner_only_teams: settings.preventBeginnerOnlyTeams,
     distribute_advanced_participants: settings.distributeAdvancedParticipants,
+    locked_teams: settings.lockedTeams ?? [],
     weights: settings.weights,
     updated_at: new Date().toISOString()
   };

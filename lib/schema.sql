@@ -42,6 +42,7 @@ create table matching_settings (
   require_presenter boolean not null default true,
   prevent_beginner_only_teams boolean not null default true,
   distribute_advanced_participants boolean not null default true,
+  locked_teams jsonb not null default '[]',
   weights jsonb not null,
   updated_at timestamptz not null default now()
 );
