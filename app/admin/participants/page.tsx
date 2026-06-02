@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
 import { participantsToCsv } from "@/lib/export";
 import { joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
@@ -8,7 +9,18 @@ import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 
 export default function AdminParticipantsPage() {
-  const { participants, setParticipants, saveParticipant, deleteParticipant, resetDemoData, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
+  const {
+    participants,
+    setParticipants,
+    saveParticipant,
+    deleteParticipant,
+    resetDemoData,
+    activeCohort,
+    setActiveCohort,
+    cohorts,
+    persistenceMode,
+    persistenceWarning
+  } = useHackMatchData();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
@@ -143,6 +155,11 @@ export default function AdminParticipantsPage() {
           {exportStatus}
         </div>
       ) : null}
+      <AdminPersistenceStatus
+        mode={persistenceMode}
+        warning={persistenceWarning}
+        detail="Participant edits, imports, access tokens, and cohorts are stored in this browser until Supabase env vars are configured."
+      />
       <div className="grid gap-4 md:grid-cols-4">
         <Metric label="Total" value={participants.length} />
         <Metric label="Showing" value={filteredParticipants.length} />

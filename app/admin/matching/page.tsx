@@ -3,13 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-react";
+import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult } from "@/lib/matching/types";
 
 export default function AdminMatchingPage() {
-  const { cohortParticipants, settings, activeCohort, setActiveCohort, cohorts } = useHackMatchData();
+  const {
+    cohortParticipants,
+    settings,
+    activeCohort,
+    setActiveCohort,
+    cohorts,
+    persistenceMode,
+    persistenceWarning
+  } = useHackMatchData();
   const [newCohort, setNewCohort] = useState("");
   const result = generateTeams(cohortParticipants, settings);
   const eligible = cohortParticipants.filter((participant) => participant.consentToMatch);
@@ -48,6 +57,11 @@ export default function AdminMatchingPage() {
           View teams
         </Link>
       </div>
+      <AdminPersistenceStatus
+        mode={persistenceMode}
+        warning={persistenceWarning}
+        detail="Cohort selection is stored locally; participant and settings edits can sync to Supabase when env vars are configured."
+      />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

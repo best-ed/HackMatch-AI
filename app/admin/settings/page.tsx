@@ -1,13 +1,22 @@
 "use client";
 
 import { useMemo } from "react";
+import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import type { MatchingSettings } from "@/lib/matching/types";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 
 export default function AdminSettingsPage() {
-  const { settings, setSettings, resetDemoData, cohortParticipants, activeCohort } = useHackMatchData();
+  const {
+    settings,
+    setSettings,
+    resetDemoData,
+    cohortParticipants,
+    activeCohort,
+    persistenceMode,
+    persistenceWarning
+  } = useHackMatchData();
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
     [cohortParticipants, settings]
@@ -40,6 +49,11 @@ export default function AdminSettingsPage() {
           Reset demo data
         </button>
       </div>
+      <AdminPersistenceStatus
+        mode={persistenceMode}
+        warning={persistenceWarning}
+        detail="Matching settings are stored in this browser until Supabase env vars are configured."
+      />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { teamsToCsv } from "@/lib/export";
@@ -17,7 +18,9 @@ export default function AdminTeamsPage() {
     deleteMatchRun,
     activeCohort,
     setActiveCohort,
-    cohorts
+    cohorts,
+    persistenceMode,
+    persistenceWarning
   } = useHackMatchData();
   const result = useMemo(
     () => generateTeams(cohortParticipants, settings),
@@ -163,6 +166,11 @@ export default function AdminTeamsPage() {
           </button>
         </div>
       </div>
+      <AdminPersistenceStatus
+        mode={persistenceMode}
+        warning={persistenceWarning}
+        detail="Live generated teams and saved match runs are kept in local browser storage; participant and settings data can sync to Supabase when configured."
+      />
       <Card className="flex flex-wrap items-end justify-between gap-4">
         <label className="space-y-2 text-sm font-medium">
           <span>Active cohort</span>
