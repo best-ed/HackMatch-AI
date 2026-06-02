@@ -127,7 +127,11 @@ The settings page includes presets for balanced, skill-heavy, beginner-friendly,
 
 ## Supabase Persistence
 
-HackMatch AI can run fully offline with browser `localStorage`. To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:
+HackMatch AI can run fully offline with browser `localStorage`. Admin pages show whether the app is using local storage or Supabase so organizers know where edits are being kept.
+
+The current Supabase adapter is plug-ready for editable participants and matching settings. Participant cohorts and access tokens are included in the schema and adapter. Saved match runs remain local browser snapshots in the MVP, while `lib/schema.sql` includes a cohort-aware `match_runs` table for a later remote persistence pass.
+
+To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
