@@ -114,3 +114,33 @@ export function participantsToCsv(participants: Participant[]): string {
 
   return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
 }
+
+export function participantLinksToCsv(
+  participants: Participant[],
+  origin: string
+): string {
+  const rows = [
+    [
+      "participant_id",
+      "full_name",
+      "email",
+      "cohort",
+      "access_token",
+      "team_link"
+    ]
+  ];
+
+  for (const participant of participants) {
+    const accessToken = participant.accessToken ?? "";
+    rows.push([
+      participant.id,
+      participant.fullName,
+      participant.email,
+      participant.cohort ?? "General",
+      accessToken,
+      accessToken ? `${origin}/participant/team?access=${encodeURIComponent(accessToken)}` : ""
+    ]);
+  }
+
+  return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+}

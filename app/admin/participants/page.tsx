@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
-import { participantsToCsv } from "@/lib/export";
-import { joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
+import { participantLinksToCsv, participantsToCsv } from "@/lib/export";
+import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 
@@ -29,6 +29,7 @@ export default function AdminParticipantsPage() {
   const [importCsv, setImportCsv] = useState("");
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
   const [importStatus, setImportStatus] = useState("");
+  const [linkStatus, setLinkStatus] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -108,6 +109,35 @@ export default function AdminParticipantsPage() {
     setExportStatus(`Exported ${exportParticipants.length} participant${exportParticipants.length === 1 ? "" : "s"} to ${filename}.`);
   }
 
+  function downloadAccessLinksCsv(scope: "all" | "filtered") {
+    if (typeof window === "undefined") return;
+    const exportParticipants = scope === "all" ? participants : filteredParticipants;
+    const csv = participantLinksToCsv(exportParticipants, window.location.origin);
+    downloadCsvBlob(
+      csv,
+      scope === "all" ? "hackmatch-access-links.csv" : "hackmatch-access-links-filtered.csv"
+    );
+    setLinkStatus(`Exported ${exportParticipants.length} access link${exportParticipants.length === 1 ? "" : "s"}.`);
+  }
+
+  async function copyFilteredAccessLinks() {
+    if (typeof window === "undefined") return;
+    const links = filteredParticipants
+      .filter((participant) => participant.accessToken)
+      .map((participant) => {
+        const url = new URL(`/participant/team?access=${participant.accessToken}`, window.location.origin);
+        return `${participant.fullName}: ${url.toString()}`;
+      });
+    await navigator.clipboard?.writeText(links.join("\n"));
+    setLinkStatus(`Copied ${links.length} filtered access link${links.length === 1 ? "" : "s"}.`);
+  }
+
+  function regenerateAccessToken(participant: Participant) {
+    const nextToken = createParticipantAccessToken();
+    saveParticipant({ ...participant, accessToken: nextToken });
+    setLinkStatus(`Regenerated access token for ${participant.fullName}. Old links for this participant are now invalid.`);
+  }
+
   function handleCsvFile(file?: File) {
     if (!file) return;
     const reader = new FileReader();
@@ -153,6 +183,11 @@ export default function AdminParticipantsPage() {
       {exportStatus ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
           {exportStatus}
+        </div>
+      ) : null}
+      {linkStatus ? (
+        <div className="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800" role="status">
+          {linkStatus}
         </div>
       ) : null}
       <AdminPersistenceStatus
@@ -219,6 +254,25 @@ export default function AdminParticipantsPage() {
           >
             Clear
           </Button>
+        </div>
+      </Card>
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Access link management</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Copy or export participant team links for the current filtered view.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => void copyFilteredAccessLinks()}>
+            Copy filtered links
+          </button>
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("filtered")}>
+            Export filtered links
+          </button>
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("all")}>
+            Export all links
+          </button>
         </div>
       </Card>
       <Card className="space-y-4">
@@ -413,6 +467,13 @@ export default function AdminParticipantsPage() {
                   >
                     Copy link
                   </button>
+                  <button
+                    className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-amber-800"
+                    onClick={() => regenerateAccessToken(participant)}
+                    type="button"
+                  >
+                    Regenerate token
+                  </button>
                   <div className="break-all text-xs text-muted-foreground">
                     {participant.accessToken ? formatAccessToken(participant.accessToken) : "Token will be generated on next save"}
                   </div>
@@ -436,6 +497,19 @@ export default function AdminParticipantsPage() {
       </Card>
     </div>
   );
+}
+
+function downloadCsvBlob(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function PreviewMetric({ label, value }: { label: string; value: number }) {
