@@ -17,6 +17,9 @@ export default function AdminTeamsPage() {
     savedMatchRuns,
     saveMatchRun,
     deleteMatchRun,
+    renameMatchRun,
+    duplicateMatchRun,
+    restoreMatchRunSnapshot,
     activeCohort,
     setActiveCohort,
     cohorts,
@@ -43,6 +46,9 @@ export default function AdminTeamsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [runName, setRunName] = useState("");
   const [compareRunId, setCompareRunId] = useState("");
+  const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState("");
+  const [runActionStatus, setRunActionStatus] = useState("");
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
   const comparison = compareRun
     ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
@@ -144,9 +150,36 @@ export default function AdminTeamsPage() {
 
   function removeRun(run: SavedMatchRun) {
     deleteMatchRun(run.id);
+    setDeleteConfirmId("");
+    setRunActionStatus(`Deleted ${run.name}.`);
     if (activeRunId === run.id) {
       setActiveRunId("live");
     }
+  }
+
+  function renameRun(run: SavedMatchRun) {
+    const nextName = renameDrafts[run.id] ?? run.name;
+    renameMatchRun(run.id, nextName);
+    setRenameDrafts((current) => {
+      const next = { ...current };
+      delete next[run.id];
+      return next;
+    });
+    setRunActionStatus(`Renamed saved run to ${nextName.trim()}.`);
+  }
+
+  function duplicateRun(run: SavedMatchRun) {
+    const copy = duplicateMatchRun(run.id);
+    if (!copy) return;
+    setActiveRunId(copy.id);
+    setCompareRunId(copy.id);
+    setRunActionStatus(`Duplicated ${run.name} as ${copy.name}.`);
+  }
+
+  function restoreRun(run: SavedMatchRun) {
+    restoreMatchRunSnapshot(run.id);
+    setActiveRunId("live");
+    setRunActionStatus(`Restored ${run.name} as the live baseline.`);
   }
 
   async function copyTeamSummary(
@@ -241,6 +274,11 @@ export default function AdminTeamsPage() {
           </div>
           <Badge>{savedMatchRuns.length} saved</Badge>
         </div>
+        {runActionStatus ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+            {runActionStatus}
+          </div>
+        ) : null}
         <div className="grid gap-3 md:grid-cols-[220px_1fr]">
           <button
             className={runButtonClass(activeRunId === "live")}
@@ -263,18 +301,73 @@ export default function AdminTeamsPage() {
                   <div className="font-semibold">{run.name}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{formatDate(run.createdAt)}</div>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge>{run.cohort ?? "General"}</Badge>
                     <Badge>{run.result.teams.length} teams</Badge>
                     <Badge>{run.assignedCount}/{run.participantCount} assigned</Badge>
                     <Badge>Avg {run.averageScore}</Badge>
+                    <Badge>{run.result.warnings.length} warning(s)</Badge>
+                    <Badge>{run.settingsSnapshot.lockedTeams?.length ?? 0} lock(s)</Badge>
+                    <Badge>Size {run.settingsSnapshot.desiredTeamSize}</Badge>
                   </div>
                 </button>
-                <button
-                  className="mt-3 text-xs font-semibold text-rose-700"
-                  onClick={() => removeRun(run)}
-                  type="button"
-                >
-                  Delete saved run
-                </button>
+                <div className="mt-3 grid gap-2">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <input
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs outline-none ring-primary/20 focus:ring-4"
+                      onChange={(event) => setRenameDrafts((current) => ({ ...current, [run.id]: event.target.value }))}
+                      value={renameDrafts[run.id] ?? run.name}
+                    />
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      onClick={() => renameRun(run)}
+                      type="button"
+                    >
+                      Rename
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      onClick={() => duplicateRun(run)}
+                      type="button"
+                    >
+                      Duplicate
+                    </button>
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      onClick={() => restoreRun(run)}
+                      type="button"
+                    >
+                      Restore as live baseline
+                    </button>
+                    {deleteConfirmId === run.id ? (
+                      <>
+                        <button
+                          className="rounded-md bg-rose-700 px-3 py-2 text-xs font-semibold text-white"
+                          onClick={() => removeRun(run)}
+                          type="button"
+                        >
+                          Confirm delete
+                        </button>
+                        <button
+                          className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                          onClick={() => setDeleteConfirmId("")}
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold text-rose-700"
+                        onClick={() => setDeleteConfirmId(run.id)}
+                        type="button"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
             {savedMatchRuns.length === 0 ? (

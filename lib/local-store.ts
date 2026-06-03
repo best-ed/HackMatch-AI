@@ -329,6 +329,51 @@ export function useHackMatchData() {
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
       },
+      renameMatchRun(id: string, name: string) {
+        const cleaned = name.trim();
+        if (!cleaned) return;
+        const next = savedMatchRuns.map((run) =>
+          run.id === id ? { ...run, name: cleaned } : run
+        );
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+      },
+      duplicateMatchRun(id: string) {
+        const source = savedMatchRuns.find((run) => run.id === id);
+        if (!source) return undefined;
+        const timestamp = new Date().toISOString();
+        const copy: SavedMatchRun = {
+          ...source,
+          id: `run-${timestamp.replace(/[^0-9]/g, "")}`,
+          name: `${source.name} copy`,
+          createdAt: timestamp
+        };
+        const next = [copy, ...savedMatchRuns].slice(0, 20);
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+        return copy;
+      },
+      restoreMatchRunSnapshot(id: string) {
+        const run = savedMatchRuns.find((item) => item.id === id);
+        if (!run) return;
+        const restoredParticipants = normalizeParticipantsForStorage(run.participantsSnapshot);
+        const restoredSettings = run.settingsSnapshot;
+        const restoredCohort = run.cohort || defaultCohort;
+
+        setParticipantsState(restoredParticipants);
+        setSettingsState(restoredSettings);
+        setActiveCohortState(restoredCohort);
+        writeJson(participantsKey, restoredParticipants);
+        writeJson(settingsKey, restoredSettings);
+        window.localStorage.setItem(activeCohortKey, restoredCohort);
+
+        if (isSupabaseConfigured()) {
+          void Promise.all([
+            ...restoredParticipants.map((participant) => saveRemoteParticipant(participant)),
+            saveRemoteSettings(restoredSettings)
+          ]).catch(() => setPersistenceWarning("Supabase restore failed; local browser storage is still updated."));
+        }
+      },
       resetDemoData() {
         const normalizedDemoParticipants = normalizeParticipantsForStorage(demoParticipants);
         setParticipantsState(normalizedDemoParticipants);
