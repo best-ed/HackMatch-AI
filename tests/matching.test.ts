@@ -4,6 +4,7 @@ import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
+import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -290,6 +291,21 @@ describe("deterministic matching", () => {
     expect(health.status).toBe("error");
     expect(health.errors.some((error) => error.includes("Minimum team size"))).toBe(true);
     expect(health.errors.some((error) => error.includes("Weights cannot be negative"))).toBe(true);
+  });
+
+  it("summarizes matching settings impact previews", () => {
+    const current = summarizeMatchingImpact(generateTeams(demoParticipants, demoMatchingSettings));
+    const draft = summarizeMatchingImpact(generateTeams(demoParticipants, {
+      ...demoMatchingSettings,
+      numberOfTeams: 6
+    }));
+    const delta = compareMatchingImpact(current, draft);
+
+    expect(current.teamCount).toBeGreaterThan(0);
+    expect(current.assignedCount + current.unassignedCount).toBe(demoParticipants.length);
+    expect(draft.teamCount).toBe(6);
+    expect(delta.teamCount).toBe(draft.teamCount - current.teamCount);
+    expect(delta.averageScore).toBe(draft.averageScore - current.averageScore);
   });
 
 });

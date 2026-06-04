@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
+import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingSettings } from "@/lib/matching/types";
+import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 
 export default function AdminSettingsPage() {
@@ -17,23 +19,63 @@ export default function AdminSettingsPage() {
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
+  const [draftSettings, setDraftSettings] = useState<MatchingSettings>(settings);
+  const hasDraftChanges = JSON.stringify(draftSettings) !== JSON.stringify(settings);
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
     [cohortParticipants, settings]
   );
+  const draftHealth = useMemo(
+    () => validateMatchingSettings(draftSettings, cohortParticipants),
+    [cohortParticipants, draftSettings]
+  );
+  const currentImpact = useMemo(
+    () => summarizeMatchingImpact(generateTeams(cohortParticipants, settings)),
+    [cohortParticipants, settings]
+  );
+  const draftImpact = useMemo(
+    () => summarizeMatchingImpact(generateTeams(cohortParticipants, draftSettings)),
+    [cohortParticipants, draftSettings]
+  );
+  const impactDelta = useMemo(
+    () => compareMatchingImpact(currentImpact, draftImpact),
+    [currentImpact, draftImpact]
+  );
+  const draftStatusText = hasDraftChanges
+    ? "Draft changes are ready to apply."
+    : "Live settings and draft settings currently match.";
+
+  useEffect(() => {
+    setDraftSettings(settings);
+  }, [settings]);
 
   function update<K extends keyof MatchingSettings>(key: K, value: MatchingSettings[K]) {
-    setSettings({ ...settings, [key]: value });
+    setDraftSettings((current) => ({ ...current, [key]: value }));
   }
 
   function updateWeight(key: keyof MatchingSettings["weights"], value: number) {
-    setSettings({
-      ...settings,
+    setDraftSettings((current) => ({
+      ...current,
       weights: {
-        ...settings.weights,
+        ...current.weights,
         [key]: value
       }
-    });
+    }));
+  }
+
+  function applyDraftSettings() {
+    setSettings(draftSettings);
+  }
+
+  function resetDraftSettings() {
+    setDraftSettings(settings);
+  }
+
+  function applyPresetToDraft(preset: MatchingSettings) {
+    setDraftSettings((current) => ({
+      ...preset,
+      lockedTeams: current.lockedTeams
+    }));
   }
 
   return (
@@ -57,7 +99,7 @@ export default function AdminSettingsPage() {
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Settings health</h2>
+            <h2 className="font-semibold">Live settings health</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Guardrails for the active cohort: {activeCohort}.
             </p>
@@ -106,7 +148,7 @@ export default function AdminSettingsPage() {
             <button
               className="rounded-md border border-border bg-white p-4 text-left transition hover:border-primary hover:bg-emerald-50"
               key={preset.id}
-              onClick={() => setSettings(preset.settings)}
+              onClick={() => applyPresetToDraft(preset.settings)}
               type="button"
             >
               <div className="font-semibold">{preset.name}</div>
@@ -115,22 +157,83 @@ export default function AdminSettingsPage() {
           ))}
         </div>
       </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Settings impact preview</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Compare the current live settings with your draft before applying changes.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {hasDraftChanges ? <Badge className="bg-sky-100 text-sky-800">Unsaved draft</Badge> : null}
+            <Badge className={healthBadgeClass(draftHealth.status)}>
+              Draft {draftHealth.status}
+            </Badge>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <ImpactMetric label="Teams" current={currentImpact.teamCount} draft={draftImpact.teamCount} delta={impactDelta.teamCount} />
+          <ImpactMetric label="Assigned" current={currentImpact.assignedCount} draft={draftImpact.assignedCount} delta={impactDelta.assignedCount} />
+          <ImpactMetric label="Unassigned" current={currentImpact.unassignedCount} draft={draftImpact.unassignedCount} delta={impactDelta.unassignedCount} invert />
+          <ImpactMetric label="Avg score" current={currentImpact.averageScore} draft={draftImpact.averageScore} delta={impactDelta.averageScore} />
+          <ImpactMetric label="Warnings" current={currentImpact.warningCount} draft={draftImpact.warningCount} delta={impactDelta.warningCount} invert />
+        </div>
+        {draftHealth.errors.length > 0 || draftHealth.warnings.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {draftHealth.errors.length > 0 ? (
+              <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <div className="font-semibold">Draft errors</div>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {draftHealth.errors.map((error) => <li key={error}>{error}</li>)}
+                </ul>
+              </div>
+            ) : null}
+            {draftHealth.warnings.length > 0 ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <div className="font-semibold">Draft warnings</div>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {draftHealth.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={draftHealth.errors.length > 0}
+            onClick={applyDraftSettings}
+            type="button"
+          >
+            Apply draft settings
+          </button>
+          <button
+            className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold"
+            onClick={resetDraftSettings}
+            type="button"
+          >
+            Reset draft
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground">{draftStatusText}</p>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-4">
           <h2 className="font-semibold">Constraints</h2>
-          <NumberField label="Desired team size" value={settings.desiredTeamSize} onChange={(value) => update("desiredTeamSize", value)} />
-          <NumberField label="Minimum team size" value={settings.minTeamSize} onChange={(value) => update("minTeamSize", value)} />
-          <NumberField label="Maximum team size" value={settings.maxTeamSize} onChange={(value) => update("maxTeamSize", value)} />
-          <NumberField label="Number of teams" value={settings.numberOfTeams ?? 0} onChange={(value) => update("numberOfTeams", value || undefined)} />
-          <Toggle label="Allow unassigned participants" checked={settings.allowUnassignedParticipants} onChange={(value) => update("allowUnassignedParticipants", value)} />
-          <Toggle label="Require builder" checked={settings.requireBuilder} onChange={(value) => update("requireBuilder", value)} />
-          <Toggle label="Require presenter" checked={settings.requirePresenter} onChange={(value) => update("requirePresenter", value)} />
-          <Toggle label="Prevent beginner-only teams" checked={settings.preventBeginnerOnlyTeams} onChange={(value) => update("preventBeginnerOnlyTeams", value)} />
-          <Toggle label="Distribute advanced participants" checked={settings.distributeAdvancedParticipants} onChange={(value) => update("distributeAdvancedParticipants", value)} />
+          <NumberField label="Desired team size" value={draftSettings.desiredTeamSize} onChange={(value) => update("desiredTeamSize", value)} />
+          <NumberField label="Minimum team size" value={draftSettings.minTeamSize} onChange={(value) => update("minTeamSize", value)} />
+          <NumberField label="Maximum team size" value={draftSettings.maxTeamSize} onChange={(value) => update("maxTeamSize", value)} />
+          <NumberField label="Number of teams" value={draftSettings.numberOfTeams ?? 0} onChange={(value) => update("numberOfTeams", value || undefined)} />
+          <Toggle label="Allow unassigned participants" checked={draftSettings.allowUnassignedParticipants} onChange={(value) => update("allowUnassignedParticipants", value)} />
+          <Toggle label="Require builder" checked={draftSettings.requireBuilder} onChange={(value) => update("requireBuilder", value)} />
+          <Toggle label="Require presenter" checked={draftSettings.requirePresenter} onChange={(value) => update("requirePresenter", value)} />
+          <Toggle label="Prevent beginner-only teams" checked={draftSettings.preventBeginnerOnlyTeams} onChange={(value) => update("preventBeginnerOnlyTeams", value)} />
+          <Toggle label="Distribute advanced participants" checked={draftSettings.distributeAdvancedParticipants} onChange={(value) => update("distributeAdvancedParticipants", value)} />
         </Card>
         <Card className="space-y-4">
           <h2 className="font-semibold">Weights</h2>
-          {Object.entries(settings.weights).map(([label, value]) => (
+          {Object.entries(draftSettings.weights).map(([label, value]) => (
             <NumberField
               key={label}
               label={label}
@@ -140,6 +243,39 @@ export default function AdminSettingsPage() {
             />
           ))}
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function ImpactMetric({
+  label,
+  current,
+  draft,
+  delta,
+  invert = false
+}: {
+  label: string;
+  current: number;
+  draft: number;
+  delta: number;
+  invert?: boolean;
+}) {
+  const good = invert ? delta <= 0 : delta >= 0;
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-xl font-bold">{draft}</div>
+          <div className="text-xs text-muted-foreground">Draft</div>
+        </div>
+        <div className="text-right">
+          <div className={good ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
+            {delta >= 0 ? "+" : ""}{delta}
+          </div>
+          <div className="text-xs text-muted-foreground">current {current}</div>
+        </div>
       </div>
     </div>
   );
