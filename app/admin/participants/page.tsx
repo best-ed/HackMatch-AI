@@ -6,6 +6,7 @@ import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
 import { participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
+import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 
 export default function AdminParticipantsPage() {
@@ -35,6 +36,7 @@ export default function AdminParticipantsPage() {
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
     [participants]
   );
+  const intakeSummary = useMemo(() => evaluateParticipantIntake(participants), [participants]);
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return participants.filter((participant) => {
@@ -201,6 +203,57 @@ export default function AdminParticipantsPage() {
         <Metric label="Matchable" value={matchableCount} />
         <Metric label="Advanced" value={advancedCount} />
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Intake quality</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Deterministic checks for participant readiness before matching.
+            </p>
+          </div>
+          <Badge className={intakeSummary.incompleteCount ? "bg-rose-100 text-rose-800" : intakeSummary.lowSignalCount || intakeSummary.excludedCount ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+            {intakeSummary.incompleteCount ? "Needs fixes" : intakeSummary.lowSignalCount || intakeSummary.excludedCount ? "Needs review" : "Ready"}
+          </Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <PreviewMetric label="Matchable" value={intakeSummary.matchableCount} />
+          <PreviewMetric label="Excluded" value={intakeSummary.excludedCount} />
+          <PreviewMetric label="Incomplete" value={intakeSummary.incompleteCount} />
+          <PreviewMetric label="Low signal" value={intakeSummary.lowSignalCount} />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <div className="rounded-md border border-border bg-white p-4">
+            <div className="font-semibold">Top role coverage</div>
+            <div className="mt-3 space-y-2">
+              {intakeSummary.roleCoverage.map((role) => (
+                <div key={role.role}>
+                  <div className="mb-1 flex justify-between text-xs font-medium">
+                    <span>{role.role}</span>
+                    <span>{role.count}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, (role.count / Math.max(1, intakeSummary.totalCount)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-2">
+            {intakeSummary.issues.map((issue) => (
+              <div key={`${issue.title}-${issue.detail}`} className="rounded-md border border-border bg-white p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-sm font-semibold">{issue.title}</div>
+                  <Badge className={intakeIssueClass(issue.severity)}>{issue.severity}</Badge>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">{issue.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
       <Card className="grid gap-3 lg:grid-cols-[1fr_180px_180px_180px_auto]">
         <label className="space-y-2 text-sm font-medium">
           <span>Search participants</span>
@@ -526,6 +579,12 @@ function importActionClass(action: "create" | "update" | "skip" | "error") {
   if (action === "update") return "bg-sky-100 text-sky-800";
   if (action === "skip") return "bg-slate-100 text-slate-800";
   return "bg-rose-100 text-rose-800";
+}
+
+function intakeIssueClass(severity: "blocker" | "warning" | "info") {
+  if (severity === "blocker") return "bg-rose-100 text-rose-800";
+  if (severity === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-emerald-100 text-emerald-800";
 }
 
 function copyAccessLink(participant: Participant) {

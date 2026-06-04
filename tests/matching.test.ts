@@ -5,6 +5,7 @@ import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
+import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
@@ -334,6 +335,33 @@ describe("deterministic matching", () => {
 
     expect(readiness.items.some((item) => item.severity === "blocker")).toBe(true);
     expect(readiness.items.some((item) => item.title === "No matchable participants")).toBe(true);
+  });
+
+  it("evaluates participant intake quality", () => {
+    const intake = evaluateParticipantIntake(demoParticipants);
+
+    expect(intake.totalCount).toBe(demoParticipants.length);
+    expect(intake.matchableCount).toBe(demoParticipants.filter((participant) => participant.consentToMatch).length);
+    expect(intake.excludedCount).toBe(1);
+    expect(intake.roleCoverage.length).toBeGreaterThan(0);
+    expect(intake.issues.length).toBeGreaterThan(0);
+  });
+
+  it("flags incomplete participant intake records", () => {
+    const intake = evaluateParticipantIntake([
+      {
+        ...demoParticipants[0],
+        id: "broken-intake",
+        fullName: "",
+        email: "",
+        primaryRole: "",
+        availability: [],
+        consentToMatch: false
+      }
+    ]);
+
+    expect(intake.incompleteCount).toBe(1);
+    expect(intake.issues.some((issue) => issue.severity === "blocker")).toBe(true);
   });
 
 });
