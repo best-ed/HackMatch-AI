@@ -128,7 +128,7 @@ For a realistic event rehearsal:
 6. Save the final match run before making later participant edits.
 7. Export teams or participant records as CSV for sharing and operational follow-up.
 
-The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. It also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals.
+The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. It also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals. Settings edits are previewed as a draft before they are applied, so organizers can compare live versus draft team count, assigned participants, unassigned participants, average score, and warning count.
 
 The matching page includes an event setup panel for cohort name, preset, desired/min/max team size, and a shareable registration link. This gives organizers a fast path from event setup to participant intake without changing the deterministic matching rules.
 
@@ -154,7 +154,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, settings presets, and settings validation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, settings presets, settings validation, and settings impact summaries.
 
 ## Main Routes
 
