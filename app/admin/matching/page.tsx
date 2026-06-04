@@ -8,11 +8,13 @@ import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult } from "@/lib/matching/types";
+import { matchingPresets } from "@/lib/settings-guardrails";
 
 export default function AdminMatchingPage() {
   const {
     cohortParticipants,
     settings,
+    setSettings,
     activeCohort,
     setActiveCohort,
     cohorts,
@@ -20,6 +22,12 @@ export default function AdminMatchingPage() {
     persistenceWarning
   } = useHackMatchData();
   const [newCohort, setNewCohort] = useState("");
+  const [setupCohort, setSetupCohort] = useState(activeCohort);
+  const [setupPresetId, setSetupPresetId] = useState("balanced");
+  const [setupDesiredTeamSize, setSetupDesiredTeamSize] = useState(settings.desiredTeamSize);
+  const [setupMinTeamSize, setSetupMinTeamSize] = useState(settings.minTeamSize);
+  const [setupMaxTeamSize, setSetupMaxTeamSize] = useState(settings.maxTeamSize);
+  const [setupStatus, setSetupStatus] = useState("");
   const result = generateTeams(cohortParticipants, settings);
   const eligible = cohortParticipants.filter((participant) => participant.consentToMatch);
   const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
@@ -43,6 +51,31 @@ export default function AdminMatchingPage() {
     desiredTeamSize: settings.desiredTeamSize,
     maxTeamSize: settings.maxTeamSize
   });
+  const registrationUrl =
+    typeof window === "undefined"
+      ? "/participant/register"
+      : new URL(`/participant/register?cohort=${encodeURIComponent(activeCohort)}`, window.location.origin).toString();
+
+  function applyEventSetup() {
+    const preset = matchingPresets.find((item) => item.id === setupPresetId) ?? matchingPresets[0];
+    const cleanedCohort = setupCohort.trim() || activeCohort;
+    setActiveCohort(cleanedCohort);
+    setSettings({
+      ...preset.settings,
+      desiredTeamSize: setupDesiredTeamSize,
+      minTeamSize: setupMinTeamSize,
+      maxTeamSize: setupMaxTeamSize,
+      numberOfTeams: settings.numberOfTeams,
+      lockedTeams: settings.lockedTeams ?? []
+    });
+    setSetupStatus(`Event setup applied for ${cleanedCohort}.`);
+  }
+
+  async function copyRegistrationLink() {
+    if (typeof window === "undefined") return;
+    await navigator.clipboard?.writeText(registrationUrl);
+    setSetupStatus("Registration link copied.");
+  }
 
   return (
     <div className="space-y-6">
@@ -62,6 +95,63 @@ export default function AdminMatchingPage() {
         warning={persistenceWarning}
         detail="Cohort selection is stored locally; participant and settings edits can sync to Supabase when env vars are configured."
       />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Event setup</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Configure the active cohort, matching preset, team size, and registration link in one pass.
+            </p>
+          </div>
+          <Badge>{setupPresetId.replace("-", " ")}</Badge>
+        </div>
+        {setupStatus ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+            {setupStatus}
+          </div>
+        ) : null}
+        <div className="grid gap-4 lg:grid-cols-[1fr_220px_120px_120px_120px]">
+          <label className="space-y-2 text-sm font-medium">
+            <span>Event cohort</span>
+            <input
+              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+              list="event-setup-cohorts"
+              onChange={(event) => setSetupCohort(event.target.value)}
+              placeholder="June Build Night"
+              value={setupCohort}
+            />
+            <datalist id="event-setup-cohorts">
+              {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
+            </datalist>
+          </label>
+          <label className="space-y-2 text-sm font-medium">
+            <span>Preset</span>
+            <select
+              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+              onChange={(event) => setSetupPresetId(event.target.value)}
+              value={setupPresetId}
+            >
+              {matchingPresets.map((preset) => (
+                <option key={preset.id} value={preset.id}>{preset.name}</option>
+              ))}
+            </select>
+          </label>
+          <NumberInput label="Desired" value={setupDesiredTeamSize} onChange={setSetupDesiredTeamSize} />
+          <NumberInput label="Min" value={setupMinTeamSize} onChange={setSetupMinTeamSize} />
+          <NumberInput label="Max" value={setupMaxTeamSize} onChange={setSetupMaxTeamSize} />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+          <div className="break-all rounded-md border border-border bg-white px-3 py-2 text-sm text-muted-foreground">
+            {registrationUrl}
+          </div>
+          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => void copyRegistrationLink()} type="button">
+            Copy registration link
+          </button>
+          <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onClick={applyEventSetup} type="button">
+            Apply setup
+          </button>
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -249,6 +339,29 @@ function Metric({
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-sm text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+function NumberInput({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-medium">
+      <span>{label}</span>
+      <input
+        className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+        min={1}
+        onChange={(event) => onChange(Number(event.target.value))}
+        type="number"
+        value={value}
+      />
+    </label>
   );
 }
 
