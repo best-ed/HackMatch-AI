@@ -4,6 +4,7 @@ import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
+import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
@@ -306,6 +307,33 @@ describe("deterministic matching", () => {
     expect(draft.teamCount).toBe(6);
     expect(delta.teamCount).toBe(draft.teamCount - current.teamCount);
     expect(delta.averageScore).toBe(draft.averageScore - current.averageScore);
+  });
+
+  it("evaluates matching readiness with actionable items", () => {
+    const result = generateTeams(demoParticipants, demoMatchingSettings);
+    const readiness = evaluateMatchingReadiness(result, demoParticipants, demoMatchingSettings);
+
+    expect(readiness.score).toBeGreaterThan(0);
+    expect(readiness.eligibleCount).toBe(demoParticipants.filter((participant) => participant.consentToMatch).length);
+    expect(readiness.assignedCount).toBe(assignedIds(result).length);
+    expect(readiness.items.length).toBeGreaterThan(0);
+    expect(readiness.items.every((item) => item.action.length > 0)).toBe(true);
+  });
+
+  it("flags readiness blockers for impossible settings", () => {
+    const result = generateTeams([], {
+      ...demoMatchingSettings,
+      minTeamSize: 5,
+      desiredTeamSize: 3
+    });
+    const readiness = evaluateMatchingReadiness(result, [], {
+      ...demoMatchingSettings,
+      minTeamSize: 5,
+      desiredTeamSize: 3
+    });
+
+    expect(readiness.items.some((item) => item.severity === "blocker")).toBe(true);
+    expect(readiness.items.some((item) => item.title === "No matchable participants")).toBe(true);
   });
 
 });

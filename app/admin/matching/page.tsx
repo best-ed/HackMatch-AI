@@ -6,8 +6,8 @@ import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-rea
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
+import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { generateTeams } from "@/lib/matching/algorithm";
-import type { MatchingResult } from "@/lib/matching/types";
 import { matchingPresets } from "@/lib/settings-guardrails";
 
 export default function AdminMatchingPage() {
@@ -29,28 +29,7 @@ export default function AdminMatchingPage() {
   const [setupMaxTeamSize, setSetupMaxTeamSize] = useState(settings.maxTeamSize);
   const [setupStatus, setSetupStatus] = useState("");
   const result = generateTeams(cohortParticipants, settings);
-  const eligible = cohortParticipants.filter((participant) => participant.consentToMatch);
-  const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
-  const scores = result.teams.map((team) => team.score?.totalScore ?? 0);
-  const averageScore =
-    scores.length > 0
-      ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-      : 0;
-  const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
-  const readiness = Math.round(
-    ((assigned / Math.max(1, eligible.length)) * 0.48 +
-      (averageScore / 100) * 0.42 +
-      (result.warnings.length === 0 ? 0.1 : 0)) *
-      100
-  );
-  const checks = getViabilityChecks(result, {
-    eligibleCount: eligible.length,
-    assigned,
-    averageScore,
-    lowestScore,
-    desiredTeamSize: settings.desiredTeamSize,
-    maxTeamSize: settings.maxTeamSize
-  });
+  const readiness = evaluateMatchingReadiness(result, cohortParticipants, settings);
   const registrationUrl =
     typeof window === "undefined"
       ? "/participant/register"
@@ -227,17 +206,17 @@ export default function AdminMatchingPage() {
             </div>
             <div>
               <div className="text-sm font-medium text-muted-foreground">Match readiness</div>
-              <div className="text-3xl font-bold">{readiness}%</div>
+              <div className="text-3xl font-bold">{readiness.score}%</div>
             </div>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${readiness}%` }} />
+            <div className="h-full rounded-full bg-primary" style={{ width: `${readiness.score}%` }} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Metric label="Eligible" value={eligible.length} icon={<Users size={16} />} />
-            <Metric label="Assigned" value={assigned} icon={<CheckCircle2 size={16} />} />
-            <Metric label="Avg score" value={averageScore} icon={<Gauge size={16} />} />
-            <Metric label="Lowest score" value={lowestScore} icon={<AlertTriangle size={16} />} />
+            <Metric label="Eligible" value={readiness.eligibleCount} icon={<Users size={16} />} />
+            <Metric label="Assigned" value={readiness.assignedCount} icon={<CheckCircle2 size={16} />} />
+            <Metric label="Avg score" value={readiness.averageScore} icon={<Gauge size={16} />} />
+            <Metric label="Lowest score" value={readiness.lowestScore} icon={<AlertTriangle size={16} />} />
           </div>
         </Card>
 
@@ -253,14 +232,18 @@ export default function AdminMatchingPage() {
             </Link>
           </div>
           <div className="grid gap-2">
-            {checks.map((check) => (
-              <div key={check.label} className="flex items-start gap-3 rounded-md border border-border bg-white p-3">
-                <span className={check.ok ? "text-emerald-700" : "text-amber-700"}>
-                  {check.ok ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+            {readiness.items.map((item) => (
+              <div key={`${item.title}-${item.detail}`} className="flex items-start gap-3 rounded-md border border-border bg-white p-3">
+                <span className={readinessIconClass(item.severity)}>
+                  {item.severity === "info" ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
                 </span>
-                <div>
-                  <div className="text-sm font-semibold">{check.label}</div>
-                  <div className="text-sm text-muted-foreground">{check.detail}</div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <Badge className={readinessBadgeClass(item.severity)}>{item.severity}</Badge>
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">{item.detail}</div>
+                  <div className="mt-2 text-xs font-medium text-foreground">{item.action}</div>
                 </div>
               </div>
             ))}
@@ -385,50 +368,14 @@ function scoreBadgeClass(score: number): string {
   return "bg-rose-100 text-rose-800";
 }
 
-function getViabilityChecks(
-  result: MatchingResult,
-  stats: {
-    eligibleCount: number;
-    assigned: number;
-    averageScore: number;
-    lowestScore: number;
-    desiredTeamSize: number;
-    maxTeamSize: number;
-  }
-) {
-  return [
-    {
-      label: "Eligible participants assigned",
-      ok: stats.assigned === stats.eligibleCount,
-      detail:
-        stats.assigned === stats.eligibleCount
-          ? "Every participant with consent is currently placed."
-          : `${stats.eligibleCount - stats.assigned} matchable participant(s) still need placement.`
-    },
-    {
-      label: "Team score floor",
-      ok: stats.lowestScore >= 75,
-      detail:
-        stats.lowestScore >= 75
-          ? `Lowest team score is ${stats.lowestScore}, which is healthy for an MVP run.`
-          : `Lowest team score is ${stats.lowestScore}; inspect role coverage or constraints.`
-    },
-    {
-      label: "Warnings",
-      ok: result.warnings.length === 0,
-      detail:
-        result.warnings.length === 0
-          ? "No hard-constraint or consent warnings returned."
-          : `${result.warnings.length} warning(s) returned by the deterministic matcher.`
-    },
-    {
-      label: "Team sizing",
-      ok: result.teams.every(
-        (team) =>
-          team.participantIds.length <= stats.maxTeamSize &&
-          team.participantIds.length > 0
-      ),
-      detail: `Target is ${stats.desiredTeamSize} per team with max ${stats.maxTeamSize}.`
-    }
-  ];
+function readinessIconClass(severity: "blocker" | "warning" | "info") {
+  if (severity === "blocker") return "text-rose-700";
+  if (severity === "warning") return "text-amber-700";
+  return "text-emerald-700";
+}
+
+function readinessBadgeClass(severity: "blocker" | "warning" | "info") {
+  if (severity === "blocker") return "bg-rose-100 text-rose-800";
+  if (severity === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-emerald-100 text-emerald-800";
 }
