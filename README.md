@@ -132,6 +132,8 @@ The settings page includes presets for balanced, skill-heavy, beginner-friendly,
 
 The matching page includes an event setup panel for cohort name, preset, desired/min/max team size, and a shareable registration link. This gives organizers a fast path from event setup to participant intake without changing the deterministic matching rules.
 
+The matching page also includes a readiness action plan. It classifies current run issues as blockers, warnings, or informational next steps using deterministic settings validation, assignment coverage, score floor, penalties, and matcher warnings.
+
 ## Supabase Persistence
 
 HackMatch AI can run fully offline with browser `localStorage`. Admin pages show whether the app is using local storage or Supabase so organizers know where edits are being kept.
@@ -154,7 +156,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, settings presets, settings validation, and settings impact summaries.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
 
 ## Main Routes
 
