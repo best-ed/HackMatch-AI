@@ -3,6 +3,7 @@ import { participantLinksToCsv, participantsToCsv, teamsToCsv } from "@/lib/expo
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
+import { validateParticipantRegistration } from "@/lib/participant-validation";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -220,6 +221,44 @@ describe("deterministic matching", () => {
     expect(plan.updatedCount).toBe(1);
     expect(plan.rowPreviews[0].action).toBe("update");
     expect(plan.rowPreviews[0].duplicateName).toBe("Avery Chen");
+  });
+
+  it("validates participant registration quality", () => {
+    const validation = validateParticipantRegistration(
+      {
+        ...demoParticipants[0],
+        id: "new-participant",
+        fullName: "",
+        email: "bad-email",
+        primaryRole: "",
+        availability: [],
+        consentToMatch: false,
+        technicalSkills: [],
+        interests: [],
+        githubUrl: "github.com/not-a-url"
+      },
+      demoParticipants
+    );
+
+    expect(validation.errors).toContain("Full name is required.");
+    expect(validation.errors).toContain("Email must be a valid address.");
+    expect(validation.errors).toContain("Primary role is required.");
+    expect(validation.errors).toContain("Select at least one availability slot.");
+    expect(validation.errors).toContain("Consent to match is required for team assignment.");
+    expect(validation.warnings).toContain("Add at least one technical skill to improve matching quality.");
+  });
+
+  it("blocks duplicate participant registration emails", () => {
+    const validation = validateParticipantRegistration(
+      {
+        ...demoParticipants[0],
+        id: "new-participant",
+        email: demoParticipants[1].email
+      },
+      demoParticipants
+    );
+
+    expect(validation.errors).toContain("A participant with this email already exists.");
   });
 
   it("provides deterministic matching settings presets", () => {
