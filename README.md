@@ -130,6 +130,8 @@ For a realistic event rehearsal:
 
 The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. It also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals.
 
+The matching page includes an event setup panel for cohort name, preset, desired/min/max team size, and a shareable registration link. This gives organizers a fast path from event setup to participant intake without changing the deterministic matching rules.
+
 ## Supabase Persistence
 
 HackMatch AI can run fully offline with browser `localStorage`. Admin pages show whether the app is using local storage or Supabase so organizers know where edits are being kept.
