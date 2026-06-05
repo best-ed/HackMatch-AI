@@ -38,7 +38,9 @@ Use the Supabase anon public key, not the service role key.
 2. Run `lib/schema.sql` in the Supabase SQL editor.
 3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the deployment environment.
 4. Redeploy.
-5. Confirm `/admin` shows `Supabase connected`.
+5. Confirm `/admin` shows the Supabase plug-readiness card as ready and the persistence status as `Supabase connected`.
+
+Keep using the anon public key for the browser-facing adapter. Do not expose the service role key.
 
 ## Optional OpenAI Setup
 

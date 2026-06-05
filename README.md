@@ -155,6 +155,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 
 When those variables are present, the app loads participants and matching settings from Supabase and mirrors successful edits back to localStorage as a fallback. If Supabase is unavailable, the UI continues with local browser storage and shows a warning in the admin dashboard.
 
+The admin dashboard includes a Supabase plug-readiness card that checks whether the public project URL and anon key are absent, malformed, or ready-looking before launch. This is a local shape check only; the persistence status confirms whether the app actually connected.
+
 ## Test The Project
 
 ```bash
@@ -162,7 +164,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, matching readiness evaluation, and Supabase readiness checks.
 
 ## Main Routes
 
