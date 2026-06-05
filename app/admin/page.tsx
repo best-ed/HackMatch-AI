@@ -7,6 +7,7 @@ import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
+import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 
 export default function AdminPage() {
   const {
@@ -28,6 +29,10 @@ export default function AdminPage() {
     : 0;
   const latestRun = savedMatchRuns[0];
   const settingsHealth = validateMatchingSettings(settings, cohortParticipants);
+  const supabaseReadiness = evaluateSupabaseReadiness({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
   const dashboardChecks = [
     {
       label: "Participant coverage",
@@ -139,6 +144,38 @@ export default function AdminPage() {
           )}
         </Card>
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Supabase plug-readiness</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Remote persistence remains optional; this checks whether the public env vars look launch-ready.
+            </p>
+          </div>
+          <Badge className={supabaseStatusClass(supabaseReadiness.status)}>
+            {supabaseReadiness.status}
+          </Badge>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="font-semibold">{supabaseReadiness.title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{supabaseReadiness.detail}</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {supabaseReadiness.checks.map((check) => (
+            <div key={check.label} className="rounded-md border border-border bg-white p-4">
+              <div className="flex items-center gap-2">
+                {check.ok ? (
+                  <ShieldCheck className="text-emerald-700" size={18} />
+                ) : (
+                  <AlertTriangle className="text-amber-700" size={18} />
+                )}
+                <div className="font-semibold">{check.label}</div>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <QuickAction href="/participant/register" title="Register participant" detail="Add one participant to the active cohort." icon={<Users size={18} />} />
         <QuickAction href="/admin/participants" title="Import or edit" detail={`${participants.length} total participant profile(s).`} icon={<Link2 size={18} />} />
@@ -147,6 +184,12 @@ export default function AdminPage() {
       </div>
     </div>
   );
+}
+
+function supabaseStatusClass(status: "local" | "ready" | "misconfigured") {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
+  if (status === "misconfigured") return "bg-rose-100 text-rose-800";
+  return "bg-slate-100 text-slate-800";
 }
 
 function MetricCard({

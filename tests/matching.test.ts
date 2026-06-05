@@ -9,6 +9,7 @@ import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
+import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -432,6 +433,33 @@ describe("deterministic matching", () => {
 
     expect(review.highRiskCount).toBeGreaterThan(0);
     expect(review.risks.some((risk) => risk.label === "Low score")).toBe(true);
+  });
+
+  it("evaluates Supabase local-storage mode", () => {
+    const readiness = evaluateSupabaseReadiness({});
+
+    expect(readiness.status).toBe("local");
+    expect(readiness.checks.every((check) => check.ok)).toBe(false);
+  });
+
+  it("evaluates Supabase ready env shape", () => {
+    const readiness = evaluateSupabaseReadiness({
+      url: "https://abc123.supabase.co",
+      anonKey: "header.payload.signature-that-is-long-enough-for-a-public-anon-jwt"
+    });
+
+    expect(readiness.status).toBe("ready");
+    expect(readiness.checks.every((check) => check.ok)).toBe(true);
+  });
+
+  it("flags malformed Supabase env values", () => {
+    const readiness = evaluateSupabaseReadiness({
+      url: "not-a-url",
+      anonKey: "short"
+    });
+
+    expect(readiness.status).toBe("misconfigured");
+    expect(readiness.checks.some((check) => !check.ok)).toBe(true);
   });
 
 });
