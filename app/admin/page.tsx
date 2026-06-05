@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
+import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
@@ -32,6 +33,12 @@ export default function AdminPage() {
   const supabaseReadiness = evaluateSupabaseReadiness({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL,
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
+  const deploymentReadiness = evaluateDeploymentReadiness({
+    supabase: supabaseReadiness,
+    hasParticipants: participants.length > 0,
+    hasGeneratedTeams: result.teams.length > 0,
+    hasSavedRun: Boolean(latestRun)
   });
   const dashboardChecks = [
     {
@@ -162,6 +169,38 @@ export default function AdminPage() {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {supabaseReadiness.checks.map((check) => (
+            <div key={check.label} className="rounded-md border border-border bg-white p-4">
+              <div className="flex items-center gap-2">
+                {check.ok ? (
+                  <ShieldCheck className="text-emerald-700" size={18} />
+                ) : (
+                  <AlertTriangle className="text-amber-700" size={18} />
+                )}
+                <div className="font-semibold">{check.label}</div>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Deployment preflight</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Browser-visible launch checks before a production build and smoke test.
+            </p>
+          </div>
+          <Badge className={deploymentReadiness.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+            {deploymentReadiness.status}
+          </Badge>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="font-semibold">{deploymentReadiness.title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{deploymentReadiness.detail}</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {deploymentReadiness.checks.map((check) => (
             <div key={check.label} className="rounded-md border border-border bg-white p-4">
               <div className="flex items-center gap-2">
                 {check.ok ? (

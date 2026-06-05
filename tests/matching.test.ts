@@ -7,6 +7,7 @@ import { validateParticipantRegistration } from "@/lib/participant-validation";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
+import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
@@ -460,6 +461,30 @@ describe("deterministic matching", () => {
 
     expect(readiness.status).toBe("misconfigured");
     expect(readiness.checks.some((check) => !check.ok)).toBe(true);
+  });
+
+  it("evaluates deployment readiness for local MVP mode", () => {
+    const readiness = evaluateDeploymentReadiness({
+      supabase: evaluateSupabaseReadiness({}),
+      hasParticipants: true,
+      hasGeneratedTeams: true,
+      hasSavedRun: false
+    });
+
+    expect(readiness.status).toBe("ready");
+    expect(readiness.checks.find((check) => check.label === "Saved run")?.ok).toBe(false);
+  });
+
+  it("flags deployment readiness when Supabase env is malformed", () => {
+    const readiness = evaluateDeploymentReadiness({
+      supabase: evaluateSupabaseReadiness({ url: "bad-url", anonKey: "short" }),
+      hasParticipants: true,
+      hasGeneratedTeams: true,
+      hasSavedRun: true
+    });
+
+    expect(readiness.status).toBe("review");
+    expect(readiness.checks.find((check) => check.label === "Persistence mode")?.ok).toBe(false);
   });
 
 });
