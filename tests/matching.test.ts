@@ -8,6 +8,7 @@ import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
+import { summarizeTeamReview } from "@/lib/team-review";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -400,6 +401,37 @@ describe("deterministic matching", () => {
 
     expect(brief.visibleContacts).toHaveLength(0);
     expect(brief.warnings).toContain("No teammates have enabled contact sharing yet.");
+  });
+
+  it("summarizes team review risks", () => {
+    const result = generateTeams(demoParticipants, demoMatchingSettings);
+    const review = summarizeTeamReview(result, demoParticipants);
+
+    expect(review.teamCount).toBe(result.teams.length);
+    expect(review.assignedCount).toBe(assignedIds(result).length);
+    expect(review.averageScore).toBeGreaterThan(0);
+    expect(review.risks.length).toBeGreaterThan(0);
+  });
+
+  it("flags high-risk team review items", () => {
+    const result = generateTeams(demoParticipants, demoMatchingSettings);
+    const lowScoreResult = {
+      ...result,
+      teams: [
+        {
+          ...result.teams[0],
+          score: {
+            ...result.teams[0].score!,
+            totalScore: 52
+          }
+        },
+        ...result.teams.slice(1)
+      ]
+    };
+    const review = summarizeTeamReview(lowScoreResult, demoParticipants);
+
+    expect(review.highRiskCount).toBeGreaterThan(0);
+    expect(review.risks.some((risk) => risk.label === "Low score")).toBe(true);
   });
 
 });

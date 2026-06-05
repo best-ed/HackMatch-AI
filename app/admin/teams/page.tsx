@@ -8,6 +8,7 @@ import { teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
+import { summarizeTeamReview } from "@/lib/team-review";
 
 export default function AdminTeamsPage() {
   const {
@@ -35,6 +36,10 @@ export default function AdminTeamsPage() {
   const activeRun = savedMatchRuns.find((run) => run.id === activeRunId);
   const activeResult = activeRun?.result ?? result;
   const activeParticipants = activeRun?.participantsSnapshot ?? cohortParticipants;
+  const reviewSummary = useMemo(
+    () => summarizeTeamReview(activeResult, activeParticipants),
+    [activeParticipants, activeResult]
+  );
   const isViewingSavedRun = Boolean(activeRun);
   const heading = activeRun?.name ?? "Generated teams";
   const csv = teamsToCsv(activeResult, activeParticipants);
@@ -264,6 +269,38 @@ export default function AdminTeamsPage() {
           <Badge>{lockedTeams.length} locked</Badge>
         </Card>
       ) : null}
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Review brief</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Fast scan of the currently selected team run before export or sharing.
+            </p>
+          </div>
+          <Badge className={reviewSummary.highRiskCount ? "bg-rose-100 text-rose-800" : reviewSummary.risks.some((risk) => risk.severity === "medium") ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+            {reviewSummary.highRiskCount ? `${reviewSummary.highRiskCount} high risk` : reviewSummary.risks.some((risk) => risk.severity === "medium") ? "Needs review" : "Ready"}
+          </Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <ReviewMetric label="Teams" value={reviewSummary.teamCount} />
+          <ReviewMetric label="Assigned" value={reviewSummary.assignedCount} />
+          <ReviewMetric label="Unassigned" value={reviewSummary.unassignedCount} />
+          <ReviewMetric label="Avg score" value={reviewSummary.averageScore} />
+          <ReviewMetric label="Lowest score" value={reviewSummary.lowestScore} />
+          <ReviewMetric label="Locked" value={reviewSummary.lockedCount} />
+        </div>
+        <div className="grid gap-2 lg:grid-cols-2">
+          {reviewSummary.risks.slice(0, 6).map((risk) => (
+            <div key={`${risk.teamId}-${risk.label}-${risk.detail}`} className="rounded-md border border-border bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-semibold">{risk.teamName}</div>
+                <Badge className={reviewRiskClass(risk.severity)}>{risk.label}</Badge>
+              </div>
+              <div className="mt-1 text-sm text-muted-foreground">{risk.detail}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -621,6 +658,21 @@ function CompareMetric({
       </div>
     </div>
   );
+}
+
+function ReviewMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function reviewRiskClass(severity: "high" | "medium" | "low") {
+  if (severity === "high") return "bg-rose-100 text-rose-800";
+  if (severity === "medium") return "bg-amber-100 text-amber-800";
+  return "bg-emerald-100 text-emerald-800";
 }
 
 function ScoreBar({ label, value, invert = false }: { label: string; value: number; invert?: boolean }) {
