@@ -6,6 +6,7 @@ import { planParticipantCsvImport } from "@/lib/participant-import";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
+import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
@@ -362,6 +363,43 @@ describe("deterministic matching", () => {
 
     expect(intake.incompleteCount).toBe(1);
     expect(intake.issues.some((issue) => issue.severity === "blocker")).toBe(true);
+  });
+
+  it("builds participant-facing team briefs", () => {
+    const members: Participant[] = [
+      {
+        ...demoParticipants[0],
+        interests: ["Health", "Education"],
+        availability: ["weekend_morning", "weekday_evening"],
+        consentToShareContact: true
+      },
+      {
+        ...demoParticipants[1],
+        interests: ["Health", "Climate"],
+        availability: ["weekend_morning"],
+        consentToShareContact: false
+      }
+    ];
+    const brief = buildParticipantTeamBrief(members);
+
+    expect(brief.sharedInterests).toEqual(["Health"]);
+    expect(brief.sharedAvailability).toEqual(["weekend_morning"]);
+    expect(brief.visibleContacts).toHaveLength(1);
+    expect(brief.nextSteps.some((step) => step.includes("Weekend Morning"))).toBe(true);
+    expect(brief.warnings).toEqual([]);
+    expect(formatAvailability("weekday_evening")).toBe("Weekday Evening");
+  });
+
+  it("warns when no teammate contacts can be shared", () => {
+    const brief = buildParticipantTeamBrief(
+      demoParticipants.slice(0, 2).map((participant) => ({
+        ...participant,
+        consentToShareContact: false
+      }))
+    );
+
+    expect(brief.visibleContacts).toHaveLength(0);
+    expect(brief.warnings).toContain("No teammates have enabled contact sharing yet.");
   });
 
 });
