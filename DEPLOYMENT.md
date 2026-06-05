@@ -13,6 +13,8 @@ npm run test
 npm run build
 ```
 
+The `/admin` dashboard also includes a deployment preflight card. It checks browser-visible readiness signals such as persistence mode, participant data, generated teams, and saved runs. Treat it as a launch helper, not a replacement for the commands above.
+
 ## Vercel
 
 1. Import the GitHub repo into Vercel.
@@ -59,3 +61,5 @@ AI only explains deterministic team assignments. It never assigns or changes tea
 4. Open `/admin/participants` and confirm the participant appears.
 5. Open `/admin/matching` and check viability warnings.
 6. Open `/admin/teams` and download CSV.
+7. Open `/participant/team?access=...` and confirm the participant handoff renders.
+8. Open `/admin` and confirm persistence, Supabase readiness, and deployment preflight states match the intended launch mode.

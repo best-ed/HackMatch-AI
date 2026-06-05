@@ -90,6 +90,8 @@ npm run build
 
 Deployment notes live in `DEPLOYMENT.md`.
 
+The admin dashboard includes a deployment preflight card for browser-visible launch readiness. It does not replace `npm run build`, but it helps organizers confirm persistence mode, participant data, generated teams, and saved-run readiness before a launch smoke test.
+
 ## Viability Workflow
 
 Use the MVP to test real matching behavior before adding Supabase persistence:
@@ -164,7 +166,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, matching readiness evaluation, and Supabase readiness checks.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, matching readiness evaluation, Supabase readiness checks, and deployment readiness checks.
 
 ## Main Routes
 
