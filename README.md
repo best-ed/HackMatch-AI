@@ -114,6 +114,8 @@ The participant team page turns each access link into a team handoff with member
 
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
+The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results.
+
 Saved runs can be renamed, duplicated, restored as the live baseline, compared against current live teams, or deleted with confirmation. Restoring a saved run brings back its participant snapshot, settings snapshot, and cohort as the current editable baseline.
 
 Live teams can also be locked from `/admin/teams`. Locked teams are passed back into the deterministic matcher through explicit settings, so their participants stay together while the rest of the cohort can be regenerated and optimized.
@@ -160,7 +162,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
 
 ## Main Routes
 
