@@ -110,6 +110,8 @@ The participants page includes an intake quality panel for consent coverage, inc
 
 Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link and review saved profile details. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
+The participant team page turns each access link into a team handoff with members, suggested internal roles, strengths, watch points, shared interests, shared availability, next steps, and contact details only for teammates who consented to sharing.
+
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
 Saved runs can be renamed, duplicated, restored as the live baseline, compared against current live teams, or deleted with confirmation. Restoring a saved run brings back its participant snapshot, settings snapshot, and cohort as the current editable baseline.
@@ -158,7 +160,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, settings presets, settings validation, settings impact summaries, and matching readiness evaluation.
 
 ## Main Routes
 
