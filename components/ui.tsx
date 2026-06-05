@@ -37,7 +37,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm outline-none ring-primary/20 transition hover:-translate-y-0.5 hover:opacity-95 focus-visible:ring-4 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60",
         className
       )}
       {...props}
@@ -50,7 +50,7 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        "w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4",
+        "w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 transition placeholder:text-muted-foreground/70 focus:ring-4",
         props.className
       )}
     />
@@ -64,7 +64,7 @@ export function TextArea(
     <textarea
       {...props}
       className={cn(
-        "min-h-24 w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4",
+        "min-h-24 w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 transition placeholder:text-muted-foreground/70 focus:ring-4",
         props.className
       )}
     />
