@@ -18,6 +18,10 @@ export const adminNavItems: NavItem[] = [
   { href: "/admin/settings", label: "Settings" }
 ];
 
+export const contextualParticipantRoutes: NavItem[] = [
+  { href: "/participant/confirmation", label: "Confirmation" }
+];
+
 export function isNavItemActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/admin") return pathname === "/admin" || pathname.startsWith("/admin/");

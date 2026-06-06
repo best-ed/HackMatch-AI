@@ -11,7 +11,7 @@ import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
-import { adminNavItems, isAdminSectionActive, isNavItemActive, primaryNavItems } from "@/lib/navigation";
+import { adminNavItems, contextualParticipantRoutes, isAdminSectionActive, isNavItemActive, primaryNavItems } from "@/lib/navigation";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -496,6 +496,7 @@ describe("deterministic matching", () => {
       "/admin"
     ]);
     expect(primaryNavItems.some((item) => item.href === "/participant/confirmation")).toBe(false);
+    expect(contextualParticipantRoutes.map((item) => item.href)).toEqual(["/participant/confirmation"]);
     expect(adminNavItems.map((item) => item.href)).toEqual([
       "/admin",
       "/admin/participants",

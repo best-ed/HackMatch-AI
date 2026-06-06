@@ -91,11 +91,19 @@ export default function ParticipantConfirmationPage() {
           </Card>
         </div>
       ) : (
-        <Card>
+        <Card className="space-y-4">
           <h2 className="font-semibold">Registration not found</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            The saved access token did not match a local participant. Try registering again or open the team page with your access link.
+            Confirmation is only shown after registration or from a valid saved access token. The current browser lookup did not match a local participant.
           </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Link className="rounded-md bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground" href="/participant/register">
+              Register participant
+            </Link>
+            <Link className="rounded-md border border-border bg-white px-4 py-2 text-center text-sm font-semibold" href="/participant/team">
+              Open team lookup
+            </Link>
+          </div>
         </Card>
       )}
 
