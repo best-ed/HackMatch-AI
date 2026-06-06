@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
@@ -87,9 +87,9 @@ export default function AdminPage() {
       </div>
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard href="/admin/participants" title="Active cohort" value={cohortParticipants.length} detail={`${matchable.length} matchable`} icon={<Users size={20} />} />
-        <MetricCard href="/admin/matching" title="Live teams" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned`} icon={<Settings2 size={20} />} />
-        <MetricCard href="/admin/teams" title="Average score" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
+        <MetricCard href="/admin/participants" title="Directory" value={cohortParticipants.length} detail={`${matchable.length} matchable in ${activeCohort}`} icon={<Users size={20} />} />
+        <MetricCard href="/admin/matching" title="Match setup" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned live`} icon={<Settings2 size={20} />} />
+        <MetricCard href="/admin/teams" title="Team review" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
         <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -215,12 +215,31 @@ export default function AdminPage() {
           ))}
         </div>
       </Card>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <QuickAction href="/participant/register" title="Register participant" detail="Add one participant to the active cohort." icon={<Users size={18} />} />
-        <QuickAction href="/admin/participants" title="Import or edit" detail={`${participants.length} total participant profile(s).`} icon={<Link2 size={18} />} />
-        <QuickAction href="/admin/settings" title="Tune settings" detail={`${settings.desiredTeamSize} desired team size.`} icon={<Settings2 size={18} />} />
-        <QuickAction href="/admin/matching" title="Open match setup" detail={`${cohorts.length} cohort option(s).`} icon={<CalendarDays size={18} />} />
-      </div>
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-semibold">Admin workflow</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Move through the main organizer loop using the same section names as the admin navigation.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <QuickAction href="/admin/participants" title="Directory" detail={`${participants.length} participant profile(s), imports, filters, and access links.`} icon={<Link2 size={18} />} />
+          <QuickAction href="/admin/matching" title="Match setup" detail={`${cohorts.length} cohort option(s), event setup, and readiness checks.`} icon={<CalendarDays size={18} />} />
+          <QuickAction href="/admin/teams" title="Team review" detail={`${result.teams.length} live team(s), explanations, locks, saved runs, and exports.`} icon={<ShieldCheck size={18} />} />
+          <QuickAction href="/admin/settings" title="Settings" detail={`${settings.desiredTeamSize} desired team size with draft impact preview.`} icon={<SlidersHorizontal size={18} />} />
+        </div>
+      </section>
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-semibold">Participant entry</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Quick path for adding another participant to the active cohort.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <QuickAction href="/participant/register" title="Register participant" detail={`Add one participant to ${activeCohort}.`} icon={<Users size={18} />} />
+        </div>
+      </section>
     </div>
   );
 }
