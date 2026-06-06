@@ -2,12 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { adminNavItems, isAdminSectionActive, isNavItemActive, primaryNavItems } from "@/lib/navigation";
+import {
+  adminNavItems,
+  contextualParticipantRoutes,
+  isAdminSectionActive,
+  isNavItemActive,
+  isParticipantSectionActive,
+  participantNavItems,
+  primaryNavItems
+} from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isParticipantRoute = pathname === "/participant" || pathname.startsWith("/participant/");
+  const participantSubnavItems = pathname.startsWith("/participant/confirmation")
+    ? [...participantNavItems, ...contextualParticipantRoutes]
+    : participantNavItems;
 
   return (
     <>
@@ -44,6 +56,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               {adminNavItems.map((item) => {
                 const active = isAdminSectionActive(pathname, item.href);
+                return (
+                  <Link
+                    aria-current={active ? "page" : undefined}
+                    className={cn(navLinkClass(active), "shrink-0")}
+                    href={item.href}
+                    key={item.href}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          ) : null}
+          {isParticipantRoute ? (
+            <nav
+              aria-label="Participant navigation"
+              className="nav-scroll mt-4 flex gap-1 border-t border-border/70 pt-3 text-sm text-muted-foreground"
+            >
+              {participantSubnavItems.map((item) => {
+                const active = isParticipantSectionActive(pathname, item.href);
                 return (
                   <Link
                     aria-current={active ? "page" : undefined}

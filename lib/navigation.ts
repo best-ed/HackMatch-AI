@@ -5,9 +5,13 @@ export type NavItem = {
 
 export const primaryNavItems: NavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/participant/register", label: "Register" },
-  { href: "/participant/team", label: "My team" },
+  { href: "/participant", label: "Participant" },
   { href: "/admin", label: "Admin" }
+];
+
+export const participantNavItems: NavItem[] = [
+  { href: "/participant/register", label: "Register" },
+  { href: "/participant/team", label: "My team" }
 ];
 
 export const adminNavItems: NavItem[] = [
@@ -30,5 +34,10 @@ export function isNavItemActive(pathname: string, href: string) {
 
 export function isAdminSectionActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function isParticipantSectionActive(pathname: string, href: string) {
+  if (href === "/participant") return pathname === "/participant";
   return pathname === href || pathname.startsWith(`${href}/`);
 }

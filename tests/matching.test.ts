@@ -11,7 +11,15 @@ import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
-import { adminNavItems, contextualParticipantRoutes, isAdminSectionActive, isNavItemActive, primaryNavItems } from "@/lib/navigation";
+import {
+  adminNavItems,
+  contextualParticipantRoutes,
+  isAdminSectionActive,
+  isNavItemActive,
+  isParticipantSectionActive,
+  participantNavItems,
+  primaryNavItems
+} from "@/lib/navigation";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -491,11 +499,14 @@ describe("deterministic matching", () => {
   it("keeps primary and admin navigation hierarchy separate", () => {
     expect(primaryNavItems.map((item) => item.href)).toEqual([
       "/",
-      "/participant/register",
-      "/participant/team",
+      "/participant",
       "/admin"
     ]);
     expect(primaryNavItems.some((item) => item.href === "/participant/confirmation")).toBe(false);
+    expect(participantNavItems.map((item) => item.href)).toEqual([
+      "/participant/register",
+      "/participant/team"
+    ]);
     expect(contextualParticipantRoutes.map((item) => item.href)).toEqual(["/participant/confirmation"]);
     expect(adminNavItems.map((item) => item.href)).toEqual([
       "/admin",
@@ -514,7 +525,8 @@ describe("deterministic matching", () => {
     expect(isNavItemActive("/admin/teams", "/admin")).toBe(true);
     expect(isAdminSectionActive("/admin/teams", "/admin")).toBe(false);
     expect(isAdminSectionActive("/admin/teams", "/admin/teams")).toBe(true);
-    expect(isNavItemActive("/participant/confirmation", "/participant/register")).toBe(false);
+    expect(isNavItemActive("/participant/confirmation", "/participant")).toBe(true);
+    expect(isParticipantSectionActive("/participant/confirmation", "/participant/register")).toBe(false);
   });
 
 });
