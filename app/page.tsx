@@ -41,7 +41,7 @@ export default function HomePage() {
         <div className="liquid-glass min-w-0 space-y-6 rounded-lg p-6">
           <div className="space-y-5">
             <Badge className="w-fit bg-white/10 text-white ring-1 ring-white/20">
-              Deterministic matching, explainable output
+              Public demo dashboard
             </Badge>
             <h1 className="animate-fade-rise max-w-3xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
               Watch teams <em className="not-italic text-emerald-200">assemble</em> from real constraints.

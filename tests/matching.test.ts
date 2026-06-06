@@ -11,6 +11,7 @@ import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
+import { adminNavItems, isAdminSectionActive, isNavItemActive, primaryNavItems } from "@/lib/navigation";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import type { Participant } from "@/lib/matching/types";
 
@@ -485,6 +486,26 @@ describe("deterministic matching", () => {
 
     expect(readiness.status).toBe("review");
     expect(readiness.checks.find((check) => check.label === "Persistence mode")?.ok).toBe(false);
+  });
+
+  it("keeps primary and admin navigation hierarchy separate", () => {
+    expect(primaryNavItems.map((item) => item.href)).toEqual([
+      "/",
+      "/participant/register",
+      "/participant/team",
+      "/admin"
+    ]);
+    expect(primaryNavItems.some((item) => item.href === "/participant/confirmation")).toBe(false);
+    expect(adminNavItems.map((item) => item.href)).toEqual([
+      "/admin",
+      "/admin/participants",
+      "/admin/matching",
+      "/admin/teams",
+      "/admin/settings"
+    ]);
+    expect(isNavItemActive("/admin/teams", "/admin")).toBe(true);
+    expect(isAdminSectionActive("/admin/teams", "/admin")).toBe(false);
+    expect(isAdminSectionActive("/admin/teams", "/admin/teams")).toBe(true);
   });
 
 });
