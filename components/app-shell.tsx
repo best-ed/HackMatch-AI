@@ -8,6 +8,7 @@ import {
   isAdminSectionActive,
   isNavItemActive,
   isParticipantSectionActive,
+  navAriaCurrent,
   participantNavItems,
   primaryNavItems
 } from "@/lib/navigation";
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const active = isNavItemActive(pathname, item.href);
                 return (
                   <Link
-                    aria-current={active ? "page" : undefined}
+                    aria-current={navAriaCurrent(pathname, item.href, active)}
                     className={navLinkClass(active)}
                     href={item.href}
                     key={item.href}
@@ -58,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const active = isAdminSectionActive(pathname, item.href);
                 return (
                   <Link
-                    aria-current={active ? "page" : undefined}
+                    aria-current={navAriaCurrent(pathname, item.href, active)}
                     className={cn(navLinkClass(active), "shrink-0")}
                     href={item.href}
                     key={item.href}
@@ -78,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const active = isParticipantSectionActive(pathname, item.href);
                 return (
                   <Link
-                    aria-current={active ? "page" : undefined}
+                    aria-current={navAriaCurrent(pathname, item.href, active)}
                     className={cn(navLinkClass(active), "shrink-0")}
                     href={item.href}
                     key={item.href}

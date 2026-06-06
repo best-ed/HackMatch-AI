@@ -41,3 +41,8 @@ export function isParticipantSectionActive(pathname: string, href: string) {
   if (href === "/participant") return pathname === "/participant";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+export function navAriaCurrent(pathname: string, href: string, active: boolean) {
+  if (!active) return undefined;
+  return pathname === href ? "page" : "location";
+}

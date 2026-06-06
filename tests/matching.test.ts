@@ -17,6 +17,7 @@ import {
   isAdminSectionActive,
   isNavItemActive,
   isParticipantSectionActive,
+  navAriaCurrent,
   participantNavItems,
   primaryNavItems
 } from "@/lib/navigation";
@@ -527,6 +528,9 @@ describe("deterministic matching", () => {
     expect(isAdminSectionActive("/admin/teams", "/admin/teams")).toBe(true);
     expect(isNavItemActive("/participant/confirmation", "/participant")).toBe(true);
     expect(isParticipantSectionActive("/participant/confirmation", "/participant/register")).toBe(false);
+    expect(navAriaCurrent("/admin/teams", "/admin", true)).toBe("location");
+    expect(navAriaCurrent("/admin/teams", "/admin/teams", true)).toBe("page");
+    expect(navAriaCurrent("/admin/teams", "/participant", false)).toBeUndefined();
   });
 
 });
