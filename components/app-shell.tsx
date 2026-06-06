@@ -24,6 +24,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <a
+        className="skip-link"
+        href="#main-content"
+      >
+        Skip to content
+      </a>
       <header className="sticky top-0 z-30 border-b border-white/40 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -92,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 outline-none sm:px-6 lg:px-8" id="main-content" tabIndex={-1}>
         {children}
       </main>
     </>
