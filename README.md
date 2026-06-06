@@ -96,12 +96,13 @@ The admin dashboard includes a deployment preflight card for browser-visible lau
 
 Use the MVP to test real matching behavior before adding Supabase persistence:
 
-1. Add participants at `/participant/register`.
-2. Edit or delete active participants at `/admin/participants`.
-3. Select or create the active cohort at `/admin/matching` or `/admin/participants`.
-4. Tune team size, constraints, presets, and weights at `/admin/settings`.
-5. Check generated assignments and warnings at `/admin/matching`.
-6. Inspect score breakdowns, save match runs, and export results at `/admin/teams`.
+1. Start at `/participant` for participant-facing registration and team lookup.
+2. Add participants at `/participant/register`.
+3. Edit or delete active participants from the admin Directory at `/admin/participants`.
+4. Select or create the active cohort in Match setup at `/admin/matching`.
+5. Tune team size, constraints, presets, and weights at `/admin/settings`.
+6. Check generated assignments and warnings at `/admin/matching`.
+7. Inspect score breakdowns, save match runs, and export results from Team review at `/admin/teams`.
 
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
@@ -123,6 +124,14 @@ Saved runs can be renamed, duplicated, restored as the live baseline, compared a
 Live teams can also be locked from `/admin/teams`. Locked teams are passed back into the deterministic matcher through explicit settings, so their participants stay together while the rest of the cohort can be regenerated and optimized.
 
 Participants can be assigned to cohorts such as `General`, `May Hackathon`, or `Workshop A`. Admin matching and team exports use the active cohort, so separate events or groups can be generated independently without changing older saved runs.
+
+## Navigation Model
+
+The primary navigation stays intentionally small: Home, Participant, and Admin.
+
+Participant pages use a contextual subnav for registration and team lookup. The confirmation page is not a primary destination; it appears after registration or from a saved access link.
+
+Admin pages use a contextual subnav for Overview, Directory, Match setup, Team review, and Settings. Nested pages also show a small section trail such as `Admin / Team review` or `Participant / Register` so users can see where they are without duplicating every route in the top-level header.
 
 ## Organizer Workflow
 
@@ -171,6 +180,7 @@ Tests cover determinism, uniqueness, team sizes, blocked teammates, consent excl
 ## Main Routes
 
 - `/`
+- `/participant`
 - `/participant/register`
 - `/participant/confirmation`
 - `/participant/team`
