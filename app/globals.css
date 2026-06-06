@@ -43,6 +43,19 @@ a {
   overflow-x: auto;
 }
 
+.nav-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .liquid-glass {
   background: rgba(255, 255, 255, 0.06);
   background-blend-mode: luminosity;

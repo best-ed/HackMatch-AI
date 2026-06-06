@@ -506,6 +506,7 @@ describe("deterministic matching", () => {
     expect(isNavItemActive("/admin/teams", "/admin")).toBe(true);
     expect(isAdminSectionActive("/admin/teams", "/admin")).toBe(false);
     expect(isAdminSectionActive("/admin/teams", "/admin/teams")).toBe(true);
+    expect(isNavItemActive("/participant/confirmation", "/participant/register")).toBe(false);
   });
 
 });

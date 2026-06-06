@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               HackMatch AI<sup className="text-xs">&reg;</sup>
             </Link>
-            <nav aria-label="Primary navigation" className="flex flex-wrap gap-1 text-sm text-muted-foreground">
+            <nav aria-label="Primary navigation" className="nav-scroll flex gap-1 text-sm text-muted-foreground lg:flex-wrap lg:justify-end">
               {primaryNavItems.map((item) => {
                 const active = isNavItemActive(pathname, item.href);
                 return (
@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {isAdminRoute ? (
             <nav
               aria-label="Admin navigation"
-              className="mt-4 flex gap-1 overflow-x-auto border-t border-border/70 pt-3 text-sm text-muted-foreground"
+              className="nav-scroll mt-4 flex gap-1 border-t border-border/70 pt-3 text-sm text-muted-foreground"
             >
               {adminNavItems.map((item) => {
                 const active = isAdminSectionActive(pathname, item.href);
@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function navLinkClass(active: boolean) {
   return cn(
-    "rounded-md px-3 py-1.5 font-medium outline-none ring-primary/20 transition focus-visible:ring-4",
+    "shrink-0 rounded-md px-3 py-1.5 font-medium outline-none ring-primary/20 transition focus-visible:ring-4",
     active
       ? "bg-primary text-primary-foreground shadow-sm"
       : "hover:bg-muted hover:text-foreground"
