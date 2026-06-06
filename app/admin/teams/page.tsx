@@ -41,7 +41,7 @@ export default function AdminTeamsPage() {
     [activeParticipants, activeResult]
   );
   const isViewingSavedRun = Boolean(activeRun);
-  const heading = activeRun?.name ?? "Generated teams";
+  const heading = activeRun?.name ?? "Team review";
   const csv = teamsToCsv(activeResult, activeParticipants);
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
   const [explanations, setExplanations] = useState<TeamExplanation[]>(activeResult.explanations);
@@ -212,7 +212,7 @@ export default function AdminTeamsPage() {
           <p className="mt-2 text-muted-foreground">
             {isViewingSavedRun
               ? `Frozen match run saved ${formatDate(activeRun?.createdAt ?? "")}. Exports use this exact snapshot.`
-              : "Live assignments, score breakdowns, explanations, and export from edited data."}
+              : "Review live assignments, score breakdowns, explanations, locks, and exports from edited data."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

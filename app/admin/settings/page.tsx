@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Matching settings</h1>
           <p className="mt-2 text-muted-foreground">
-            Edit constraints and weights used by the deterministic matcher.
+            Tune deterministic constraints and scoring weights with draft impact preview.
           </p>
         </div>
         <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={resetDemoData}>

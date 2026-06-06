@@ -12,9 +12,9 @@ export const primaryNavItems: NavItem[] = [
 
 export const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/participants", label: "Participants" },
-  { href: "/admin/matching", label: "Matching" },
-  { href: "/admin/teams", label: "Teams" },
+  { href: "/admin/participants", label: "Directory" },
+  { href: "/admin/matching", label: "Match setup" },
+  { href: "/admin/teams", label: "Team review" },
   { href: "/admin/settings", label: "Settings" }
 ];
 

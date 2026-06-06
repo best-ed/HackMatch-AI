@@ -88,7 +88,7 @@ export default function AdminPage() {
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard href="/admin/participants" title="Active cohort" value={cohortParticipants.length} detail={`${matchable.length} matchable`} icon={<Users size={20} />} />
-        <MetricCard href="/admin/matching" title="Generated teams" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned`} icon={<Settings2 size={20} />} />
+        <MetricCard href="/admin/matching" title="Live teams" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned`} icon={<Settings2 size={20} />} />
         <MetricCard href="/admin/teams" title="Average score" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
         <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
@@ -146,7 +146,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-              Generate teams, then save a run from `/admin/teams` to freeze the assignment.
+              Generate teams, then save a run from the team review page to freeze the assignment.
             </div>
           )}
         </Card>
@@ -219,7 +219,7 @@ export default function AdminPage() {
         <QuickAction href="/participant/register" title="Register participant" detail="Add one participant to the active cohort." icon={<Users size={18} />} />
         <QuickAction href="/admin/participants" title="Import or edit" detail={`${participants.length} total participant profile(s).`} icon={<Link2 size={18} />} />
         <QuickAction href="/admin/settings" title="Tune settings" detail={`${settings.desiredTeamSize} desired team size.`} icon={<Settings2 size={18} />} />
-        <QuickAction href="/admin/matching" title="Generate teams" detail={`${cohorts.length} cohort option(s).`} icon={<CalendarDays size={18} />} />
+        <QuickAction href="/admin/matching" title="Open match setup" detail={`${cohorts.length} cohort option(s).`} icon={<CalendarDays size={18} />} />
       </div>
     </div>
   );

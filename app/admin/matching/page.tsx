@@ -60,13 +60,13 @@ export default function AdminMatchingPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Generate teams</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Matching workspace</h1>
           <p className="mt-2 text-muted-foreground">
-            Deterministic output from the active cohort and current settings.
+            Configure the active cohort, preview readiness, and generate deterministic teams.
           </p>
         </div>
         <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/teams">
-          View teams
+          Open team review
         </Link>
       </div>
       <AdminPersistenceStatus

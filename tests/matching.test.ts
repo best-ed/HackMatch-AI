@@ -504,6 +504,13 @@ describe("deterministic matching", () => {
       "/admin/teams",
       "/admin/settings"
     ]);
+    expect(adminNavItems.map((item) => item.label)).toEqual([
+      "Overview",
+      "Directory",
+      "Match setup",
+      "Team review",
+      "Settings"
+    ]);
     expect(isNavItemActive("/admin/teams", "/admin")).toBe(true);
     expect(isAdminSectionActive("/admin/teams", "/admin")).toBe(false);
     expect(isAdminSectionActive("/admin/teams", "/admin/teams")).toBe(true);

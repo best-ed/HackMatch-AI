@@ -51,7 +51,7 @@ export default function HomePage() {
             </p>
             <div className="animate-fade-rise-delay-2 flex flex-wrap gap-3">
               <Link className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition hover:scale-[1.03]" href="/admin/matching">
-                Generate teams <ArrowRight size={16} />
+                Open match setup <ArrowRight size={16} />
               </Link>
               <Link className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition hover:scale-[1.03]" href="/participant/register">
                 Register participant
@@ -75,7 +75,7 @@ export default function HomePage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-emerald-200">Live matching preview</p>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">Current generated teams</h2>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">Live team preview</h2>
               </div>
               <Badge className="bg-white/10 text-white ring-1 ring-white/20">{result.teams.length} teams</Badge>
             </div>
