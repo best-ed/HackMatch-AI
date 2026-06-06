@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { SectionTrail } from "@/components/section-trail";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
@@ -94,6 +95,7 @@ export default function RegisterPage() {
   return (
     <div className="space-y-6">
       <div>
+        <SectionTrail items={[{ href: "/participant", label: "Participant" }, { label: "Register" }]} />
         <h1 className="text-3xl font-bold tracking-tight">Participant registration</h1>
         <p className="mt-2 text-muted-foreground">
           Add a participant profile with enough role, skill, consent, and availability data for reliable matching.

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card } from "@/components/ui";
 import {
   readCurrentParticipantLookup,
@@ -45,6 +46,7 @@ export default function ParticipantConfirmationPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
+        <SectionTrail items={[{ href: "/participant", label: "Participant" }, { label: "Confirmation" }]} />
         <Badge className="bg-emerald-100 text-emerald-800">Registration saved</Badge>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">You&apos;re registered</h1>
         <p className="mt-2 text-muted-foreground">

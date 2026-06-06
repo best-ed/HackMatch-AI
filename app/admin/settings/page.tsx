@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -82,6 +83,7 @@ export default function AdminSettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <SectionTrail items={[{ href: "/admin", label: "Admin" }, { label: "Settings" }]} />
           <h1 className="text-3xl font-bold tracking-tight">Matching settings</h1>
           <p className="mt-2 text-muted-foreground">
             Tune deterministic constraints and scoring weights with draft impact preview.

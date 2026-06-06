@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card } from "@/components/ui";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { teamsToCsv } from "@/lib/export";
@@ -206,6 +207,7 @@ export default function AdminTeamsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <SectionTrail items={[{ href: "/admin", label: "Admin" }, { label: "Team review" }]} />
           <h1 className="text-3xl font-bold tracking-tight">
             {heading}
           </h1>

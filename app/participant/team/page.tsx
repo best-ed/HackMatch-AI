@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Clipboard, LinkIcon, Mail, Phone, Users } from "lucide-react";
+import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextInput } from "@/components/ui";
 import {
   readCurrentParticipantLookup,
@@ -83,6 +84,7 @@ export default function ParticipantTeamPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <SectionTrail items={[{ href: "/participant", label: "Participant" }, { label: "My team" }]} />
           <h1 className="text-3xl font-bold tracking-tight">My team</h1>
           <p className="mt-2 text-muted-foreground">
             Open your access link or enter a participant name, email, ID, or access token.

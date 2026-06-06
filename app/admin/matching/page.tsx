@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
@@ -60,6 +61,7 @@ export default function AdminMatchingPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <SectionTrail items={[{ href: "/admin", label: "Admin" }, { label: "Match setup" }]} />
           <h1 className="text-3xl font-bold tracking-tight">Matching workspace</h1>
           <p className="mt-2 text-muted-foreground">
             Configure the active cohort, preview readiness, and generate deterministic teams.
