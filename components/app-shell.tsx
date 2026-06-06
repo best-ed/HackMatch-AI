@@ -26,10 +26,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <header className="sticky top-0 z-30 border-b border-white/40 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <Link
               href="/"
-              className="inline-flex w-fit items-baseline rounded-md text-2xl font-semibold tracking-tight outline-none ring-primary/20 transition focus-visible:ring-4"
+              className="inline-flex w-fit shrink-0 items-baseline rounded-md text-2xl font-semibold tracking-tight outline-none ring-primary/20 transition focus-visible:ring-4"
               style={{ fontFamily: "var(--font-display)" }}
             >
               HackMatch AI<sup className="text-xs">&reg;</sup>
@@ -101,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function navLinkClass(active: boolean) {
   return cn(
-    "shrink-0 rounded-md px-3 py-1.5 font-medium outline-none ring-primary/20 transition focus-visible:ring-4",
+    "shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 font-medium outline-none ring-primary/20 transition focus-visible:ring-4",
     active
       ? "bg-primary text-primary-foreground shadow-sm"
       : "hover:bg-muted hover:text-foreground"

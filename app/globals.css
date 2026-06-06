@@ -44,12 +44,32 @@ a {
 }
 
 .nav-scroll {
+  --nav-scroll-fade: hsl(var(--background));
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding-bottom: 0.25rem;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+}
+
+.nav-scroll::before,
+.nav-scroll::after {
+  content: "";
+  flex: 0 0 0.5rem;
+  pointer-events: none;
+  position: sticky;
+  z-index: 1;
+}
+
+.nav-scroll::before {
+  background: linear-gradient(90deg, var(--nav-scroll-fade), transparent);
+  left: 0;
+}
+
+.nav-scroll::after {
+  background: linear-gradient(90deg, transparent, var(--nav-scroll-fade));
+  right: 0;
 }
 
 .nav-scroll::-webkit-scrollbar {
