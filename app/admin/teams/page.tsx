@@ -9,6 +9,7 @@ import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
+import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import { summarizeTeamReview } from "@/lib/team-review";
 
 export default function AdminTeamsPage() {
@@ -534,6 +535,7 @@ export default function AdminTeamsPage() {
           const members = team.participantIds
             .map((id) => activeParticipants.find((item) => item.id === id))
             .filter((participant): participant is Participant => Boolean(participant));
+          const placementExplanations = buildTeamPlacementExplanations(members);
           const risks = getTeamRisks(team.score?.totalScore ?? 0, explanation);
           return (
             <Card key={team.id} className="space-y-4">
@@ -582,6 +584,14 @@ export default function AdminTeamsPage() {
                       {participant.technicalSkills.slice(0, 3).map((skill) => (
                         <Badge key={skill}>{skill}</Badge>
                       ))}
+                    </div>
+                    <div className="mt-3 rounded-md bg-muted p-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Placement note</div>
+                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {(placementExplanations.find((item) => item.participantId === participant.id)?.reasons ?? []).map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 ))}

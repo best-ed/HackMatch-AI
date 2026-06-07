@@ -11,6 +11,7 @@ import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
+import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import {
   adminNavItems,
   contextualParticipantRoutes,
@@ -498,6 +499,17 @@ describe("deterministic matching", () => {
     expect(review.availabilityRiskCount).toBeGreaterThan(0);
     expect(review.constraintRiskCount).toBeGreaterThan(0);
     expect(review.risks.some((risk) => risk.category === "availability")).toBe(true);
+  });
+
+  it("builds deterministic participant placement explanations", () => {
+    const members = demoParticipants.slice(0, 4);
+    const first = buildTeamPlacementExplanations(members);
+    const second = buildTeamPlacementExplanations(members);
+
+    expect(first).toEqual(second);
+    expect(first).toHaveLength(members.length);
+    expect(first[0].participantId).toBe(members[0].id);
+    expect(first[0].reasons.length).toBeGreaterThan(0);
   });
 
   it("evaluates Supabase local-storage mode", () => {
