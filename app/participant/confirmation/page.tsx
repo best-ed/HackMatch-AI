@@ -9,9 +9,10 @@ import {
   useHackMatchData,
   writeCurrentParticipantLookup
 } from "@/lib/local-store";
+import { generateTeams } from "@/lib/matching/algorithm";
 
 export default function ParticipantConfirmationPage() {
-  const { participants } = useHackMatchData();
+  const { participants, settings } = useHackMatchData();
   const [lookup, setLookup] = useState("");
 
   useEffect(() => {
@@ -38,6 +39,17 @@ export default function ParticipantConfirmationPage() {
     : "/participant/team";
   const absoluteTeamUrl =
     typeof window === "undefined" ? teamUrl : new URL(teamUrl, window.location.origin).toString();
+  const cohortParticipants = participant
+    ? participants.filter((item) => (item.cohort ?? "General") === (participant.cohort ?? "General"))
+    : participants;
+  const result = useMemo(
+    () => generateTeams(cohortParticipants, settings),
+    [cohortParticipants, settings]
+  );
+  const assignedTeam = participant?.consentToMatch
+    ? result.teams.find((team) => team.participantIds.includes(participant.id))
+    : undefined;
+  const isUnassigned = participant ? result.unassignedParticipants.includes(participant.id) : false;
 
   async function copyAccessLink() {
     await navigator.clipboard?.writeText(absoluteTeamUrl);
@@ -91,6 +103,27 @@ export default function ParticipantConfirmationPage() {
               </Link>
             </div>
           </Card>
+          <Card className="space-y-4 lg:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Assignment status</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Status is based on the current local participant data and matching settings.
+                </p>
+              </div>
+              <Badge className={assignmentBadgeClass(Boolean(assignedTeam), Boolean(participant.consentToMatch), isUnassigned)}>
+                {assignmentLabel(Boolean(assignedTeam), Boolean(participant.consentToMatch), isUnassigned)}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {assignmentDetail(assignedTeam?.name, Boolean(participant.consentToMatch), isUnassigned)}
+            </p>
+            {assignedTeam ? (
+              <Link className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href={teamUrl}>
+                Open {assignedTeam.name}
+              </Link>
+            ) : null}
+          </Card>
         </div>
       ) : (
         <Card className="space-y-4">
@@ -139,6 +172,26 @@ function Step({ label, text }: { label: string; text: string }) {
       <p className="mt-3 text-sm text-muted-foreground">{text}</p>
     </div>
   );
+}
+
+function assignmentLabel(hasTeam: boolean, hasConsent: boolean, isUnassigned: boolean) {
+  if (!hasConsent) return "Not matchable";
+  if (hasTeam) return "Team ready";
+  if (isUnassigned) return "Unassigned";
+  return "Waiting";
+}
+
+function assignmentDetail(teamName: string | undefined, hasConsent: boolean, isUnassigned: boolean) {
+  if (!hasConsent) return "This profile is saved, but matching consent is off, so organizers will not place it on a team.";
+  if (teamName) return `Current deterministic matching places this participant on ${teamName}.`;
+  if (isUnassigned) return "Current matching settings leave this participant unassigned. Organizers may adjust cohort size or constraints.";
+  return "No team assignment is visible yet. Return with this access link after organizers review the cohort.";
+}
+
+function assignmentBadgeClass(hasTeam: boolean, hasConsent: boolean, isUnassigned: boolean) {
+  if (!hasConsent || isUnassigned) return "bg-amber-100 text-amber-800";
+  if (hasTeam) return "bg-emerald-100 text-emerald-800";
+  return "bg-slate-100 text-slate-800";
 }
 
 function normalizeLookupValue(value: string) {
