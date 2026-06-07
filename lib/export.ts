@@ -115,6 +115,63 @@ export function participantsToCsv(participants: Participant[]): string {
   return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
 }
 
+export function participantImportTemplateCsv(): string {
+  const rows = [
+    [
+      "full_name",
+      "email",
+      "cohort",
+      "phone",
+      "institution",
+      "github_url",
+      "linkedin_url",
+      "portfolio_url",
+      "experience_level",
+      "primary_role",
+      "secondary_roles",
+      "technical_skills",
+      "non_technical_skills",
+      "tools",
+      "interests",
+      "project_ideas",
+      "preferred_team_size",
+      "preferred_teammates",
+      "blocked_teammates",
+      "availability",
+      "personal_statement",
+      "consent_to_match",
+      "consent_to_share_contact"
+    ],
+    [
+      "Maya Okafor",
+      "maya.okafor@example.com",
+      "General",
+      "+1 555 0100",
+      "State University",
+      "https://github.com/mayaokafor",
+      "https://linkedin.com/in/mayaokafor",
+      "https://mayaokafor.dev",
+      "intermediate",
+      "Full Stack",
+      "Backend; Product",
+      "React; TypeScript; PostgreSQL",
+      "Pitching; User research",
+      "Figma; Supabase",
+      "Climate tech; Civic tech",
+      "A lightweight tool for local community reporting",
+      "4",
+      "Jordan Lee",
+      "",
+      "weekday_evening; weekend_morning",
+      "I like turning fuzzy problem statements into practical demos.",
+      "true",
+      "true"
+    ]
+  ];
+
+  return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
 export function participantLinksToCsv(
   participants: Participant[],
   origin: string

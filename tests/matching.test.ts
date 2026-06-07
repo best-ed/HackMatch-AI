@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { participantLinksToCsv, participantsToCsv, teamsToCsv } from "@/lib/export";
+import { participantImportTemplateCsv, participantLinksToCsv, participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
@@ -155,6 +155,22 @@ describe("deterministic matching", () => {
     expect(csv.split("\n")[0]).toContain("participant_id,access_token,cohort");
     expect(csv).toContain("Avery Chen");
     expect(csv).toContain("consent_to_match");
+  });
+
+  it("exports a participant import template that can be previewed", () => {
+    const csv = participantImportTemplateCsv();
+    expect(csv.split("\n")[0]).toContain("full_name,email,cohort");
+    expect(csv).toContain("consent_to_match");
+
+    const plan = planParticipantCsvImport({
+      csv,
+      existingParticipants: [],
+      activeCohort: "General",
+      now: "2026-06-07T00:00:00.000Z"
+    });
+
+    expect(plan.createdCount).toBe(1);
+    expect(plan.errors).toEqual([]);
   });
 
   it("exports participant access links as CSV", () => {

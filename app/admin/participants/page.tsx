@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
-import { participantLinksToCsv, participantsToCsv } from "@/lib/export";
+import { participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
@@ -121,6 +121,12 @@ export default function AdminParticipantsPage() {
       scope === "all" ? "hackmatch-access-links.csv" : "hackmatch-access-links-filtered.csv"
     );
     setLinkStatus(`Exported ${exportParticipants.length} access link${exportParticipants.length === 1 ? "" : "s"}.`);
+  }
+
+  function downloadImportTemplate() {
+    const filename = "hackmatch-participant-import-template.csv";
+    downloadCsvBlob(participantImportTemplateCsv(), filename);
+    setImportStatus(`Downloaded ${filename}.`);
   }
 
   async function copyFilteredAccessLinks() {
@@ -338,15 +344,20 @@ export default function AdminParticipantsPage() {
               Upload an exported HackMatch CSV or paste matching columns to preview before saving.
             </p>
           </div>
-          <label className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold">
-            Choose CSV
-            <input
-              accept=".csv,text/csv"
-              className="sr-only"
-              onChange={(event) => handleCsvFile(event.target.files?.[0])}
-              type="file"
-            />
-          </label>
+          <div className="flex flex-wrap gap-2">
+            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={downloadImportTemplate} type="button">
+              Download template
+            </button>
+            <label className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold">
+              Choose CSV
+              <input
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(event) => handleCsvFile(event.target.files?.[0])}
+                type="file"
+              />
+            </label>
+          </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
           <label className="space-y-2 text-sm font-medium">
