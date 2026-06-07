@@ -8,6 +8,40 @@ function csvEscape(value: string | number | boolean | undefined): string {
   return text;
 }
 
+function slugifyFilenamePart(value: string): string {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "general";
+}
+
+export function exportDateStamp(date = new Date()): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function hackMatchCsvFilename({
+  cohort,
+  date = new Date(),
+  kind,
+  scope
+}: {
+  cohort?: string;
+  date?: Date;
+  kind: "participants" | "teams" | "access-links" | "participant-import-template";
+  scope?: "all" | "filtered" | "live" | "saved";
+}): string {
+  const parts = [
+    "hackmatch",
+    slugifyFilenamePart(cohort ?? "general"),
+    kind,
+    scope,
+    exportDateStamp(date)
+  ].filter(Boolean);
+  return `${parts.join("-")}.csv`;
+}
+
 export function teamsToCsv(
   result: MatchingResult,
   participants: Participant[]

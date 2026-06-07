@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { participantImportTemplateCsv, participantLinksToCsv, participantsToCsv, teamsToCsv } from "@/lib/export";
+import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv, teamsToCsv } from "@/lib/export";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { planParticipantCsvImport } from "@/lib/participant-import";
@@ -184,6 +184,17 @@ describe("deterministic matching", () => {
     expect(csv.split("\n")[0]).toContain("participant_id,full_name,email,cohort,access_token,team_link");
     expect(csv).toContain("Avery Chen");
     expect(csv).toContain("https://hackmatch.example/participant/team?access=");
+  });
+
+  it("builds cohort-aware CSV filenames", () => {
+    const filename = hackMatchCsvFilename({
+      cohort: "May Hackathon 2026",
+      date: new Date("2026-06-07T12:00:00.000Z"),
+      kind: "teams",
+      scope: "saved"
+    });
+
+    expect(filename).toBe("hackmatch-may-hackathon-2026-teams-saved-2026-06-07.csv");
   });
 
   it("imports participants from exported CSV and skips duplicates by default", () => {

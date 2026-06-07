@@ -1,5 +1,5 @@
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
-import { teamsToCsv } from "@/lib/export";
+import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { generateTeams } from "@/lib/matching/algorithm";
 
 export function GET() {
@@ -8,7 +8,7 @@ export function GET() {
   return new Response(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": 'attachment; filename="hackmatch-teams.csv"'
+      "content-disposition": `attachment; filename="${hackMatchCsvFilename({ cohort: "General", kind: "teams", scope: "live" })}"`
     }
   });
 }

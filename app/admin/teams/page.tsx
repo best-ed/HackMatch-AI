@@ -5,7 +5,7 @@ import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card } from "@/components/ui";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
-import { teamsToCsv } from "@/lib/export";
+import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
@@ -43,6 +43,7 @@ export default function AdminTeamsPage() {
   );
   const isViewingSavedRun = Boolean(activeRun);
   const heading = activeRun?.name ?? "Team review";
+  const exportCohort = activeRun?.cohort ?? activeCohort;
   const csv = teamsToCsv(activeResult, activeParticipants);
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
   const [explanations, setExplanations] = useState<TeamExplanation[]>(activeResult.explanations);
@@ -82,7 +83,11 @@ export default function AdminTeamsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "hackmatch-teams.csv";
+    link.download = hackMatchCsvFilename({
+      cohort: exportCohort,
+      kind: "teams",
+      scope: isViewingSavedRun ? "saved" : "live"
+    });
     link.click();
     URL.revokeObjectURL(url);
   }

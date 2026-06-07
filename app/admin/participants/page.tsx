@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
-import { participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
+import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
@@ -101,7 +101,7 @@ export default function AdminParticipantsPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const filename = scope === "all" ? "hackmatch-participants.csv" : "hackmatch-participants-filtered.csv";
+    const filename = hackMatchCsvFilename({ cohort: activeCohort, kind: "participants", scope });
     link.href = url;
     link.download = filename;
     link.style.display = "none";
@@ -118,13 +118,13 @@ export default function AdminParticipantsPage() {
     const csv = participantLinksToCsv(exportParticipants, window.location.origin);
     downloadCsvBlob(
       csv,
-      scope === "all" ? "hackmatch-access-links.csv" : "hackmatch-access-links-filtered.csv"
+      hackMatchCsvFilename({ cohort: activeCohort, kind: "access-links", scope })
     );
     setLinkStatus(`Exported ${exportParticipants.length} access link${exportParticipants.length === 1 ? "" : "s"}.`);
   }
 
   function downloadImportTemplate() {
-    const filename = "hackmatch-participant-import-template.csv";
+    const filename = hackMatchCsvFilename({ cohort: activeCohort, kind: "participant-import-template" });
     downloadCsvBlob(participantImportTemplateCsv(), filename);
     setImportStatus(`Downloaded ${filename}.`);
   }
