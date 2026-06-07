@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Clipboard, LinkIcon, Mail, Phone, Users } from "lucide-react";
 import { SectionTrail } from "@/components/section-trail";
-import { Badge, Button, Card, TextInput } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, TextInput } from "@/components/ui";
 import {
   readCurrentParticipantLookup,
   useHackMatchData,
@@ -287,24 +287,27 @@ export default function ParticipantTeamPage() {
           </div>
         </div>
       ) : (
-        <Card className="space-y-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="text-amber-700" size={20} />
-            <h2 className="font-semibold">No team assignment found</h2>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {!participant
-              ? "No participant matches that access token, name, email, or ID."
-              : !participant.consentToMatch
-                ? `${participant.fullName} did not consent to matching, so they are excluded.`
-                : isUnassigned
-                  ? `${participant.fullName} is currently unassigned under these settings.`
-                  : "This participant was not placed in a generated team."}
-          </p>
-          <div className="rounded-md border border-border bg-white p-3 text-sm text-muted-foreground">
-            Try the exact access token from your confirmation page. If you recently registered, the organizer may still need to generate teams for your cohort.
-          </div>
-        </Card>
+        <EmptyState
+          action={
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => updateLookup(defaultParticipant?.email ?? "")}
+              type="button"
+            >
+              Use demo participant
+            </Button>
+          }
+          description={`${!participant
+            ? "No participant matches that access token, name, email, or ID."
+            : !participant.consentToMatch
+              ? `${participant.fullName} did not consent to matching, so they are excluded.`
+              : isUnassigned
+                ? `${participant.fullName} is currently unassigned under these settings.`
+                : "This participant was not placed in a generated team."
+          } Try the exact access token from your confirmation page, or wait for the organizer to generate teams for your cohort.`}
+          icon={<AlertTriangle size={20} />}
+          title="No team assignment found"
+        />
       )}
     </div>
   );

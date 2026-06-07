@@ -70,3 +70,37 @@ export function TextArea(
     />
   );
 }
+
+export function EmptyState({
+  title,
+  description,
+  icon,
+  action,
+  className
+}: {
+  title: string;
+  description: string;
+  icon?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-dashed border-border bg-muted/45 p-6 text-center",
+        className
+      )}
+    >
+      {icon ? (
+        <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-md bg-white text-primary shadow-sm">
+          {icon}
+        </div>
+      ) : null}
+      <div className="font-semibold text-foreground">{title}</div>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+        {description}
+      </p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    </div>
+  );
+}

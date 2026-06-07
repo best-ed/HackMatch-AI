@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Card, EmptyState } from "@/components/ui";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
@@ -177,9 +177,16 @@ export default function AdminPage() {
               </Link>
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-              Generate teams, then save a run from the team review page to freeze the assignment.
-            </div>
+            <EmptyState
+              action={
+                <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/teams">
+                  Open team review
+                </Link>
+              }
+              description="Generate teams, then save a run from the team review page to freeze assignments, scores, warnings, and export output."
+              icon={<Download size={20} />}
+              title="No saved run yet"
+            />
           )}
         </Card>
       </div>

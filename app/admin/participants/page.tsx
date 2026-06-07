@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { SearchX } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
-import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
 import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
@@ -593,8 +594,12 @@ export default function AdminParticipantsPage() {
             ))}
             {filteredParticipants.length === 0 ? (
               <tr className="border-t border-border">
-                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={9}>
-                  No participants match the current filters.
+                <td className="px-4 py-8" colSpan={9}>
+                  <EmptyState
+                    description="Adjust the search, role, experience, or consent filters to bring participants back into view."
+                    icon={<SearchX size={20} />}
+                    title="No participants match these filters"
+                  />
                 </td>
               </tr>
             ) : null}

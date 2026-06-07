@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Card, EmptyState } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -260,8 +260,9 @@ export default function AdminMatchingPage() {
         <Card><Metric label="Unassigned" value={result.unassignedParticipants.length} icon={<AlertTriangle size={16} />} /></Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {result.teams.map((team) => {
+      {result.teams.length ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {result.teams.map((team) => {
           const members = team.participantIds
             .map((id) => cohortParticipants.find((participant) => participant.id === id))
             .filter(Boolean);
@@ -294,8 +295,20 @@ export default function AdminMatchingPage() {
             ) : null}
           </Card>
         );
-        })}
-      </div>
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          action={
+            <Link className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/participant/register">
+              Register participant
+            </Link>
+          }
+          description="This cohort does not have enough matchable participants under the current settings. Add participants, switch cohorts, or tune team size constraints."
+          icon={<Users size={20} />}
+          title="No teams generated for this cohort"
+        />
+      )}
 
       {result.warnings.length > 0 ? (
         <Card>

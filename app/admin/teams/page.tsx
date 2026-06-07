@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Archive, GitCompareArrows, UsersRound } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Card, EmptyState } from "@/components/ui";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
@@ -452,9 +453,21 @@ export default function AdminTeamsPage() {
               </div>
             ))}
             {savedMatchRuns.length === 0 ? (
-              <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-                No saved runs yet.
-              </div>
+              <EmptyState
+                action={
+                  <button
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                    onClick={saveCurrentRun}
+                    type="button"
+                  >
+                    Save current run
+                  </button>
+                }
+                className="md:col-span-2 xl:col-span-3"
+                description="Freeze the current generated teams before editing participants, changing settings, or sharing results."
+                icon={<Archive size={20} />}
+                title="No saved match runs yet"
+              />
             ) : null}
           </div>
         </div>
@@ -532,9 +545,11 @@ export default function AdminTeamsPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Save a match run to compare it against the current live generated teams.
-          </div>
+          <EmptyState
+            description="Save one generated run first, then this panel will show score, assignment, warning, and participant movement differences."
+            icon={<GitCompareArrows size={20} />}
+            title="No saved run available for comparison"
+          />
         )}
       </Card>
       <Card className="flex flex-wrap items-center justify-between gap-3">
@@ -559,8 +574,9 @@ export default function AdminTeamsPage() {
           </ul>
         </Card>
       ) : null}
-      <div className="grid gap-5">
-        {activeResult.teams.map((team) => {
+      {activeResult.teams.length ? (
+        <div className="grid gap-5">
+          {activeResult.teams.map((team) => {
           const explanation = explanations.find((item) => item.teamId === team.id);
           const members = team.participantIds
             .map((id) => activeParticipants.find((item) => item.id === id))
@@ -671,8 +687,20 @@ export default function AdminTeamsPage() {
               ) : null}
             </Card>
           );
-        })}
-      </div>
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          action={
+            <a className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/matching">
+              Open match setup
+            </a>
+          }
+          description="Add matchable participants to the active cohort or loosen settings, then regenerate deterministic teams."
+          icon={<UsersRound size={20} />}
+          title="No generated teams to review"
+        />
+      )}
       <Card>
         <h2 className="font-semibold">CSV preview</h2>
         <pre className="mt-3 overflow-x-auto rounded-md bg-slate-950 p-4 text-xs text-white">{csvPreview}</pre>
