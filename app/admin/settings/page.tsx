@@ -7,6 +7,7 @@ import { Badge, Card, TextInput } from "@/components/ui";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingSettings } from "@/lib/matching/types";
+import { summarizeSettingsChanges } from "@/lib/settings-changes";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 
@@ -41,6 +42,10 @@ export default function AdminSettingsPage() {
   const impactDelta = useMemo(
     () => compareMatchingImpact(currentImpact, draftImpact),
     [currentImpact, draftImpact]
+  );
+  const settingsChanges = useMemo(
+    () => summarizeSettingsChanges(settings, draftSettings),
+    [draftSettings, settings]
   );
   const draftStatusText = hasDraftChanges
     ? "Draft changes are ready to apply."
@@ -181,6 +186,31 @@ export default function AdminSettingsPage() {
           <ImpactMetric label="Avg score" current={currentImpact.averageScore} draft={draftImpact.averageScore} delta={impactDelta.averageScore} />
           <ImpactMetric label="Warnings" current={currentImpact.warningCount} draft={draftImpact.warningCount} delta={impactDelta.warningCount} invert />
         </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">Draft change summary</h3>
+            <Badge>{settingsChanges.length} change{settingsChanges.length === 1 ? "" : "s"}</Badge>
+          </div>
+          {settingsChanges.length > 0 ? (
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {settingsChanges.map((change) => (
+                <div key={`${change.category}-${change.label}`} className="rounded-md border border-border bg-muted p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-medium">{change.label}</div>
+                    <Badge className={settingsChangeClass(change.category)}>{change.category}</Badge>
+                  </div>
+                  <div className="mt-2 text-muted-foreground">
+                    {change.current} -&gt; <span className="font-semibold text-foreground">{change.draft}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              No settings changes are currently staged.
+            </p>
+          )}
+        </div>
         {draftHealth.errors.length > 0 || draftHealth.warnings.length > 0 ? (
           <div className="grid gap-3 md:grid-cols-2">
             {draftHealth.errors.length > 0 ? (
@@ -296,6 +326,12 @@ function healthBadgeClass(status: "healthy" | "warning" | "error") {
   if (status === "healthy") return "bg-emerald-100 text-emerald-800";
   if (status === "warning") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
+}
+
+function settingsChangeClass(category: "team-size" | "constraint" | "weight") {
+  if (category === "team-size") return "bg-sky-100 text-sky-800";
+  if (category === "constraint") return "bg-amber-100 text-amber-800";
+  return "bg-violet-100 text-violet-800";
 }
 
 function NumberField({

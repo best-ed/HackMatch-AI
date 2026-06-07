@@ -9,6 +9,7 @@ import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
+import { summarizeSettingsChanges } from "@/lib/settings-changes";
 import { summarizeTeamReview } from "@/lib/team-review";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
@@ -350,6 +351,22 @@ describe("deterministic matching", () => {
     expect(draft.teamCount).toBe(6);
     expect(delta.teamCount).toBe(draft.teamCount - current.teamCount);
     expect(delta.averageScore).toBe(draft.averageScore - current.averageScore);
+  });
+
+  it("summarizes draft settings changes", () => {
+    const changes = summarizeSettingsChanges(demoMatchingSettings, {
+      ...demoMatchingSettings,
+      desiredTeamSize: demoMatchingSettings.desiredTeamSize + 1,
+      requirePresenter: !demoMatchingSettings.requirePresenter,
+      weights: {
+        ...demoMatchingSettings.weights,
+        roleCoverage: demoMatchingSettings.weights.roleCoverage + 0.5
+      }
+    });
+
+    expect(changes.map((change) => change.label)).toContain("Desired team size");
+    expect(changes.map((change) => change.label)).toContain("Require presenter");
+    expect(changes.map((change) => change.label)).toContain("Role coverage weight");
   });
 
   it("evaluates matching readiness with actionable items", () => {
