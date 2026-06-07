@@ -296,6 +296,12 @@ export default function AdminTeamsPage() {
           <ReviewMetric label="Lowest score" value={reviewSummary.lowestScore} />
           <ReviewMetric label="Locked" value={reviewSummary.lockedCount} />
         </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <ReviewMetric label="Coverage risks" value={reviewSummary.coverageRiskCount} />
+          <ReviewMetric label="Availability risks" value={reviewSummary.availabilityRiskCount} />
+          <ReviewMetric label="Constraint risks" value={reviewSummary.constraintRiskCount} />
+          <ReviewMetric label="Medium risks" value={reviewSummary.mediumRiskCount} />
+        </div>
         <div className="grid gap-2 lg:grid-cols-2">
           {reviewSummary.risks.slice(0, 6).map((risk) => (
             <div key={`${risk.teamId}-${risk.label}-${risk.detail}`} className="rounded-md border border-border bg-white p-3">

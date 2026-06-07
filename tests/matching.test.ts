@@ -450,6 +450,7 @@ describe("deterministic matching", () => {
     expect(review.assignedCount).toBe(assignedIds(result).length);
     expect(review.averageScore).toBeGreaterThan(0);
     expect(review.risks.length).toBeGreaterThan(0);
+    expect(review.mediumRiskCount + review.highRiskCount).toBeGreaterThanOrEqual(0);
   });
 
   it("flags high-risk team review items", () => {
@@ -471,6 +472,32 @@ describe("deterministic matching", () => {
 
     expect(review.highRiskCount).toBeGreaterThan(0);
     expect(review.risks.some((risk) => risk.label === "Low score")).toBe(true);
+  });
+
+  it("flags actionable team risk categories", () => {
+    const result = generateTeams(demoParticipants, demoMatchingSettings);
+    const riskyResult = {
+      ...result,
+      teams: [
+        {
+          ...result.teams[0],
+          score: {
+            ...result.teams[0].score!,
+            roleCoverageScore: 50,
+            skillCoverageScore: 55,
+            availabilityCompatibilityScore: 45,
+            constraintPenalty: 30
+          }
+        },
+        ...result.teams.slice(1)
+      ]
+    };
+    const review = summarizeTeamReview(riskyResult, demoParticipants);
+
+    expect(review.coverageRiskCount).toBeGreaterThan(0);
+    expect(review.availabilityRiskCount).toBeGreaterThan(0);
+    expect(review.constraintRiskCount).toBeGreaterThan(0);
+    expect(review.risks.some((risk) => risk.category === "availability")).toBe(true);
   });
 
   it("evaluates Supabase local-storage mode", () => {
