@@ -9,6 +9,7 @@ import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
+import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import { summarizeTeamReview } from "@/lib/team-review";
 
@@ -194,6 +195,12 @@ export default function AdminTeamsPage() {
     setRunActionStatus(`Restored ${run.name} as the live baseline.`);
   }
 
+  async function copySavedRunSharePreview(run: SavedMatchRun) {
+    const preview = buildSavedRunSharePreview(run);
+    await navigator.clipboard?.writeText(preview.text);
+    setRunActionStatus(`Copied share preview for ${run.name}.`);
+  }
+
   async function copyTeamSummary(
     teamName: string,
     members: Participant[],
@@ -344,6 +351,22 @@ export default function AdminTeamsPage() {
                 key={run.id}
                 className={`rounded-md border p-3 ${activeRunId === run.id ? "border-primary bg-emerald-50" : "border-border bg-white"}`}
               >
+                {(() => {
+                  const sharePreview = buildSavedRunSharePreview(run);
+                  return (
+                    <div className="mb-3 rounded-md bg-muted p-3 text-xs">
+                      <div className="font-semibold">Share preview</div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {sharePreview.metrics.slice(0, 4).map((metric) => (
+                          <div key={metric.label}>
+                            <div className="font-bold">{metric.value}</div>
+                            <div className="text-muted-foreground">{metric.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <button
                   className="block w-full text-left"
                   onClick={() => setActiveRunId(run.id)}
@@ -377,6 +400,13 @@ export default function AdminTeamsPage() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      onClick={() => void copySavedRunSharePreview(run)}
+                      type="button"
+                    >
+                      Copy share preview
+                    </button>
                     <button
                       className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
                       onClick={() => duplicateRun(run)}
