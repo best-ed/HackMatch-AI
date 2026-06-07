@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { SearchX } from "lucide-react";
+import { Eye, LinkIcon, SearchX, X } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
@@ -11,6 +11,7 @@ import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
+import { validateParticipantRegistration } from "@/lib/participant-validation";
 
 export default function AdminParticipantsPage() {
   const {
@@ -34,6 +35,7 @@ export default function AdminParticipantsPage() {
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
   const [importStatus, setImportStatus] = useState("");
   const [linkStatus, setLinkStatus] = useState("");
+  const [selectedParticipantId, setSelectedParticipantId] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -78,6 +80,7 @@ export default function AdminParticipantsPage() {
       return matchesQuery && matchesRole && matchesExperience && matchesConsent;
     });
   }, [consentFilter, experienceFilter, participants, query, roleFilter]);
+  const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId);
   const matchableCount = participants.filter((participant) => participant.consentToMatch).length;
   const advancedCount = participants.filter((participant) => participant.experienceLevel === "advanced").length;
   const importPlan = useMemo(() => {
@@ -358,6 +361,17 @@ export default function AdminParticipantsPage() {
           </Button>
         </div>
       </Card>
+      {selectedParticipant ? (
+        <ParticipantDetailPanel
+          onClose={() => setSelectedParticipantId("")}
+          onCopyLink={() => {
+            copyAccessLink(selectedParticipant);
+            setLinkStatus(`Copied access link for ${selectedParticipant.fullName}.`);
+          }}
+          participant={selectedParticipant}
+          validation={validateParticipantRegistration(selectedParticipant, participants)}
+        />
+      ) : null}
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">Access link management</h2>
@@ -586,9 +600,19 @@ export default function AdminParticipantsPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <button className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => deleteParticipant(participant.id)}>
+                  <div className="grid gap-2">
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-semibold"
+                      onClick={() => setSelectedParticipantId(participant.id)}
+                      type="button"
+                    >
+                      <Eye size={15} />
+                      Details
+                    </button>
+                    <button className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => deleteParticipant(participant.id)}>
                     Delete
-                  </button>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -606,6 +630,156 @@ export default function AdminParticipantsPage() {
           </tbody>
         </table>
       </Card>
+    </div>
+  );
+}
+
+function ParticipantDetailPanel({
+  participant,
+  validation,
+  onClose,
+  onCopyLink
+}: {
+  participant: Participant;
+  validation: { errors: string[]; warnings: string[] };
+  onClose: () => void;
+  onCopyLink: () => void;
+}) {
+  const readiness = validation.errors.length
+    ? "Needs fixes"
+    : validation.warnings.length
+      ? "Needs review"
+      : "Ready";
+  return (
+    <Card className="space-y-5 border-primary/30 bg-emerald-50/40">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-semibold">{participant.fullName || "Unnamed participant"}</h2>
+            <Badge className={participant.consentToMatch ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+              {participant.consentToMatch ? "Matchable" : "Excluded"}
+            </Badge>
+            <Badge className={readiness === "Ready" ? "bg-emerald-100 text-emerald-800" : readiness === "Needs review" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"}>
+              {readiness}
+            </Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {participant.primaryRole} - {participant.experienceLevel} - {participant.cohort ?? "General"}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
+            onClick={onCopyLink}
+            type="button"
+          >
+            <LinkIcon size={15} />
+            Copy link
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={15} />
+            Close
+          </button>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-md border border-border bg-white p-4">
+          <h3 className="font-semibold">Identity and links</h3>
+          <div className="mt-3 grid gap-2 text-sm">
+            <DetailRow label="Email" value={participant.email} />
+            <DetailRow label="Phone" value={participant.phone || "Not provided"} />
+            <DetailRow label="Institution" value={participant.institution || "Not provided"} />
+            <DetailRow label="Access token" value={participant.accessToken || "Not generated"} />
+            <DetailLink label="GitHub" value={participant.githubUrl} />
+            <DetailLink label="LinkedIn" value={participant.linkedinUrl} />
+            <DetailLink label="Portfolio" value={participant.portfolioUrl} />
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <h3 className="font-semibold">Readiness notes</h3>
+          <div className="mt-3 grid gap-2">
+            {validation.errors.map((error) => (
+              <div className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-800" key={error}>{error}</div>
+            ))}
+            {validation.warnings.map((warning) => (
+              <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800" key={warning}>{warning}</div>
+            ))}
+            {validation.errors.length === 0 && validation.warnings.length === 0 ? (
+              <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Profile has enough signal for matching.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ListPanel title="Secondary roles" items={participant.secondaryRoles} />
+        <ListPanel title="Technical skills" items={participant.technicalSkills} />
+        <ListPanel title="Tools" items={participant.tools} />
+        <ListPanel title="Interests" items={participant.interests} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ListPanel title="Availability" items={participant.availability} />
+        <ListPanel title="Preferred teammates" items={participant.preferredTeammates} />
+        <ListPanel title="Blocked teammates" items={participant.blockedTeammates} tone="warning" />
+      </div>
+      <div className="rounded-md border border-border bg-white p-4">
+        <h3 className="font-semibold">Project signal</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {participant.projectIdeas || participant.personalStatement || "No project idea or personal statement yet."}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-3 rounded-md bg-muted px-3 py-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
+
+function DetailLink({ label, value }: { label: string; value?: string }) {
+  return value ? (
+    <a className="flex flex-wrap justify-between gap-3 rounded-md bg-muted px-3 py-2 text-primary" href={value} rel="noreferrer" target="_blank">
+      <span>{label}</span>
+      <span className="break-all">{value}</span>
+    </a>
+  ) : (
+    <DetailRow label={label} value="Not provided" />
+  );
+}
+
+function ListPanel({
+  title,
+  items,
+  tone = "default"
+}: {
+  title: string;
+  items: string[];
+  tone?: "default" | "warning";
+}) {
+  return (
+    <div className="rounded-md border border-border bg-white p-4">
+      <div className="font-semibold">{title}</div>
+      {items.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {items.map((item) => (
+            <Badge key={item} className={tone === "warning" ? "bg-amber-100 text-amber-800" : undefined}>
+              {item}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">None listed.</p>
+      )}
     </div>
   );
 }
