@@ -8,6 +8,7 @@ import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToC
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
+import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 
 export default function AdminParticipantsPage() {
@@ -38,6 +39,7 @@ export default function AdminParticipantsPage() {
     [participants]
   );
   const intakeSummary = useMemo(() => evaluateParticipantIntake(participants), [participants]);
+  const duplicateGroups = useMemo(() => findParticipantDuplicates(participants), [participants]);
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return participants.filter((participant) => {
@@ -261,6 +263,44 @@ export default function AdminParticipantsPage() {
             ))}
           </div>
         </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Duplicate review</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Likely duplicate records based on email, access token, or name plus institution.
+            </p>
+          </div>
+          <Badge className={duplicateGroups.length ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+            {duplicateGroups.length ? `${duplicateGroups.length} group${duplicateGroups.length === 1 ? "" : "s"}` : "Clear"}
+          </Badge>
+        </div>
+        {duplicateGroups.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {duplicateGroups.slice(0, 6).map((group) => (
+              <div className="rounded-md border border-border bg-white p-3" key={`${group.reason}-${group.label}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-medium">{group.reason}</div>
+                  <Badge>{group.participants.length} records</Badge>
+                </div>
+                <div className="mt-2 text-sm text-muted-foreground">{group.label}</div>
+                <div className="mt-3 space-y-1 text-sm">
+                  {group.participants.map((participant) => (
+                    <div className="flex justify-between gap-3" key={participant.id}>
+                      <span>{participant.fullName}</span>
+                      <span className="text-muted-foreground">{participant.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            No likely duplicate participants detected.
+          </div>
+        )}
       </Card>
       <Card className="grid gap-3 lg:grid-cols-[1fr_180px_180px_180px_auto]">
         <label className="space-y-2 text-sm font-medium">
