@@ -12,6 +12,7 @@ import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
+import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import { summarizeTeamReview } from "@/lib/team-review";
 
@@ -665,6 +666,7 @@ export default function AdminTeamsPage() {
             .map((id) => activeParticipants.find((item) => item.id === id))
             .filter((participant): participant is Participant => Boolean(participant));
           const placementExplanations = buildTeamPlacementExplanations(members);
+          const balanceSummary = summarizeTeamBalance(members, team.score);
           const risks = getTeamRisks(team.score?.totalScore ?? 0, explanation);
           return (
             <Card key={team.id} className="space-y-4">
@@ -703,6 +705,11 @@ export default function AdminTeamsPage() {
                     Copy summary
                   </button>
                 </div>
+              </div>
+              <div className="grid gap-3 rounded-md border border-border bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
+                {balanceSummary.signals.map((signal) => (
+                  <BalanceSignalBar key={signal.label} signal={signal} />
+                ))}
               </div>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {members.map((participant) => (
@@ -833,10 +840,40 @@ function ReviewMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function BalanceSignalBar({ signal }: { signal: TeamBalanceSignal }) {
+  const value = Math.max(0, Math.min(100, signal.value));
+  return (
+    <div>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">{signal.label}</div>
+          <div className="text-xs text-muted-foreground">{signal.detail}</div>
+        </div>
+        <Badge className={balanceSignalClass(signal.status)}>{value}</Badge>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div className={`h-full rounded-full ${balanceSignalFillClass(signal.status)}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function reviewRiskClass(severity: "high" | "medium" | "low") {
   if (severity === "high") return "bg-rose-100 text-rose-800";
   if (severity === "medium") return "bg-amber-100 text-amber-800";
   return "bg-emerald-100 text-emerald-800";
+}
+
+function balanceSignalClass(status: TeamBalanceSignal["status"]) {
+  if (status === "strong") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function balanceSignalFillClass(status: TeamBalanceSignal["status"]) {
+  if (status === "strong") return "bg-primary";
+  if (status === "review") return "bg-amber-500";
+  return "bg-rose-500";
 }
 
 function ScoreBar({ label, value, invert = false }: { label: string; value: number; invert?: boolean }) {
