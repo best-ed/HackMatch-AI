@@ -19,6 +19,7 @@ export default function AdminPage() {
     savedMatchRuns,
     activeCohort,
     cohorts,
+    archivedCohorts,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -263,7 +264,7 @@ export default function AdminPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <QuickAction href="/admin/participants" title="Directory" detail={`${participants.length} participant profile(s), imports, filters, and access links.`} icon={<Link2 size={18} />} />
-          <QuickAction href="/admin/matching" title="Match setup" detail={`${cohorts.length} cohort option(s), event setup, and readiness checks.`} icon={<CalendarDays size={18} />} />
+          <QuickAction href="/admin/matching" title="Match setup" detail={`${cohorts.length} active cohort option(s), ${archivedCohorts.length} archived.`} icon={<CalendarDays size={18} />} />
           <QuickAction href="/admin/teams" title="Team review" detail={`${result.teams.length} live team(s), explanations, locks, saved runs, and exports.`} icon={<ShieldCheck size={18} />} />
           <QuickAction href="/admin/settings" title="Settings" detail={`${settings.desiredTeamSize} desired team size with draft impact preview.`} icon={<SlidersHorizontal size={18} />} />
         </div>

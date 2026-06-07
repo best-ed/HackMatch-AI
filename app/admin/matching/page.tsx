@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Gauge, Settings2, Users } from "lucide-react";
+import { AlertTriangle, Archive, CheckCircle2, Gauge, RotateCcw, Settings2, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
@@ -19,6 +19,10 @@ export default function AdminMatchingPage() {
     activeCohort,
     setActiveCohort,
     cohorts,
+    allCohorts,
+    archivedCohorts,
+    archiveCohort,
+    restoreCohort,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -198,6 +202,71 @@ export default function AdminMatchingPage() {
             ))}
           </select>
         </label>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Cohort archive</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hide completed cohorts from active setup lists without deleting participants or saved runs.
+            </p>
+          </div>
+          <Badge>{archivedCohorts.length} archived</Badge>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+          <div className="rounded-md border border-border bg-white p-4">
+            <div className="flex items-center gap-2 font-semibold">
+              <Archive size={18} />
+              Active cohorts
+            </div>
+            <div className="mt-3 grid gap-2">
+              {cohorts.map((cohort) => (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted px-3 py-2" key={cohort}>
+                  <span className="text-sm font-medium">{cohort}</span>
+                  <button
+                    className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={cohort === "General"}
+                    onClick={() => archiveCohort(cohort)}
+                    type="button"
+                  >
+                    Archive
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-md border border-border bg-white p-4">
+            <div className="flex items-center gap-2 font-semibold">
+              <RotateCcw size={18} />
+              Archived cohorts
+            </div>
+            {archivedCohorts.length ? (
+              <div className="mt-3 grid gap-2">
+                {archivedCohorts.map((cohort) => (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted px-3 py-2" key={cohort}>
+                    <span className="text-sm font-medium">{cohort}</span>
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold"
+                      onClick={() => restoreCohort(cohort)}
+                      type="button"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+                No archived cohorts. Completed events can be archived here after their final saved run is recorded.
+              </p>
+            )}
+          </div>
+        </div>
+        {allCohorts.length !== cohorts.length ? (
+          <p className="text-xs text-muted-foreground">
+            Showing {cohorts.length} of {allCohorts.length} known cohort{allCohorts.length === 1 ? "" : "s"} in active setup lists.
+          </p>
+        ) : null}
       </Card>
 
       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">

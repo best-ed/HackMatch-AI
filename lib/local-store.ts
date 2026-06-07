@@ -1,6 +1,12 @@
 "use client";
 
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
+import {
+  archiveCohortList,
+  normalizeArchivedCohorts,
+  restoreCohortList,
+  visibleCohorts
+} from "@/lib/cohort-archive";
 import type {
   AvailabilitySlot,
   MatchingSettings,
@@ -22,6 +28,7 @@ const participantsKey = "hackmatch.participants.v1";
 const settingsKey = "hackmatch.settings.v1";
 const savedMatchRunsKey = "hackmatch.savedMatchRuns.v1";
 const activeCohortKey = "hackmatch.activeCohort.v1";
+const archivedCohortsKey = "hackmatch.archivedCohorts.v1";
 const currentParticipantKey = "hackmatch.currentParticipant.v1";
 const defaultCohort = "General";
 
@@ -155,6 +162,7 @@ export function useHackMatchData() {
   const [settings, setSettingsState] = useState<MatchingSettings>(demoMatchingSettings);
   const [savedMatchRuns, setSavedMatchRunsState] = useState<SavedMatchRun[]>([]);
   const [activeCohort, setActiveCohortState] = useState(defaultCohort);
+  const [archivedCohorts, setArchivedCohortsState] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [persistenceMode, setPersistenceMode] = useState<"local" | "supabase">("local");
   const [persistenceWarning, setPersistenceWarning] = useState("");
@@ -167,13 +175,16 @@ export function useHackMatchData() {
       const localSettings = readJson(settingsKey, demoMatchingSettings);
       const localSavedRuns = normalizeSavedRunsForStorage(readJson(savedMatchRunsKey, []));
       const localActiveCohort = readActiveCohort();
+      const localArchivedCohorts = normalizeArchivedCohorts(readJson(archivedCohortsKey, []));
 
       setParticipantsState(localParticipants);
       setSettingsState(localSettings);
       setSavedMatchRunsState(localSavedRuns);
       setActiveCohortState(localActiveCohort);
+      setArchivedCohortsState(localArchivedCohorts);
       writeJson(participantsKey, localParticipants);
       writeJson(savedMatchRunsKey, localSavedRuns);
+      writeJson(archivedCohortsKey, localArchivedCohorts);
 
       if (!isSupabaseConfigured()) {
         setPersistenceMode("local");
@@ -227,7 +238,12 @@ export function useHackMatchData() {
       settings,
       savedMatchRuns,
       activeCohort,
-      cohorts: Array.from(new Set([defaultCohort, ...participants.map((participant) => participant.cohort || defaultCohort)])).sort(),
+      archivedCohorts,
+      allCohorts: Array.from(new Set([defaultCohort, ...participants.map((participant) => participant.cohort || defaultCohort)])).sort(),
+      cohorts: visibleCohorts(
+        Array.from(new Set([defaultCohort, ...participants.map((participant) => participant.cohort || defaultCohort)])).sort(),
+        archivedCohorts
+      ),
       cohortParticipants:
         activeCohort === "All"
           ? participants
@@ -236,6 +252,22 @@ export function useHackMatchData() {
         const cleaned = next.trim() || defaultCohort;
         setActiveCohortState(cleaned);
         window.localStorage.setItem(activeCohortKey, cleaned);
+      },
+      archiveCohort(cohort: string) {
+        const cleaned = cohort.trim();
+        if (!cleaned || cleaned === defaultCohort) return;
+        const next = archiveCohortList(archivedCohorts, cleaned);
+        setArchivedCohortsState(next);
+        writeJson(archivedCohortsKey, next);
+        if (activeCohort === cleaned) {
+          setActiveCohortState(defaultCohort);
+          window.localStorage.setItem(activeCohortKey, defaultCohort);
+        }
+      },
+      restoreCohort(cohort: string) {
+        const next = restoreCohortList(archivedCohorts, cohort);
+        setArchivedCohortsState(next);
+        writeJson(archivedCohortsKey, next);
       },
       setParticipants(next: Participant[]) {
         const normalized = normalizeParticipantsForStorage(next);
@@ -379,9 +411,11 @@ export function useHackMatchData() {
         setParticipantsState(normalizedDemoParticipants);
         setSettingsState(demoMatchingSettings);
         setSavedMatchRunsState([]);
+        setArchivedCohortsState([]);
         writeJson(participantsKey, normalizedDemoParticipants);
         writeJson(settingsKey, demoMatchingSettings);
         writeJson(savedMatchRunsKey, []);
+        writeJson(archivedCohortsKey, []);
         if (isSupabaseConfigured()) {
           void Promise.all([
             ...normalizedDemoParticipants.map((participant) => saveRemoteParticipant(participant)),
@@ -390,7 +424,7 @@ export function useHackMatchData() {
         }
       }
     }),
-    [activeCohort, loaded, participants, persistenceMode, persistenceWarning, savedMatchRuns, settings]
+    [activeCohort, archivedCohorts, loaded, participants, persistenceMode, persistenceWarning, savedMatchRuns, settings]
   );
 
   return api;
