@@ -12,6 +12,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Provides matching settings presets and health checks before generation.
 - Lets organizers lock live teams so their membership is preserved during later regeneration.
 - Saves generated match runs as frozen snapshots for later review.
+- Generates compact saved-run share previews for organizer handoff.
 - Exports and imports participant CSV files, and exports generated teams to CSV.
 
 ## Deterministic Matching
@@ -109,15 +110,15 @@ on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
 Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, and default missing cohort values to the active cohort.
 
-The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation.
+The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation. It also flags duplicate emails, names, and access tokens so organizers can resolve messy intake data before matching.
 
-Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link and review saved profile details. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
+Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link, review saved profile details, and see whether their current cohort assignment is ready, waiting, unassigned, or blocked by consent. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
 The participant team page turns each access link into a team handoff with members, suggested internal roles, strengths, watch points, shared interests, shared availability, next steps, and contact details only for teammates who consented to sharing.
 
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
-The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results.
+The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results. Saved runs also include a deterministic share preview with compact metrics and copy-ready text for organizer updates.
 
 Saved runs can be renamed, duplicated, restored as the live baseline, compared against current live teams, or deleted with confirmation. Restoring a saved run brings back its participant snapshot, settings snapshot, and cohort as the current editable baseline.
 
@@ -175,7 +176,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, participant team briefs, team review summaries, settings presets, settings validation, settings impact summaries, matching readiness evaluation, Supabase readiness checks, and deployment readiness checks.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, duplicate participant review, participant team briefs, saved-run share previews, team review summaries, settings presets, settings validation, settings impact summaries, matching readiness evaluation, Supabase readiness checks, and deployment readiness checks.
 
 ## Main Routes
 
