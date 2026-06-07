@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card } from "@/components/ui";
+import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -29,6 +30,11 @@ export default function AdminPage() {
     ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
     : 0;
   const latestRun = savedMatchRuns[0];
+  const cohortOverview = summarizeCohortOverview({
+    cohort: activeCohort,
+    participants,
+    savedRuns: savedMatchRuns
+  });
   const settingsHealth = validateMatchingSettings(settings, cohortParticipants);
   const supabaseReadiness = evaluateSupabaseReadiness({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -92,6 +98,32 @@ export default function AdminPage() {
         <MetricCard href="/admin/teams" title="Team review" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
         <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Cohort overview</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Snapshot of the active cohort before setup, review, or export.
+            </p>
+          </div>
+          <Badge>{cohortOverview.cohort}</Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <OverviewMetric label="Participants" value={cohortOverview.participantCount} />
+          <OverviewMetric label="Matchable" value={cohortOverview.matchableCount} />
+          <OverviewMetric label="Advanced" value={cohortOverview.advancedCount} />
+          <OverviewMetric label="Saved runs" value={cohortOverview.savedRunCount} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <OverviewList title="Top roles" items={cohortOverview.topRoles} />
+          <OverviewList title="Top interests" items={cohortOverview.topInterests} />
+        </div>
+        <div className="rounded-md border border-border bg-white p-3 text-sm text-muted-foreground">
+          {cohortOverview.latestRunName
+            ? `Latest saved run for this cohort: ${cohortOverview.latestRunName}.`
+            : "No saved run exists for this active cohort yet."}
+        </div>
+      </Card>
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -272,6 +304,33 @@ function MetricCard({
         <div className="mt-1 text-sm text-muted-foreground">{detail}</div>
       </Card>
     </Link>
+  );
+}
+
+function OverviewMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-2 text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function OverviewList({ title, items }: { title: string; items: Array<{ label: string; count: number }> }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="font-semibold">{title}</div>
+      <div className="mt-3 space-y-2">
+        {items.length > 0 ? items.map((item) => (
+          <div className="flex justify-between gap-3 text-sm" key={item.label}>
+            <span className="text-muted-foreground">{item.label}</span>
+            <span className="font-semibold">{item.count}</span>
+          </div>
+        )) : (
+          <div className="text-sm text-muted-foreground">No signal yet.</div>
+        )}
+      </div>
+    </div>
   );
 }
 
