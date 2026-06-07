@@ -6,6 +6,7 @@ import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
+import { buildTeamExportAudit } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -47,6 +48,19 @@ export default function AdminTeamsPage() {
   const isViewingSavedRun = Boolean(activeRun);
   const heading = activeRun?.name ?? "Team review";
   const exportCohort = activeRun?.cohort ?? activeCohort;
+  const exportAudit = useMemo(
+    () =>
+      buildTeamExportAudit({
+        result: activeResult,
+        participants: activeParticipants,
+        cohort: exportCohort,
+        scope: isViewingSavedRun ? "saved" : "live",
+        lockedTeamCount: isViewingSavedRun
+          ? activeRun?.settingsSnapshot.lockedTeams?.length ?? 0
+          : lockedTeams.length
+      }),
+    [activeParticipants, activeResult, activeRun?.settingsSnapshot.lockedTeams?.length, exportCohort, isViewingSavedRun, lockedTeams.length]
+  );
   const csv = teamsToCsv(activeResult, activeParticipants);
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
   const [explanations, setExplanations] = useState<TeamExplanation[]>(activeResult.explanations);
@@ -319,6 +333,44 @@ export default function AdminTeamsPage() {
                 <Badge className={reviewRiskClass(risk.severity)}>{risk.label}</Badge>
               </div>
               <div className="mt-1 text-sm text-muted-foreground">{risk.detail}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Export audit</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Confirm exactly what the team CSV will include before downloading.
+            </p>
+          </div>
+          <Badge className={exportAudit.checks.every((check) => check.status === "ready") ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+            {exportAudit.checks.filter((check) => check.status === "ready").length}/{exportAudit.checks.length} ready
+          </Badge>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="font-semibold">{exportAudit.filename}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{exportAudit.summary}</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <ReviewMetric label="CSV rows" value={exportAudit.exportRows} />
+          <ReviewMetric label="Teams" value={exportAudit.teamCount} />
+          <ReviewMetric label="Assigned" value={exportAudit.assignedCount} />
+          <ReviewMetric label="Unassigned" value={exportAudit.unassignedCount} />
+          <ReviewMetric label="Contact hidden" value={exportAudit.contactHiddenCount} />
+          <ReviewMetric label="Warnings" value={exportAudit.warningCount} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {exportAudit.checks.map((check) => (
+            <div className="rounded-md border border-border bg-white p-4" key={check.label}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{check.label}</div>
+                <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                  {check.status}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
             </div>
           ))}
         </div>
