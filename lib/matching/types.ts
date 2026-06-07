@@ -110,6 +110,7 @@ export type MatchingResult = {
 export type SavedMatchRun = {
   id: string;
   name: string;
+  notes?: string;
   createdAt: string;
   participantCount: number;
   assignedCount: number;

@@ -7,6 +7,7 @@ import {
   restoreCohortList,
   visibleCohorts
 } from "@/lib/cohort-archive";
+import { updateSavedRunNotes } from "@/lib/saved-run-notes";
 import type {
   AvailabilitySlot,
   MatchingSettings,
@@ -115,6 +116,7 @@ function normalizeParticipantsForStorage(participants: Participant[]): Participa
 function normalizeSavedRunsForStorage(runs: SavedMatchRun[]): SavedMatchRun[] {
   return runs.map((run) => ({
     ...run,
+    notes: run.notes?.trim() || undefined,
     participantsSnapshot: normalizeParticipantsForStorage(run.participantsSnapshot)
   }));
 }
@@ -367,6 +369,11 @@ export function useHackMatchData() {
         const next = savedMatchRuns.map((run) =>
           run.id === id ? { ...run, name: cleaned } : run
         );
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+      },
+      updateMatchRunNotes(id: string, note: string) {
+        const next = updateSavedRunNotes(savedMatchRuns, id, note);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
       },

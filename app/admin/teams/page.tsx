@@ -24,6 +24,7 @@ export default function AdminTeamsPage() {
     saveMatchRun,
     deleteMatchRun,
     renameMatchRun,
+    updateMatchRunNotes,
     duplicateMatchRun,
     restoreMatchRunSnapshot,
     activeCohort,
@@ -71,6 +72,7 @@ export default function AdminTeamsPage() {
   const [runName, setRunName] = useState("");
   const [compareRunId, setCompareRunId] = useState("");
   const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
@@ -202,6 +204,12 @@ export default function AdminTeamsPage() {
     setActiveRunId(copy.id);
     setCompareRunId(copy.id);
     setRunActionStatus(`Duplicated ${run.name} as ${copy.name}.`);
+  }
+
+  function saveRunNotes(run: SavedMatchRun) {
+    const note = noteDrafts[run.id] ?? run.notes ?? "";
+    updateMatchRunNotes(run.id, note);
+    setRunActionStatus(note.trim() ? `Saved notes for ${run.name}.` : `Cleared notes for ${run.name}.`);
   }
 
   function restoreRun(run: SavedMatchRun) {
@@ -452,6 +460,29 @@ export default function AdminTeamsPage() {
                       Rename
                     </button>
                   </div>
+                  <div className="grid gap-2">
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span>Organizer notes</span>
+                      <textarea
+                        className="min-h-20 w-full rounded-md border border-border bg-white px-3 py-2 text-xs outline-none ring-primary/20 focus:ring-4"
+                        onChange={(event) => setNoteDrafts((current) => ({ ...current, [run.id]: event.target.value }))}
+                        placeholder="Final after mentor review, needs sponsor approval, or follow-up context"
+                        value={noteDrafts[run.id] ?? run.notes ?? ""}
+                      />
+                    </label>
+                    <button
+                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      onClick={() => saveRunNotes(run)}
+                      type="button"
+                    >
+                      Save notes
+                    </button>
+                  </div>
+                  {run.notes ? (
+                    <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                      {run.notes}
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <button
                       className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
