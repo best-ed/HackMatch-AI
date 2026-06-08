@@ -11,6 +11,11 @@ import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
+import {
+  duplicateParticipantIdsFromGroups,
+  participantMatchesReadinessFilter,
+  type ParticipantReadinessFilter
+} from "@/lib/participant-readiness-filter";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
 export default function AdminParticipantsPage() {
@@ -30,6 +35,7 @@ export default function AdminParticipantsPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
   const [consentFilter, setConsentFilter] = useState<"all" | "matchable" | "excluded">("all");
+  const [readinessFilter, setReadinessFilter] = useState<ParticipantReadinessFilter>("all");
   const [exportStatus, setExportStatus] = useState("");
   const [importCsv, setImportCsv] = useState("");
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
@@ -43,6 +49,7 @@ export default function AdminParticipantsPage() {
   );
   const intakeSummary = useMemo(() => evaluateParticipantIntake(participants), [participants]);
   const duplicateGroups = useMemo(() => findParticipantDuplicates(participants), [participants]);
+  const duplicateParticipantIds = useMemo(() => duplicateParticipantIdsFromGroups(duplicateGroups), [duplicateGroups]);
   const filteredParticipants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return participants.filter((participant) => {
@@ -77,9 +84,15 @@ export default function AdminParticipantsPage() {
         consentFilter === "all" ||
         (consentFilter === "matchable" && participant.consentToMatch) ||
         (consentFilter === "excluded" && !participant.consentToMatch);
-      return matchesQuery && matchesRole && matchesExperience && matchesConsent;
+      const matchesReadiness = participantMatchesReadinessFilter({
+        participant,
+        participants,
+        duplicateParticipantIds,
+        filter: readinessFilter
+      });
+      return matchesQuery && matchesRole && matchesExperience && matchesConsent && matchesReadiness;
     });
-  }, [consentFilter, experienceFilter, participants, query, roleFilter]);
+  }, [consentFilter, duplicateParticipantIds, experienceFilter, participants, query, readinessFilter, roleFilter]);
   const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId);
   const matchableCount = participants.filter((participant) => participant.consentToMatch).length;
   const advancedCount = participants.filter((participant) => participant.experienceLevel === "advanced").length;
@@ -235,6 +248,13 @@ export default function AdminParticipantsPage() {
           <PreviewMetric label="Incomplete" value={intakeSummary.incompleteCount} />
           <PreviewMetric label="Low signal" value={intakeSummary.lowSignalCount} />
         </div>
+        <div className="flex flex-wrap gap-2">
+          <ReadinessFilterButton active={readinessFilter === "all"} label="All records" onClick={() => setReadinessFilter("all")} />
+          <ReadinessFilterButton active={readinessFilter === "incomplete"} label={`Incomplete (${intakeSummary.incompleteCount})`} onClick={() => setReadinessFilter("incomplete")} />
+          <ReadinessFilterButton active={readinessFilter === "excluded"} label={`Excluded (${intakeSummary.excludedCount})`} onClick={() => setReadinessFilter("excluded")} />
+          <ReadinessFilterButton active={readinessFilter === "low-signal"} label={`Low signal (${intakeSummary.lowSignalCount})`} onClick={() => setReadinessFilter("low-signal")} />
+          <ReadinessFilterButton active={readinessFilter === "duplicates"} label={`Duplicates (${duplicateParticipantIds.size})`} onClick={() => setReadinessFilter("duplicates")} />
+        </div>
         <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
           <div className="rounded-md border border-border bg-white p-4">
             <div className="font-semibold">Top role coverage</div>
@@ -354,6 +374,7 @@ export default function AdminParticipantsPage() {
               setRoleFilter("all");
               setExperienceFilter("all");
               setConsentFilter("all");
+              setReadinessFilter("all");
             }}
             type="button"
           >
@@ -875,6 +896,30 @@ function PreviewMetric({ label, value }: { label: string; value: number }) {
       <div className="text-base font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+function ReadinessFilterButton({
+  active,
+  label,
+  onClick
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+        active
+          ? "border-primary bg-emerald-50 text-foreground"
+          : "border-border bg-white text-muted-foreground hover:text-foreground"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
   );
 }
 
