@@ -8,6 +8,7 @@ import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingSettings } from "@/lib/matching/types";
 import { summarizeSettingsChanges } from "@/lib/settings-changes";
+import { explainMatchingSettings, type SettingsExplanation } from "@/lib/settings-explainer";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 
@@ -46,6 +47,10 @@ export default function AdminSettingsPage() {
   const settingsChanges = useMemo(
     () => summarizeSettingsChanges(settings, draftSettings),
     [draftSettings, settings]
+  );
+  const settingExplanations = useMemo(
+    () => explainMatchingSettings(draftSettings),
+    [draftSettings]
   );
   const draftStatusText = hasDraftChanges
     ? "Draft changes are ready to apply."
@@ -162,6 +167,22 @@ export default function AdminSettingsPage() {
               <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
             </button>
           ))}
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Settings guide</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Plain-English impact notes for the current draft values.
+            </p>
+          </div>
+          <Badge>{settingExplanations.length} rules explained</Badge>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-3">
+          <SettingsExplanationGroup title="Team sizing" items={settingExplanations.filter((item) => item.category === "team-size")} />
+          <SettingsExplanationGroup title="Constraints" items={settingExplanations.filter((item) => item.category === "constraint")} />
+          <SettingsExplanationGroup title="Scoring weights" items={settingExplanations.filter((item) => item.category === "weight")} />
         </div>
       </Card>
       <Card className="space-y-4">
@@ -318,6 +339,32 @@ function HealthMetric({ label, value }: { label: string; value: string | number 
     <div className="rounded-md border border-border bg-white p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+function SettingsExplanationGroup({
+  title,
+  items
+}: {
+  title: string;
+  items: SettingsExplanation[];
+}) {
+  return (
+    <div className="rounded-md border border-border bg-white p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <div className="mt-3 grid gap-3">
+        {items.map((item) => (
+          <div className="rounded-md bg-muted p-3 text-sm" key={item.key}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-medium">{item.label}</div>
+              <Badge>{item.currentValue}</Badge>
+            </div>
+            <p className="mt-2 text-muted-foreground">{item.explanation}</p>
+            <p className="mt-2 text-xs font-medium text-foreground">{item.organizerTip}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
