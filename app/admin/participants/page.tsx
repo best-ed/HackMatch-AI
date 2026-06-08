@@ -368,6 +368,7 @@ export default function AdminParticipantsPage() {
             copyAccessLink(selectedParticipant);
             setLinkStatus(`Copied access link for ${selectedParticipant.fullName}.`);
           }}
+          onUpdate={(key, value) => updateParticipant(selectedParticipant, key, value)}
           participant={selectedParticipant}
           validation={validateParticipantRegistration(selectedParticipant, participants)}
         />
@@ -638,12 +639,14 @@ function ParticipantDetailPanel({
   participant,
   validation,
   onClose,
-  onCopyLink
+  onCopyLink,
+  onUpdate
 }: {
   participant: Participant;
   validation: { errors: string[]; warnings: string[] };
   onClose: () => void;
   onCopyLink: () => void;
+  onUpdate: <K extends keyof Participant>(key: K, value: Participant[K]) => void;
 }) {
   const readiness = validation.errors.length
     ? "Needs fixes"
@@ -713,6 +716,75 @@ function ParticipantDetailPanel({
                 Profile has enough signal for matching.
               </div>
             ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-md border border-border bg-white p-4">
+          <h3 className="font-semibold">Edit identity</h3>
+          <div className="mt-3 grid gap-3">
+            <label className="space-y-2 text-sm font-medium">
+              <span>Full name</span>
+              <TextInput value={participant.fullName} onChange={(event) => onUpdate("fullName", event.target.value)} />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Email</span>
+              <TextInput value={participant.email} onChange={(event) => onUpdate("email", event.target.value)} />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Cohort</span>
+              <TextInput value={participant.cohort ?? "General"} onChange={(event) => onUpdate("cohort", event.target.value)} />
+            </label>
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <h3 className="font-semibold">Edit matching signal</h3>
+          <div className="mt-3 grid gap-3">
+            <label className="space-y-2 text-sm font-medium">
+              <span>Primary role</span>
+              <TextInput value={participant.primaryRole} onChange={(event) => onUpdate("primaryRole", event.target.value)} />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Experience</span>
+              <select
+                className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+                onChange={(event) => onUpdate("experienceLevel", event.target.value as ExperienceLevel)}
+                value={participant.experienceLevel}
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Technical skills</span>
+              <TextArea className="min-h-20" value={joinListLines(participant.technicalSkills)} onChange={(event) => onUpdate("technicalSkills", splitList(event.target.value))} />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Interests</span>
+              <TextArea className="min-h-20" value={joinListLines(participant.interests)} onChange={(event) => onUpdate("interests", splitList(event.target.value))} />
+            </label>
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <h3 className="font-semibold">Edit teammate constraints</h3>
+          <div className="mt-3 grid gap-3">
+            <label className="space-y-2 text-sm font-medium">
+              <span>Preferred teammates</span>
+              <TextArea className="min-h-20" value={joinListLines(participant.preferredTeammates)} onChange={(event) => onUpdate("preferredTeammates", splitList(event.target.value))} />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              <span>Blocked teammates</span>
+              <TextArea className="min-h-20" value={joinListLines(participant.blockedTeammates)} onChange={(event) => onUpdate("blockedTeammates", splitList(event.target.value))} />
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" checked={participant.consentToMatch} onChange={(event) => onUpdate("consentToMatch", event.target.checked)} />
+              Consent to match
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" checked={participant.consentToShareContact} onChange={(event) => onUpdate("consentToShareContact", event.target.checked)} />
+              Share contact with teammates
+            </label>
           </div>
         </div>
       </div>
