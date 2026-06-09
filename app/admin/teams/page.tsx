@@ -26,6 +26,8 @@ export default function AdminTeamsPage() {
     deleteMatchRun,
     renameMatchRun,
     updateMatchRunNotes,
+    markMatchRunFinal,
+    clearFinalMatchRun,
     duplicateMatchRun,
     restoreMatchRunSnapshot,
     activeCohort,
@@ -211,6 +213,16 @@ export default function AdminTeamsPage() {
     const note = noteDrafts[run.id] ?? run.notes ?? "";
     updateMatchRunNotes(run.id, note);
     setRunActionStatus(note.trim() ? `Saved notes for ${run.name}.` : `Cleared notes for ${run.name}.`);
+  }
+
+  function toggleFinalRun(run: SavedMatchRun) {
+    if (run.isFinal) {
+      clearFinalMatchRun();
+      setRunActionStatus(`Cleared final marker from ${run.name}.`);
+      return;
+    }
+    markMatchRunFinal(run.id);
+    setRunActionStatus(`${run.name} is now marked as the final saved run.`);
   }
 
   function restoreRun(run: SavedMatchRun) {
@@ -444,6 +456,7 @@ export default function AdminTeamsPage() {
                     <Badge>{run.result.warnings.length} warning(s)</Badge>
                     <Badge>{run.settingsSnapshot.lockedTeams?.length ?? 0} lock(s)</Badge>
                     <Badge>Size {run.settingsSnapshot.desiredTeamSize}</Badge>
+                    {run.isFinal ? <Badge className="bg-emerald-100 text-emerald-800">Final</Badge> : null}
                   </div>
                 </button>
                 <div className="mt-3 grid gap-2">
@@ -485,6 +498,15 @@ export default function AdminTeamsPage() {
                     </div>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
+                    <button
+                      className={`rounded-md border px-3 py-2 text-xs font-semibold ${
+                        run.isFinal ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-border bg-white"
+                      }`}
+                      onClick={() => toggleFinalRun(run)}
+                      type="button"
+                    >
+                      {run.isFinal ? "Clear final" : "Mark final"}
+                    </button>
                     <button
                       className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
                       onClick={() => void copySavedRunSharePreview(run)}

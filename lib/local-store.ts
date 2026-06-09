@@ -7,6 +7,7 @@ import {
   restoreCohortList,
   visibleCohorts
 } from "@/lib/cohort-archive";
+import { clearFinalSavedRun, markFinalSavedRun } from "@/lib/saved-run-final";
 import { updateSavedRunNotes } from "@/lib/saved-run-notes";
 import type {
   AvailabilitySlot,
@@ -116,6 +117,7 @@ function normalizeParticipantsForStorage(participants: Participant[]): Participa
 function normalizeSavedRunsForStorage(runs: SavedMatchRun[]): SavedMatchRun[] {
   return runs.map((run) => ({
     ...run,
+    isFinal: Boolean(run.isFinal) || undefined,
     notes: run.notes?.trim() || undefined,
     participantsSnapshot: normalizeParticipantsForStorage(run.participantsSnapshot)
   }));
@@ -374,6 +376,16 @@ export function useHackMatchData() {
       },
       updateMatchRunNotes(id: string, note: string) {
         const next = updateSavedRunNotes(savedMatchRuns, id, note);
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+      },
+      markMatchRunFinal(id: string) {
+        const next = markFinalSavedRun(savedMatchRuns, id);
+        setSavedMatchRunsState(next);
+        writeJson(savedMatchRunsKey, next);
+      },
+      clearFinalMatchRun() {
+        const next = clearFinalSavedRun(savedMatchRuns);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
       },

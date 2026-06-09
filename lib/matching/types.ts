@@ -111,6 +111,7 @@ export type SavedMatchRun = {
   id: string;
   name: string;
   notes?: string;
+  isFinal?: boolean;
   createdAt: string;
   participantCount: number;
   assignedCount: number;

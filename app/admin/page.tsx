@@ -8,6 +8,7 @@ import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
+import { getFinalSavedRun } from "@/lib/saved-run-final";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 
@@ -31,6 +32,7 @@ export default function AdminPage() {
     ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
     : 0;
   const latestRun = savedMatchRuns[0];
+  const finalRun = getFinalSavedRun(savedMatchRuns);
   const cohortOverview = summarizeCohortOverview({
     cohort: activeCohort,
     participants,
@@ -97,7 +99,7 @@ export default function AdminPage() {
         <MetricCard href="/admin/participants" title="Directory" value={cohortParticipants.length} detail={`${matchable.length} matchable in ${activeCohort}`} icon={<Users size={20} />} />
         <MetricCard href="/admin/matching" title="Match setup" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned live`} icon={<Settings2 size={20} />} />
         <MetricCard href="/admin/teams" title="Team review" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
-        <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
+        <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={finalRun ? `Final: ${finalRun.name}` : latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -156,21 +158,24 @@ export default function AdminPage() {
         </Card>
         <Card className="space-y-4">
           <div>
-            <h2 className="font-semibold">Latest saved run</h2>
+            <h2 className="font-semibold">{finalRun ? "Final saved run" : "Latest saved run"}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Frozen team snapshot currently available for review.
+              {finalRun ? "Organizer-approved saved run for final handoff." : "Frozen team snapshot currently available for review."}
             </p>
           </div>
-          {latestRun ? (
+          {finalRun || latestRun ? (
             <div className="space-y-3">
               <div className="rounded-md border border-border bg-white p-4">
-                <div className="font-semibold">{latestRun.name}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{formatDate(latestRun.createdAt)}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="font-semibold">{(finalRun ?? latestRun)?.name}</div>
+                  {finalRun ? <Badge className="bg-emerald-100 text-emerald-800">Final</Badge> : null}
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">{formatDate((finalRun ?? latestRun)?.createdAt ?? "")}</div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge>{latestRun.cohort ?? "General"}</Badge>
-                  <Badge>{latestRun.result.teams.length} teams</Badge>
-                  <Badge>Avg {latestRun.averageScore}</Badge>
-                  <Badge>{latestRun.assignedCount}/{latestRun.participantCount} assigned</Badge>
+                  <Badge>{(finalRun ?? latestRun)?.cohort ?? "General"}</Badge>
+                  <Badge>{(finalRun ?? latestRun)?.result.teams.length} teams</Badge>
+                  <Badge>Avg {(finalRun ?? latestRun)?.averageScore}</Badge>
+                  <Badge>{(finalRun ?? latestRun)?.assignedCount}/{(finalRun ?? latestRun)?.participantCount} assigned</Badge>
                 </div>
               </div>
               <Link className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href="/admin/teams">
