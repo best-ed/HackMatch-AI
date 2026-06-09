@@ -4,10 +4,12 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card, EmptyState } from "@/components/ui";
+import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
+import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { getFinalSavedRun } from "@/lib/saved-run-final";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
@@ -33,6 +35,7 @@ export default function AdminPage() {
     : 0;
   const latestRun = savedMatchRuns[0];
   const finalRun = getFinalSavedRun(savedMatchRuns);
+  const intakeSummary = evaluateParticipantIntake(cohortParticipants);
   const cohortOverview = summarizeCohortOverview({
     cohort: activeCohort,
     participants,
@@ -48,6 +51,16 @@ export default function AdminPage() {
     hasParticipants: participants.length > 0,
     hasGeneratedTeams: result.teams.length > 0,
     hasSavedRun: Boolean(latestRun)
+  });
+  const actionQueue = buildAdminActionQueue({
+    intake: intakeSummary,
+    settingsHealth,
+    result,
+    matchableCount: matchable.length,
+    assignedCount: assigned,
+    savedRuns: savedMatchRuns,
+    finalRun,
+    deployment: deploymentReadiness
   });
   const dashboardChecks = [
     {
@@ -101,6 +114,24 @@ export default function AdminPage() {
         <MetricCard href="/admin/teams" title="Team review" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
         <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={finalRun ? `Final: ${finalRun.name}` : latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Action queue</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Next best organizer actions based on the current cohort, settings, teams, and saved runs.
+            </p>
+          </div>
+          <Badge className={actionQueue.some((item) => item.priority === "high") ? "bg-rose-100 text-rose-800" : actionQueue.some((item) => item.priority === "medium") ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+            {actionQueue.length} action{actionQueue.length === 1 ? "" : "s"}
+          </Badge>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          {actionQueue.slice(0, 6).map((item) => (
+            <ActionQueueCard item={item} key={item.id} />
+          ))}
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -320,6 +351,21 @@ function MetricCard({
   );
 }
 
+function ActionQueueCard({ item }: { item: AdminActionQueueItem }) {
+  return (
+    <Link href={item.href}>
+      <div className="h-full rounded-md border border-border bg-white p-4 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-soft">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Badge className={priorityBadgeClass(item.priority)}>{item.priority}</Badge>
+          <span className="text-xs font-semibold text-primary">{item.actionLabel}</span>
+        </div>
+        <div className="mt-3 font-semibold">{item.title}</div>
+        <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+      </div>
+    </Link>
+  );
+}
+
 function OverviewMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-border bg-white p-3">
@@ -327,6 +373,12 @@ function OverviewMetric({ label, value }: { label: string; value: number }) {
       <div className="mt-2 text-xl font-bold">{value}</div>
     </div>
   );
+}
+
+function priorityBadgeClass(priority: AdminActionQueueItem["priority"]) {
+  if (priority === "high") return "bg-rose-100 text-rose-800";
+  if (priority === "medium") return "bg-amber-100 text-amber-800";
+  return "bg-emerald-100 text-emerald-800";
 }
 
 function OverviewList({ title, items }: { title: string; items: Array<{ label: string; count: number }> }) {
