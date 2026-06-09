@@ -25,13 +25,13 @@ const schemaItems: SupabaseSchemaReadinessItem[] = [
   },
   {
     label: "Saved match runs",
-    status: "planned",
-    detail: "The SQL schema includes match_runs, but the MVP still stores saved run snapshots in browser storage."
+    status: "ready",
+    detail: "Remote adapter and schema cover saved runs, final-run markers, organizer notes, participant snapshots, settings snapshots, and generated results."
   },
   {
     label: "Team review checklist",
-    status: "local",
-    detail: "Review checklist state is browser-local operational metadata and does not affect deterministic assignments."
+    status: "planned",
+    detail: "The SQL schema includes checklist rows, but the current UI still stores review checklist state in browser storage."
   }
 ];
 
@@ -42,7 +42,7 @@ export function evaluateSupabaseSchemaReadiness(): SupabaseSchemaReadiness {
     readyCount,
     totalCount: schemaItems.length,
     title: `${readyCount}/${schemaItems.length} persistence surfaces are remote-ready`,
-    detail: "Supabase can be plugged in for editable participants and settings now. Saved runs and review metadata need a later remote persistence pass before multi-admin production use.",
+    detail: "Supabase can be plugged in for editable participants, matching settings, and saved runs now. Review checklist metadata still needs a UI adapter before multi-admin production use.",
     items: schemaItems
   };
 }

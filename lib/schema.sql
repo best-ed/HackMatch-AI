@@ -59,6 +59,8 @@ create table team_assignments (
 create table match_runs (
   id text primary key,
   name text not null,
+  notes text,
+  is_final boolean not null default false,
   cohort text not null default 'General',
   participant_count integer not null,
   assigned_count integer not null,
@@ -68,3 +70,19 @@ create table match_runs (
   result jsonb not null,
   created_at timestamptz not null default now()
 );
+
+create index match_runs_cohort_idx on match_runs (cohort);
+create index match_runs_is_final_idx on match_runs (is_final);
+
+create table team_review_checklists (
+  id text primary key,
+  run_id text not null,
+  team_id text not null,
+  "rolesConfirmed" boolean not null default false,
+  "contactsConfirmed" boolean not null default false,
+  "blockersCleared" boolean not null default false,
+  reviewed boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+create index team_review_checklists_run_id_idx on team_review_checklists (run_id);

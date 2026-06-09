@@ -6,6 +6,8 @@ import type {
   MatchingSettings,
   Participant
 } from "@/lib/matching/types";
+import type { SavedMatchRun } from "@/lib/matching/types";
+import { rowToSavedRun, savedRunToRow, type SavedMatchRunRow } from "@/lib/saved-run-persistence";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -100,6 +102,30 @@ export async function saveRemoteSettings(settings: MatchingSettings) {
       body: JSON.stringify([settingsToRow(settings)])
     }
   );
+}
+
+export async function loadRemoteMatchRuns(): Promise<SavedMatchRun[]> {
+  const rows = await supabaseRequest<SavedMatchRunRow[]>(
+    "/match_runs?select=*&order=created_at.desc"
+  );
+  return rows.map(rowToSavedRun);
+}
+
+export async function saveRemoteMatchRun(run: SavedMatchRun) {
+  await supabaseRequest<SavedMatchRunRow[]>(
+    "/match_runs?on_conflict=id",
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify([savedRunToRow(run)])
+    }
+  );
+}
+
+export async function deleteRemoteMatchRun(id: string) {
+  await supabaseRequest(`/match_runs?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE"
+  });
 }
 
 async function supabaseRequest<T>(

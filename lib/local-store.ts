@@ -18,9 +18,12 @@ import type {
 } from "@/lib/matching/types";
 import {
   deleteRemoteParticipant,
+  deleteRemoteMatchRun,
   isSupabaseConfigured,
+  loadRemoteMatchRuns,
   loadRemoteParticipants,
   loadRemoteSettings,
+  saveRemoteMatchRun,
   saveRemoteParticipant,
   saveRemoteSettings
 } from "@/lib/supabase-store";
@@ -197,9 +200,10 @@ export function useHackMatchData() {
       }
 
       try {
-        const [remoteParticipants, remoteSettings] = await Promise.all([
+        const [remoteParticipants, remoteSettings, remoteMatchRuns] = await Promise.all([
           loadRemoteParticipants(),
-          loadRemoteSettings()
+          loadRemoteSettings(),
+          loadRemoteMatchRuns()
         ]);
 
         if (cancelled) return;
@@ -212,6 +216,11 @@ export function useHackMatchData() {
         if (remoteSettings) {
           setSettingsState(remoteSettings);
           writeJson(settingsKey, remoteSettings);
+        }
+        if (remoteMatchRuns.length > 0) {
+          const normalizedRemoteRuns = normalizeSavedRunsForStorage(remoteMatchRuns);
+          setSavedMatchRunsState(normalizedRemoteRuns);
+          writeJson(savedMatchRunsKey, normalizedRemoteRuns);
         }
         setPersistenceMode("supabase");
         setPersistenceWarning("");
@@ -358,12 +367,20 @@ export function useHackMatchData() {
         const next = [run, ...savedMatchRuns].slice(0, 20);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        if (isSupabaseConfigured()) {
+          void saveRemoteMatchRun(run)
+            .catch(() => setPersistenceWarning("Supabase saved-run save failed; local browser storage is still updated."));
+        }
         return run;
       },
       deleteMatchRun(id: string) {
         const next = savedMatchRuns.filter((run) => run.id !== id);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        if (isSupabaseConfigured()) {
+          void deleteRemoteMatchRun(id)
+            .catch(() => setPersistenceWarning("Supabase saved-run delete failed; local browser storage is still updated."));
+        }
       },
       renameMatchRun(id: string, name: string) {
         const cleaned = name.trim();
@@ -373,21 +390,39 @@ export function useHackMatchData() {
         );
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        const updated = next.find((run) => run.id === id);
+        if (updated && isSupabaseConfigured()) {
+          void saveRemoteMatchRun(updated)
+            .catch(() => setPersistenceWarning("Supabase saved-run rename failed; local browser storage is still updated."));
+        }
       },
       updateMatchRunNotes(id: string, note: string) {
         const next = updateSavedRunNotes(savedMatchRuns, id, note);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        const updated = next.find((run) => run.id === id);
+        if (updated && isSupabaseConfigured()) {
+          void saveRemoteMatchRun(updated)
+            .catch(() => setPersistenceWarning("Supabase saved-run notes save failed; local browser storage is still updated."));
+        }
       },
       markMatchRunFinal(id: string) {
         const next = markFinalSavedRun(savedMatchRuns, id);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        if (isSupabaseConfigured()) {
+          void Promise.all(next.map((run) => saveRemoteMatchRun(run)))
+            .catch(() => setPersistenceWarning("Supabase final-run save failed; local browser storage is still updated."));
+        }
       },
       clearFinalMatchRun() {
         const next = clearFinalSavedRun(savedMatchRuns);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        if (isSupabaseConfigured()) {
+          void Promise.all(next.map((run) => saveRemoteMatchRun(run)))
+            .catch(() => setPersistenceWarning("Supabase final-run clear failed; local browser storage is still updated."));
+        }
       },
       duplicateMatchRun(id: string) {
         const source = savedMatchRuns.find((run) => run.id === id);
@@ -402,6 +437,10 @@ export function useHackMatchData() {
         const next = [copy, ...savedMatchRuns].slice(0, 20);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
+        if (isSupabaseConfigured()) {
+          void saveRemoteMatchRun(copy)
+            .catch(() => setPersistenceWarning("Supabase saved-run duplicate failed; local browser storage is still updated."));
+        }
         return copy;
       },
       restoreMatchRunSnapshot(id: string) {
