@@ -6,6 +6,7 @@ import { AlertTriangle, Archive, CheckCircle2, Gauge, RotateCcw, Settings2, User
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
+import { compareCohortHealth, type CohortHealthRow } from "@/lib/cohort-health";
 import { useHackMatchData } from "@/lib/local-store";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -14,8 +15,10 @@ import { matchingPresets } from "@/lib/settings-guardrails";
 export default function AdminMatchingPage() {
   const {
     cohortParticipants,
+    participants,
     settings,
     setSettings,
+    savedMatchRuns,
     activeCohort,
     setActiveCohort,
     cohorts,
@@ -35,6 +38,12 @@ export default function AdminMatchingPage() {
   const [setupStatus, setSetupStatus] = useState("");
   const result = generateTeams(cohortParticipants, settings);
   const readiness = evaluateMatchingReadiness(result, cohortParticipants, settings);
+  const cohortHealth = compareCohortHealth({
+    cohorts,
+    participants,
+    savedRuns: savedMatchRuns,
+    settings
+  });
   const registrationUrl =
     typeof window === "undefined"
       ? "/participant/register"
@@ -202,6 +211,27 @@ export default function AdminMatchingPage() {
             ))}
           </select>
         </label>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Cohort health comparison</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Compare active cohorts before switching setup or generating teams.
+            </p>
+          </div>
+          <Badge>{cohortHealth.length} cohort{cohortHealth.length === 1 ? "" : "s"}</Badge>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          {cohortHealth.map((row) => (
+            <CohortHealthCard
+              active={row.cohort === activeCohort}
+              key={row.cohort}
+              onSelect={() => setActiveCohort(row.cohort)}
+              row={row}
+            />
+          ))}
+        </div>
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -409,6 +439,49 @@ function Metric({
   );
 }
 
+function CohortHealthCard({
+  active,
+  row,
+  onSelect
+}: {
+  active: boolean;
+  row: CohortHealthRow;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      className={`rounded-md border bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-soft ${
+        active ? "border-primary ring-2 ring-primary/15" : "border-border"
+      }`}
+      onClick={onSelect}
+      type="button"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold">{row.cohort}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{row.detail}</p>
+        </div>
+        <Badge className={cohortHealthBadgeClass(row.status)}>{row.status}</Badge>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <MiniMetric label="Participants" value={row.participantCount} />
+        <MiniMetric label="Matchable" value={row.matchableCount} />
+        <MiniMetric label="Advanced" value={row.advancedCount} />
+        <MiniMetric label="Saved runs" value={row.savedRunCount} />
+      </div>
+    </button>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md bg-muted px-3 py-2">
+      <div className="font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
 function NumberInput({
   label,
   value,
@@ -461,5 +534,11 @@ function readinessIconClass(severity: "blocker" | "warning" | "info") {
 function readinessBadgeClass(severity: "blocker" | "warning" | "info") {
   if (severity === "blocker") return "bg-rose-100 text-rose-800";
   if (severity === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-emerald-100 text-emerald-800";
+}
+
+function cohortHealthBadgeClass(status: CohortHealthRow["status"]) {
+  if (status === "blocked") return "bg-rose-100 text-rose-800";
+  if (status === "watch") return "bg-amber-100 text-amber-800";
   return "bg-emerald-100 text-emerald-800";
 }
