@@ -11,6 +11,7 @@ import {
 } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { Participant } from "@/lib/matching/types";
+import { buildParticipantStatusChecklist, type ParticipantStatusItem } from "@/lib/participant-status";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 
 export default function ParticipantTeamPage() {
@@ -52,6 +53,7 @@ export default function ParticipantTeamPage() {
   const isUnassigned = participant
     ? result.unassignedParticipants.includes(participant.id)
     : false;
+  const statusChecklist = buildParticipantStatusChecklist({ participant, team });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -205,6 +207,19 @@ export default function ParticipantTeamPage() {
                 </div>
               </Card>
             ) : null}
+            <Card className="space-y-4">
+              <div>
+                <h2 className="font-semibold">Assignment checklist</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Quick status for your profile, consent, assignment, and contact handoff.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                {statusChecklist.map((item) => (
+                  <StatusChecklistItem item={item} key={item.id} />
+                ))}
+              </div>
+            </Card>
             {explanation ? (
               <Card className="space-y-4">
                 <div>
@@ -309,6 +324,21 @@ export default function ParticipantTeamPage() {
           title="No team assignment found"
         />
       )}
+      {!team ? (
+        <Card className="space-y-4">
+          <div>
+            <h2 className="font-semibold">Assignment checklist</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Use this to see what is missing before a team assignment appears.
+            </p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {statusChecklist.map((item) => (
+              <StatusChecklistItem item={item} key={item.id} />
+            ))}
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
@@ -356,10 +386,28 @@ function ContactLine({ icon, value }: { icon: React.ReactNode; value: string }) 
   );
 }
 
+function StatusChecklistItem({ item }: { item: ParticipantStatusItem }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{item.label}</div>
+        <Badge className={statusBadgeClass(item.status)}>{item.status}</Badge>
+      </div>
+      <p className="mt-2 text-muted-foreground">{item.detail}</p>
+    </div>
+  );
+}
+
 function scoreBadgeClass(score: number) {
   if (score >= 85) return "bg-emerald-100 text-emerald-800";
   if (score >= 75) return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
+}
+
+function statusBadgeClass(status: ParticipantStatusItem["status"]) {
+  if (status === "complete") return "bg-emerald-100 text-emerald-800";
+  if (status === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-slate-100 text-slate-800";
 }
 
 function normalizeLookupValue(value: string) {
