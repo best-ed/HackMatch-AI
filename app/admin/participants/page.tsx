@@ -10,6 +10,11 @@ import { createParticipantAccessToken, joinListLines, splitList, useHackMatchDat
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
+import {
+  createImportRollbackSnapshot,
+  summarizeImportRollback,
+  type ParticipantImportRollbackSnapshot
+} from "@/lib/participant-import-rollback";
 import { planParticipantCsvImport, type ParticipantImportMode } from "@/lib/participant-import";
 import {
   duplicateParticipantIdsFromGroups,
@@ -40,6 +45,7 @@ export default function AdminParticipantsPage() {
   const [importCsv, setImportCsv] = useState("");
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
   const [importStatus, setImportStatus] = useState("");
+  const [lastImportRollback, setLastImportRollback] = useState<ParticipantImportRollbackSnapshot | undefined>();
   const [linkStatus, setLinkStatus] = useState("");
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
 
@@ -178,13 +184,28 @@ export default function AdminParticipantsPage() {
 
   function applyCsvImport() {
     if (!importPlan || importPlan.errors.length > 0) return;
+    const rollback = createImportRollbackSnapshot({
+      beforeParticipants: participants,
+      afterCount: importPlan.participants.length,
+      createdCount: importPlan.createdCount,
+      updatedCount: importPlan.updatedCount,
+      skippedCount: importPlan.skippedCount
+    });
     setParticipants(importPlan.participants);
+    setLastImportRollback(rollback);
     setImportStatus(
       `Imported ${importPlan.createdCount} new participant${importPlan.createdCount === 1 ? "" : "s"}${
         importPlan.updatedCount ? ` and updated ${importPlan.updatedCount}` : ""
       }${importPlan.skippedCount ? `; skipped ${importPlan.skippedCount} duplicate${importPlan.skippedCount === 1 ? "" : "s"}` : ""}.`
     );
     setImportCsv("");
+  }
+
+  function rollbackLastImport() {
+    if (!lastImportRollback) return;
+    setParticipants(lastImportRollback.beforeParticipants);
+    setImportStatus(`Rolled back last import from ${lastImportRollback.afterCount} to ${lastImportRollback.beforeParticipants.length} participant${lastImportRollback.beforeParticipants.length === 1 ? "" : "s"}.`);
+    setLastImportRollback(undefined);
   }
 
   return (
@@ -544,6 +565,21 @@ export default function AdminParticipantsPage() {
         {importStatus ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
             {importStatus}
+          </div>
+        ) : null}
+        {lastImportRollback ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <div>
+              <div className="font-semibold">Last import can be rolled back</div>
+              <p className="mt-1">{summarizeImportRollback(lastImportRollback)}</p>
+            </div>
+            <button
+              className="rounded-md border border-sky-300 bg-white px-4 py-2 text-sm font-semibold text-sky-900"
+              onClick={rollbackLastImport}
+              type="button"
+            >
+              Roll back last import
+            </button>
           </div>
         ) : null}
       </Card>
