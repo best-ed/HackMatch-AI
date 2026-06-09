@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock3, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
@@ -9,6 +9,7 @@ import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
+import { buildParticipantActivityTimeline, type ParticipantActivityItem } from "@/lib/participant-activity";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { getFinalSavedRun } from "@/lib/saved-run-final";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
@@ -61,6 +62,12 @@ export default function AdminPage() {
     savedRuns: savedMatchRuns,
     finalRun,
     deployment: deploymentReadiness
+  });
+  const activityTimeline = buildParticipantActivityTimeline({
+    participants,
+    savedRuns: savedMatchRuns,
+    cohort: activeCohort,
+    limit: 6
   });
   const dashboardChecks = [
     {
@@ -131,6 +138,30 @@ export default function AdminPage() {
             <ActionQueueCard item={item} key={item.id} />
           ))}
         </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Recent activity</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Latest participant and saved-run changes for the active cohort.
+            </p>
+          </div>
+          <Badge>{activityTimeline.length} item{activityTimeline.length === 1 ? "" : "s"}</Badge>
+        </div>
+        {activityTimeline.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {activityTimeline.map((item) => (
+              <ActivityCard item={item} key={item.id} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            description="Register participants or save a match run to build an organizer activity trail."
+            icon={<Clock3 size={20} />}
+            title="No recent activity"
+          />
+        )}
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -317,6 +348,23 @@ export default function AdminPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function ActivityCard({ item }: { item: ParticipantActivityItem }) {
+  return (
+    <Link href={item.href}>
+      <div className="flex h-full gap-3 rounded-md border border-border bg-white p-4 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-soft">
+        <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+          <Clock3 size={18} />
+        </div>
+        <div className="min-w-0">
+          <div className="font-semibold">{item.title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.timestamp)}</p>
+        </div>
+      </div>
+    </Link>
   );
 }
 
