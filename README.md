@@ -12,9 +12,10 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Provides matching settings presets and health checks before generation.
 - Lets organizers lock live teams so their membership is preserved during later regeneration.
 - Saves generated match runs as frozen snapshots for later review.
+- Lets organizers mark one saved run as final for handoff.
 - Lets organizers add notes to saved match runs without changing deterministic assignments.
 - Generates compact saved-run share previews for organizer handoff.
-- Exports and imports participant CSV files, and exports generated teams to CSV.
+- Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV.
 
 ## Deterministic Matching
 
@@ -109,7 +110,7 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
-Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, and default missing cohort values to the active cohort.
+Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, default missing cohort values to the active cohort, and roll back the most recent import in the current browser session.
 
 The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation. It also flags duplicate emails, names, and access tokens so organizers can resolve messy intake data before matching. Readiness quick filters let organizers jump directly to incomplete, excluded, low-signal, or duplicate participant records.
 
@@ -119,9 +120,15 @@ Participant registrations include quality checks for required identity, role, av
 
 The participant team page turns each access link into a team handoff with members, suggested internal roles, strengths, watch points, shared interests, shared availability, next steps, and contact details only for teammates who consented to sharing.
 
+The participant team page also includes an assignment checklist for profile lookup, matching consent, team assignment, and contact-sharing status so participants can quickly understand why an assignment is ready, hidden, or still waiting.
+
 Generated teams can be saved from `/admin/teams` as frozen match runs. A saved run stores the exact teams, scores, warnings, explanations, settings snapshot, and participant snapshot used for export, even if editable data changes later.
 
+Saved runs can be marked as final from `/admin/teams`. The admin dashboard then treats that final run as the organizer-approved source of truth for handoff until another run is marked final or the final marker is cleared.
+
 The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results. Each team also has compact balance indicators for role coverage, skill coverage, experience, and availability before the full score breakdown.
+
+Each team also includes a manual review checklist for role confirmation, contact-sharing review, blocker review, and final review marking. This checklist is operational metadata only; it does not alter deterministic assignments.
 
 Team exports include an audit panel that previews filename, CSV row count, assigned/unassigned counts, hidden contact count, matcher warnings, and whether the export uses live editable data or a saved snapshot.
 
@@ -155,7 +162,11 @@ The settings page includes presets for balanced, skill-heavy, beginner-friendly,
 
 The matching page includes an event setup panel for cohort name, preset, desired/min/max team size, and a shareable registration link. This gives organizers a fast path from event setup to participant intake without changing the deterministic matching rules.
 
+The matching page also includes cohort health comparison. Organizers can compare active cohorts by participant count, matchable count, advanced participant signal, saved runs, and ready/watch/blocked status before switching the active cohort.
+
 The matching page also includes a readiness action plan. It classifies current run issues as blockers, warnings, or informational next steps using deterministic settings validation, assignment coverage, score floor, penalties, and matcher warnings. Cohort archive controls hide completed events from active setup lists while keeping their participant data and saved match runs available.
+
+The admin dashboard includes an action queue and recent activity timeline. The queue highlights the next best organizer actions from participant intake, settings health, assignment coverage, saved runs, and deployment status. The activity timeline summarizes recent participant changes and saved-run milestones for the active cohort.
 
 ## Supabase Persistence
 
@@ -181,7 +192,7 @@ npm run test
 npm run typecheck
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant registration validation, participant intake quality, duplicate participant review, readiness filters, participant team briefs, saved-run share previews, saved-run notes, team review summaries, team balance indicators, export audits, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, Supabase readiness checks, and deployment readiness checks.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, final saved-run marking, team review summaries, team review checklists, team balance indicators, export audits, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, and deployment readiness checks.
 
 ## Main Routes
 
