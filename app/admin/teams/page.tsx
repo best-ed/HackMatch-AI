@@ -14,7 +14,17 @@ import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
+import {
+  checklistCompletion,
+  checklistIsComplete,
+  emptyTeamReviewChecklist,
+  updateTeamReviewChecklist,
+  type TeamReviewChecklistItem,
+  type TeamReviewChecklistStore
+} from "@/lib/team-review-checklist";
 import { summarizeTeamReview } from "@/lib/team-review";
+
+const teamReviewChecklistStorageKey = "hackmatch.teamReviewChecklist.v1";
 
 export default function AdminTeamsPage() {
   const {
@@ -78,6 +88,7 @@ export default function AdminTeamsPage() {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
+  const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
   const comparison = compareRun
     ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
@@ -99,6 +110,14 @@ export default function AdminTeamsPage() {
       setCompareRunId(savedMatchRuns[0].id);
     }
   }, [compareRunId, savedMatchRuns]);
+
+  useEffect(() => {
+    try {
+      setTeamReviewChecklist(JSON.parse(window.localStorage.getItem(teamReviewChecklistStorageKey) ?? "{}") as TeamReviewChecklistStore);
+    } catch {
+      setTeamReviewChecklist({});
+    }
+  }, []);
 
   function downloadCsv() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -223,6 +242,16 @@ export default function AdminTeamsPage() {
     }
     markMatchRunFinal(run.id);
     setRunActionStatus(`${run.name} is now marked as the final saved run.`);
+  }
+
+  function checklistKey(teamId: string) {
+    return `${activeRun?.id ?? `live-${activeCohort}`}::${teamId}`;
+  }
+
+  function updateChecklist(teamId: string, patch: Partial<TeamReviewChecklistItem>) {
+    const next = updateTeamReviewChecklist(teamReviewChecklist, checklistKey(teamId), patch);
+    setTeamReviewChecklist(next);
+    window.localStorage.setItem(teamReviewChecklistStorageKey, JSON.stringify(next));
   }
 
   function restoreRun(run: SavedMatchRun) {
@@ -690,6 +719,8 @@ export default function AdminTeamsPage() {
           const placementExplanations = buildTeamPlacementExplanations(members);
           const balanceSummary = summarizeTeamBalance(members, team.score);
           const risks = getTeamRisks(team.score?.totalScore ?? 0, explanation);
+          const checklist = teamReviewChecklist[checklistKey(team.id)] ?? emptyTeamReviewChecklist;
+          const completion = checklistCompletion(checklist);
           return (
             <Card key={team.id} className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -726,6 +757,41 @@ export default function AdminTeamsPage() {
                   >
                     Copy summary
                   </button>
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">Organizer review checklist</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Manual review state for this team; it does not change matching output.
+                    </p>
+                  </div>
+                  <Badge className={checklistIsComplete(checklist) ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                    {completion}/4 complete
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                  <ChecklistToggle
+                    checked={checklist.rolesConfirmed}
+                    label="Roles confirmed"
+                    onChange={(value) => updateChecklist(team.id, { rolesConfirmed: value })}
+                  />
+                  <ChecklistToggle
+                    checked={checklist.contactsConfirmed}
+                    label="Contact sharing checked"
+                    onChange={(value) => updateChecklist(team.id, { contactsConfirmed: value })}
+                  />
+                  <ChecklistToggle
+                    checked={checklist.blockersCleared}
+                    label="No blockers"
+                    onChange={(value) => updateChecklist(team.id, { blockersCleared: value })}
+                  />
+                  <ChecklistToggle
+                    checked={checklist.reviewed}
+                    label="Marked reviewed"
+                    onChange={(value) => updateChecklist(team.id, { reviewed: value })}
+                  />
                 </div>
               </div>
               <div className="grid gap-3 rounded-md border border-border bg-white p-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -877,6 +943,29 @@ function BalanceSignalBar({ signal }: { signal: TeamBalanceSignal }) {
         <div className={`h-full rounded-full ${balanceSignalFillClass(signal.status)}`} style={{ width: `${value}%` }} />
       </div>
     </div>
+  );
+}
+
+function ChecklistToggle({
+  checked,
+  label,
+  onChange
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold ${
+      checked ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-border bg-muted text-muted-foreground"
+    }`}>
+      <input
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
+      {label}
+    </label>
   );
 }
 
