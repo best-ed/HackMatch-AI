@@ -8,6 +8,7 @@ import {
   visibleCohorts
 } from "@/lib/cohort-archive";
 import { clearFinalSavedRun, markFinalSavedRun } from "@/lib/saved-run-final";
+import { createSavedMatchRun } from "@/lib/saved-run-factory";
 import { updateSavedRunNotes } from "@/lib/saved-run-notes";
 import type {
   AvailabilitySlot,
@@ -341,29 +342,14 @@ export function useHackMatchData() {
         }
       },
       saveMatchRun(result: MatchingResult, name?: string) {
-        const timestamp = new Date().toISOString();
-        const runParticipants =
-          activeCohort === "All"
-            ? participants
-            : participants.filter((participant) => (participant.cohort || defaultCohort) === activeCohort);
-        const assignedCount = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
-        const scoredTeams = result.teams.filter((team) => typeof team.score?.totalScore === "number");
-        const averageScore =
-          scoredTeams.length > 0
-            ? Math.round(scoredTeams.reduce((sum, team) => sum + (team.score?.totalScore ?? 0), 0) / scoredTeams.length)
-            : 0;
-        const run: SavedMatchRun = {
-          id: `run-${timestamp.replace(/[^0-9]/g, "")}`,
-          name: name?.trim() || `Match run ${savedMatchRuns.length + 1}`,
-          createdAt: timestamp,
-          participantCount: runParticipants.length,
-          assignedCount,
-          averageScore,
-          settingsSnapshot: settings,
-          cohort: activeCohort,
-          participantsSnapshot: runParticipants,
-          result
-        };
+        const run = createSavedMatchRun({
+          result,
+          participants,
+          settings,
+          activeCohort,
+          savedRunCount: savedMatchRuns.length,
+          name
+        });
         const next = [run, ...savedMatchRuns].slice(0, 20);
         setSavedMatchRunsState(next);
         writeJson(savedMatchRunsKey, next);
