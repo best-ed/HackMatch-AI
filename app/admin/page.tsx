@@ -7,6 +7,7 @@ import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
+import { buildLaunchChecklist, type LaunchChecklistItem } from "@/lib/launch-checklist";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { buildParticipantActivityTimeline, type ParticipantActivityItem } from "@/lib/participant-activity";
@@ -54,6 +55,14 @@ export default function AdminPage() {
     hasParticipants: participants.length > 0,
     hasGeneratedTeams: result.teams.length > 0,
     hasSavedRun: Boolean(latestRun)
+  });
+  const launchChecklist = buildLaunchChecklist({
+    deployment: deploymentReadiness,
+    supabase: supabaseReadiness,
+    hasFinalRun: Boolean(finalRun),
+    hasSavedRun: Boolean(latestRun),
+    hasRemoteSavedRunSupport: supabaseSchemaReadiness.items.some((item) => item.label === "Saved match runs" && item.status === "ready"),
+    hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY)
   });
   const actionQueue = buildAdminActionQueue({
     intake: intakeSummary,
@@ -337,6 +346,24 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="font-semibold">Launch checklist</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Production-facing checks to review after the build and before event handoff.
+              </p>
+            </div>
+            <Badge className={launchChecklist.readyCount === launchChecklist.totalCount ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+              {launchChecklist.readyCount}/{launchChecklist.totalCount} ready
+            </Badge>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {launchChecklist.items.map((item) => (
+              <LaunchChecklistCard item={item} key={item.label} />
+            ))}
+          </div>
+        </div>
       </Card>
       <section className="space-y-3">
         <div>
@@ -363,6 +390,20 @@ export default function AdminPage() {
           <QuickAction href="/participant/register" title="Register participant" detail={`Add one participant to ${activeCohort}.`} icon={<Users size={18} />} />
         </div>
       </section>
+    </div>
+  );
+}
+
+function LaunchChecklistCard({ item }: { item: LaunchChecklistItem }) {
+  return (
+    <div className="rounded-md border border-border bg-muted/35 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{item.label}</div>
+        <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+          {item.status}
+        </Badge>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
     </div>
   );
 }
