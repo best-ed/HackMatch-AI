@@ -5,6 +5,12 @@ import { Archive, GitCompareArrows, UsersRound } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
+import {
+  appendAdminAuditEntry,
+  createAdminAuditEntry,
+  type AdminAuditAction,
+  type AdminAuditEntry
+} from "@/lib/admin-audit-history";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { buildTeamExportAudit } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
@@ -25,6 +31,7 @@ import {
 import { summarizeTeamReview } from "@/lib/team-review";
 
 const teamReviewChecklistStorageKey = "hackmatch.teamReviewChecklist.v1";
+const adminAuditHistoryStorageKey = "hackmatch.adminAuditHistory.v1";
 
 export default function AdminTeamsPage() {
   const {
@@ -89,6 +96,7 @@ export default function AdminTeamsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
+  const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
   const comparison = compareRun
     ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
@@ -118,6 +126,21 @@ export default function AdminTeamsPage() {
       setTeamReviewChecklist({});
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      setAuditHistory(JSON.parse(window.localStorage.getItem(adminAuditHistoryStorageKey) ?? "[]") as AdminAuditEntry[]);
+    } catch {
+      setAuditHistory([]);
+    }
+  }, []);
+
+  function recordAudit(action: AdminAuditAction, label: string, detail: string) {
+    const entry = createAdminAuditEntry({ action, label, detail });
+    const next = appendAdminAuditEntry(auditHistory, entry);
+    setAuditHistory(next);
+    window.localStorage.setItem(adminAuditHistoryStorageKey, JSON.stringify(next));
+  }
 
   function downloadCsv() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -171,6 +194,7 @@ export default function AdminTeamsPage() {
     const run = saveMatchRun(result, runName);
     setRunName("");
     setActiveRunId(run.id);
+    recordAudit("saved-run", run.name, `Saved ${run.result.teams.length} teams for ${run.cohort ?? "General"}.`);
   }
 
   function toggleTeamLock(teamId: string) {
@@ -181,6 +205,7 @@ export default function AdminTeamsPage() {
         ...settings,
         lockedTeams: currentLockedTeams.filter((team) => team.id !== teamId)
       });
+      recordAudit("locked-team", teamId, "Unlocked team membership for future regeneration.");
       return;
     }
 
@@ -198,12 +223,14 @@ export default function AdminTeamsPage() {
         }
       ].sort((left, right) => left.id.localeCompare(right.id))
     });
+    recordAudit("locked-team", teamToLock.name, "Locked team membership for future regeneration.");
   }
 
   function removeRun(run: SavedMatchRun) {
     deleteMatchRun(run.id);
     setDeleteConfirmId("");
     setRunActionStatus(`Deleted ${run.name}.`);
+    recordAudit("deleted-run", run.name, `Deleted saved run from ${run.cohort ?? "General"}.`);
     if (activeRunId === run.id) {
       setActiveRunId("live");
     }
@@ -218,6 +245,7 @@ export default function AdminTeamsPage() {
       return next;
     });
     setRunActionStatus(`Renamed saved run to ${nextName.trim()}.`);
+    recordAudit("renamed-run", run.name, `Renamed saved run to ${nextName.trim()}.`);
   }
 
   function duplicateRun(run: SavedMatchRun) {
@@ -226,22 +254,26 @@ export default function AdminTeamsPage() {
     setActiveRunId(copy.id);
     setCompareRunId(copy.id);
     setRunActionStatus(`Duplicated ${run.name} as ${copy.name}.`);
+    recordAudit("duplicated-run", run.name, `Duplicated as ${copy.name}.`);
   }
 
   function saveRunNotes(run: SavedMatchRun) {
     const note = noteDrafts[run.id] ?? run.notes ?? "";
     updateMatchRunNotes(run.id, note);
     setRunActionStatus(note.trim() ? `Saved notes for ${run.name}.` : `Cleared notes for ${run.name}.`);
+    recordAudit("noted-run", run.name, note.trim() ? "Saved organizer notes." : "Cleared organizer notes.");
   }
 
   function toggleFinalRun(run: SavedMatchRun) {
     if (run.isFinal) {
       clearFinalMatchRun();
       setRunActionStatus(`Cleared final marker from ${run.name}.`);
+      recordAudit("final-run", run.name, "Cleared final saved-run marker.");
       return;
     }
     markMatchRunFinal(run.id);
     setRunActionStatus(`${run.name} is now marked as the final saved run.`);
+    recordAudit("final-run", run.name, "Marked as the final organizer-approved run.");
   }
 
   function checklistKey(teamId: string) {
@@ -252,18 +284,21 @@ export default function AdminTeamsPage() {
     const next = updateTeamReviewChecklist(teamReviewChecklist, checklistKey(teamId), patch);
     setTeamReviewChecklist(next);
     window.localStorage.setItem(teamReviewChecklistStorageKey, JSON.stringify(next));
+    recordAudit("checklist", teamId, checklistPatchDetail(patch));
   }
 
   function restoreRun(run: SavedMatchRun) {
     restoreMatchRunSnapshot(run.id);
     setActiveRunId("live");
     setRunActionStatus(`Restored ${run.name} as the live baseline.`);
+    recordAudit("restored-run", run.name, "Restored participant snapshot, settings snapshot, and cohort as live baseline.");
   }
 
   async function copySavedRunSharePreview(run: SavedMatchRun) {
     const preview = buildSavedRunSharePreview(run);
     await navigator.clipboard?.writeText(preview.text);
     setRunActionStatus(`Copied share preview for ${run.name}.`);
+    recordAudit("shared-run", run.name, "Copied saved-run share preview.");
   }
 
   async function copyTeamSummary(
@@ -386,6 +421,41 @@ export default function AdminTeamsPage() {
             </div>
           ))}
         </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Operations history</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Browser-local audit trail for saved-run actions, locks, shares, restores, and checklist review.
+            </p>
+          </div>
+          <Badge>{auditHistory.length} event{auditHistory.length === 1 ? "" : "s"}</Badge>
+        </div>
+        {auditHistory.length ? (
+          <div className="grid gap-2">
+            {auditHistory.slice(0, 8).map((entry) => (
+              <div className="rounded-md border border-border bg-white p-3" key={entry.id}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold">{entry.label}</div>
+                    <p className="mt-1 text-sm text-muted-foreground">{entry.detail}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={auditActionClass(entry.action)}>{auditActionLabel(entry.action)}</Badge>
+                    <span className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            description="Save, rename, mark final, restore, lock, share, or review teams to build an organizer history in this browser."
+            icon={<Archive size={20} />}
+            title="No operations recorded yet"
+          />
+        )}
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -967,6 +1037,28 @@ function ChecklistToggle({
       {label}
     </label>
   );
+}
+
+function checklistPatchDetail(patch: Partial<TeamReviewChecklistItem>) {
+  const [key, value] = Object.entries(patch)[0] ?? ["review", false];
+  const label: Record<string, string> = {
+    rolesConfirmed: "roles confirmed",
+    contactsConfirmed: "contact sharing checked",
+    blockersCleared: "blockers cleared",
+    reviewed: "marked reviewed"
+  };
+  return `${value ? "Checked" : "Unchecked"} ${label[key] ?? "review item"}.`;
+}
+
+function auditActionLabel(action: AdminAuditAction) {
+  return action.replace(/-/g, " ");
+}
+
+function auditActionClass(action: AdminAuditAction) {
+  if (action === "deleted-run") return "bg-rose-100 text-rose-800";
+  if (action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
+  if (action === "checklist" || action === "locked-team") return "bg-sky-100 text-sky-800";
+  return "bg-slate-100 text-slate-800";
 }
 
 function reviewRiskClass(severity: "high" | "medium" | "low") {
