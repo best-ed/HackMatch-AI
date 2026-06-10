@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SectionTrail } from "@/components/section-trail";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
+  createParticipantAccessToken,
+  createParticipantId,
   splitList,
   useHackMatchData,
   writeCurrentParticipantLookup
@@ -51,12 +53,20 @@ export default function RegisterPage() {
   const [listDrafts, setListDrafts] = useState(emptyListDrafts);
   const [saved, setSaved] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [hasEditedForm, setHasEditedForm] = useState(false);
+
+  useEffect(() => {
+    if (!loaded || hasEditedForm) return;
+    setForm(createBlankParticipant(participants));
+  }, [hasEditedForm, loaded, participants]);
 
   function update<K extends keyof Participant>(key: K, value: Participant[K]) {
+    setHasEditedForm(true);
     setForm((current) => ({ ...current, [key]: value }));
   }
 
   function updateListDraft(key: keyof ListDrafts, value: string) {
+    setHasEditedForm(true);
     setListDrafts((current) => ({ ...current, [key]: value }));
   }
 
@@ -75,6 +85,8 @@ export default function RegisterPage() {
 
     const participantToSave = {
       ...form,
+      id: createParticipantId(participants),
+      accessToken: createParticipantAccessToken(),
       secondaryRoles: splitList(listDrafts.secondaryRoles),
       technicalSkills: splitList(listDrafts.technicalSkills),
       nonTechnicalSkills: splitList(listDrafts.nonTechnicalSkills),
@@ -87,7 +99,8 @@ export default function RegisterPage() {
     writeCurrentParticipantLookup(savedParticipant.accessToken ?? savedParticipant.email);
     setSaved(true);
     setAttemptedSubmit(false);
-    setForm(createBlankParticipant([...participants, participantToSave]));
+    setForm(createBlankParticipant([...participants, savedParticipant]));
+    setHasEditedForm(false);
     setListDrafts(emptyListDrafts);
     router.push(`/participant/confirmation?access=${encodeURIComponent(savedParticipant.accessToken ?? savedParticipant.email)}`);
   }
