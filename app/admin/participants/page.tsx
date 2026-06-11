@@ -7,6 +7,7 @@ import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
 import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
+import { generateTeams } from "@/lib/matching/algorithm";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
@@ -21,6 +22,7 @@ import {
   participantMatchesReadinessFilter,
   type ParticipantReadinessFilter
 } from "@/lib/participant-readiness-filter";
+import { buildPrivacyAudit, type PrivacyAuditStatus } from "@/lib/privacy-audit";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
 export default function AdminParticipantsPage() {
@@ -33,6 +35,8 @@ export default function AdminParticipantsPage() {
     activeCohort,
     setActiveCohort,
     cohorts,
+    cohortParticipants,
+    settings,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -54,6 +58,14 @@ export default function AdminParticipantsPage() {
     [participants]
   );
   const intakeSummary = useMemo(() => evaluateParticipantIntake(participants), [participants]);
+  const generatedResult = useMemo(
+    () => generateTeams(cohortParticipants, settings),
+    [cohortParticipants, settings]
+  );
+  const privacyAudit = useMemo(
+    () => buildPrivacyAudit({ participants: cohortParticipants, result: generatedResult }),
+    [cohortParticipants, generatedResult]
+  );
   const duplicateGroups = useMemo(() => findParticipantDuplicates(participants), [participants]);
   const duplicateParticipantIds = useMemo(() => duplicateParticipantIdsFromGroups(duplicateGroups), [duplicateGroups]);
   const filteredParticipants = useMemo(() => {
@@ -251,6 +263,59 @@ export default function AdminParticipantsPage() {
         <Metric label="Matchable" value={matchableCount} />
         <Metric label="Advanced" value={advancedCount} />
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Consent and privacy audit</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Check matching consent, teammate contact sharing, and handoff privacy for {activeCohort}.
+            </p>
+          </div>
+          <Badge className={privacyStatusClass(privacyAudit.status)}>
+            {privacyAudit.status}
+          </Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <PreviewMetric label="Match consent" value={privacyAudit.matchConsentCount} />
+          <PreviewMetric label="Excluded" value={privacyAudit.matchExcludedCount} />
+          <PreviewMetric label="Can share contact" value={privacyAudit.contactSharingCount} />
+          <PreviewMetric label="Assigned hidden contact" value={privacyAudit.assignedWithoutContactCount} />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          {privacyAudit.issues.map((issue) => (
+            <div className="rounded-md border border-border bg-white p-4" key={issue.label}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{issue.label}</div>
+                <Badge className={privacyStatusClass(issue.status)}>{issue.status}</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{issue.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ReadinessFilterButton
+            active={consentFilter === "excluded"}
+            label={`Review excluded (${privacyAudit.matchExcludedCount})`}
+            onClick={() => {
+              setConsentFilter("excluded");
+              setReadinessFilter("all");
+            }}
+          />
+          <ReadinessFilterButton
+            active={consentFilter === "matchable"}
+            label={`Review matchable (${privacyAudit.matchConsentCount})`}
+            onClick={() => {
+              setConsentFilter("matchable");
+              setReadinessFilter("all");
+            }}
+          />
+          <ReadinessFilterButton
+            active={consentFilter === "all"}
+            label="Show all consent states"
+            onClick={() => setConsentFilter("all")}
+          />
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -970,6 +1035,12 @@ function intakeIssueClass(severity: "blocker" | "warning" | "info") {
   if (severity === "blocker") return "bg-rose-100 text-rose-800";
   if (severity === "warning") return "bg-amber-100 text-amber-800";
   return "bg-emerald-100 text-emerald-800";
+}
+
+function privacyStatusClass(status: PrivacyAuditStatus) {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
 }
 
 function copyAccessLink(participant: Participant) {
