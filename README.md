@@ -15,6 +15,8 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Lets organizers mark one saved run as final for handoff.
 - Lets organizers add notes to saved match runs without changing deterministic assignments.
 - Generates compact saved-run share previews for organizer handoff.
+- Audits saved-run integrity, cohort finalization readiness, and consent/privacy posture before handoff.
+- Exports and restores browser-local workspace backups for MVP data portability.
 - Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV.
 
 ## Deterministic Matching
@@ -91,6 +93,12 @@ For a production check:
 npm run build
 ```
 
+After starting a production or local server, run the route smoke test:
+
+```bash
+SMOKE_BASE_URL=http://localhost:3000 npm run smoke
+```
+
 Deployment notes live in `DEPLOYMENT.md`.
 
 The admin dashboard includes a deployment preflight card for browser-visible launch readiness. It does not replace `npm run build`, but it helps organizers confirm persistence mode, participant data, generated teams, and saved-run readiness before a launch smoke test.
@@ -110,9 +118,13 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
+The settings page includes local workspace backup and restore controls. A backup captures participants, matching settings, saved runs, active cohort, archived cohorts, and team review checklist state. Restores are previewed before replacing local browser data.
+
 Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, default missing cohort values to the active cohort, and roll back the most recent import in the current browser session.
 
 The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation. It also flags duplicate emails, names, and access tokens so organizers can resolve messy intake data before matching. Readiness quick filters let organizers jump directly to incomplete, excluded, low-signal, or duplicate participant records.
+
+The participant directory also includes a consent and privacy audit for the active cohort. It counts matching consent, excluded participants, contact-sharing consent, assigned participants with hidden contact details, and quick filters for consent review.
 
 The participant directory includes a detail panel for each participant. Organizers can inspect profile readiness, contact links, skills, interests, preferences, blocked teammates, and grouped edit sections without leaving the table.
 
@@ -126,9 +138,13 @@ Generated teams can be saved from `/admin/teams` as frozen match runs. A saved r
 
 Saved runs can be marked as final from `/admin/teams`. The admin dashboard then treats that final run as the organizer-approved source of truth for handoff until another run is marked final or the final marker is cleared.
 
+Saved-run cards include integrity signals that compare frozen snapshots against live participants, settings, cohort context, and stored assignment metrics. This helps organizers see whether a run is verified, needs review, or appears stale.
+
 The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results. Each team also has compact balance indicators for role coverage, skill coverage, experience, and availability before the full score breakdown.
 
 Each team also includes a manual review checklist for role confirmation, contact-sharing review, blocker review, and final review marking. This checklist is operational metadata only; it does not alter deterministic assignments.
+
+The teams page includes a cohort finalization gate for live generated teams. It checks minimum cohort size, generated assignments, assignment coverage, matcher warnings, consent posture, and whether the cohort has a final saved run before organizers treat the cohort as ready.
 
 Team exports include an audit panel that previews filename, CSV row count, assigned/unassigned counts, hidden contact count, matcher warnings, and whether the export uses live editable data or a saved snapshot.
 
@@ -172,7 +188,7 @@ The admin dashboard includes an action queue and recent activity timeline. The q
 
 HackMatch AI can run fully offline with browser `localStorage`. Admin pages show whether the app is using local storage or Supabase so organizers know where edits are being kept.
 
-The current Supabase adapter is plug-ready for editable participants and matching settings. Participant cohorts and access tokens are included in the schema and adapter. Saved match runs remain local browser snapshots in the MVP, while `lib/schema.sql` includes a cohort-aware `match_runs` table for a later remote persistence pass.
+The current Supabase adapter is plug-ready for editable participants, matching settings, saved match runs, and team review checklist metadata. Participant cohorts and access tokens are included in the schema and adapter. Browser-local storage remains the fallback when Supabase is absent or unavailable.
 
 To persist editable participants and settings in Supabase, create the tables from `lib/schema.sql`, then add these values to `.env.local`:
 
@@ -190,9 +206,10 @@ The admin dashboard includes a Supabase plug-readiness card that checks whether 
 ```bash
 npm run test
 npm run typecheck
+npm run smoke
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, final saved-run marking, team review summaries, team review checklists, team balance indicators, export audits, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, and deployment readiness checks.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, saved-run integrity, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
 
 ## Main Routes
 
