@@ -18,6 +18,12 @@ import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
+import {
+  summarizeSavedRunIntegrity,
+  summarizeSavedRunIntegrityOverview,
+  type SavedRunIntegritySummary,
+  type SavedRunIntegrityStatus
+} from "@/lib/saved-run-integrity";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import {
@@ -104,6 +110,26 @@ export default function AdminTeamsPage() {
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
   const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
+  const savedRunIntegritySummaries = useMemo(
+    () =>
+      savedMatchRuns.map((run) =>
+        summarizeSavedRunIntegrity({
+          run,
+          currentParticipants: cohortParticipants,
+          currentSettings: settings,
+          activeCohort
+        })
+      ),
+    [activeCohort, cohortParticipants, savedMatchRuns, settings]
+  );
+  const savedRunIntegrityById = useMemo(
+    () => new Map(savedRunIntegritySummaries.map((summary) => [summary.runId, summary])),
+    [savedRunIntegritySummaries]
+  );
+  const savedRunIntegrityOverview = useMemo(
+    () => summarizeSavedRunIntegrityOverview(savedRunIntegritySummaries),
+    [savedRunIntegritySummaries]
+  );
   const comparison = compareRun
     ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
     : null;
@@ -533,6 +559,12 @@ export default function AdminTeamsPage() {
           </div>
           <Badge>{savedMatchRuns.length} saved</Badge>
         </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <ReviewMetric label="Verified" value={savedRunIntegrityOverview.verified} />
+          <ReviewMetric label="Review" value={savedRunIntegrityOverview.review} />
+          <ReviewMetric label="Stale" value={savedRunIntegrityOverview.stale} />
+          <ReviewMetric label="Total runs" value={savedRunIntegrityOverview.total} />
+        </div>
         {runActionStatus ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
             {runActionStatus}
@@ -554,17 +586,21 @@ export default function AdminTeamsPage() {
               >
                 {(() => {
                   const sharePreview = buildSavedRunSharePreview(run);
+                  const integrity = savedRunIntegrityById.get(run.id);
                   return (
-                    <div className="mb-3 rounded-md bg-muted p-3 text-xs">
-                      <div className="font-semibold">Share preview</div>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        {sharePreview.metrics.slice(0, 4).map((metric) => (
-                          <div key={metric.label}>
-                            <div className="font-bold">{metric.value}</div>
-                            <div className="text-muted-foreground">{metric.label}</div>
-                          </div>
-                        ))}
+                    <div className="mb-3 grid gap-3">
+                      <div className="rounded-md bg-muted p-3 text-xs">
+                        <div className="font-semibold">Share preview</div>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {sharePreview.metrics.slice(0, 4).map((metric) => (
+                            <div key={metric.label}>
+                              <div className="font-bold">{metric.value}</div>
+                              <div className="text-muted-foreground">{metric.label}</div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
+                      {integrity ? <SavedRunIntegrityPanel integrity={integrity} /> : null}
                     </div>
                   );
                 })()}
@@ -583,6 +619,11 @@ export default function AdminTeamsPage() {
                     <Badge>{run.result.warnings.length} warning(s)</Badge>
                     <Badge>{run.settingsSnapshot.lockedTeams?.length ?? 0} lock(s)</Badge>
                     <Badge>Size {run.settingsSnapshot.desiredTeamSize}</Badge>
+                    {savedRunIntegrityById.get(run.id) ? (
+                      <Badge className={integrityBadgeClass(savedRunIntegrityById.get(run.id)?.status ?? "review")}>
+                        {savedRunIntegrityById.get(run.id)?.status}
+                      </Badge>
+                    ) : null}
                     {run.isFinal ? <Badge className="bg-emerald-100 text-emerald-800">Final</Badge> : null}
                   </div>
                 </button>
@@ -1026,6 +1067,29 @@ function ReviewMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function SavedRunIntegrityPanel({ integrity }: { integrity: SavedRunIntegritySummary }) {
+  const leadCheck = integrity.checks.find((check) => check.status !== "verified") ?? integrity.checks[0];
+
+  return (
+    <div className="rounded-md border border-border bg-white p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">Integrity summary</div>
+        <Badge className={integrityBadgeClass(integrity.status)}>
+          {integrity.status}
+        </Badge>
+      </div>
+      <p className="mt-2 text-muted-foreground">{leadCheck.detail}</p>
+      <div className="mt-3 flex flex-wrap gap-1">
+        {integrity.checks.map((check) => (
+          <Badge key={check.label} className={integrityBadgeClass(check.status)}>
+            {check.label}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BalanceSignalBar({ signal }: { signal: TeamBalanceSignal }) {
   const value = Math.max(0, Math.min(100, signal.value));
   return (
@@ -1097,6 +1161,12 @@ function reviewRiskClass(severity: "high" | "medium" | "low") {
 
 function balanceSignalClass(status: TeamBalanceSignal["status"]) {
   if (status === "strong") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function integrityBadgeClass(status: SavedRunIntegrityStatus) {
+  if (status === "verified") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
