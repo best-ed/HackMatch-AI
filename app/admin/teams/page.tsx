@@ -29,6 +29,11 @@ import {
   type TeamReviewChecklistStore
 } from "@/lib/team-review-checklist";
 import { summarizeTeamReview } from "@/lib/team-review";
+import {
+  isSupabaseConfigured,
+  loadRemoteTeamReviewChecklists,
+  saveRemoteTeamReviewChecklist
+} from "@/lib/supabase-store";
 
 const teamReviewChecklistStorageKey = "hackmatch.teamReviewChecklist.v1";
 const adminAuditHistoryStorageKey = "hackmatch.adminAuditHistory.v1";
@@ -95,6 +100,7 @@ export default function AdminTeamsPage() {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
+  const [checklistSyncStatus, setChecklistSyncStatus] = useState("");
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
   const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
   const compareRun = savedMatchRuns.find((run) => run.id === compareRunId) ?? savedMatchRuns[0];
@@ -121,7 +127,18 @@ export default function AdminTeamsPage() {
 
   useEffect(() => {
     try {
-      setTeamReviewChecklist(JSON.parse(window.localStorage.getItem(teamReviewChecklistStorageKey) ?? "{}") as TeamReviewChecklistStore);
+      const localChecklist = JSON.parse(window.localStorage.getItem(teamReviewChecklistStorageKey) ?? "{}") as TeamReviewChecklistStore;
+      setTeamReviewChecklist(localChecklist);
+      if (isSupabaseConfigured()) {
+        void loadRemoteTeamReviewChecklists()
+          .then((remoteChecklist) => {
+            const next = { ...localChecklist, ...remoteChecklist };
+            setTeamReviewChecklist(next);
+            window.localStorage.setItem(teamReviewChecklistStorageKey, JSON.stringify(next));
+            setChecklistSyncStatus("Team review checklist loaded from Supabase.");
+          })
+          .catch(() => setChecklistSyncStatus("Team review checklist is using local browser storage."));
+      }
     } catch {
       setTeamReviewChecklist({});
     }
@@ -281,9 +298,15 @@ export default function AdminTeamsPage() {
   }
 
   function updateChecklist(teamId: string, patch: Partial<TeamReviewChecklistItem>) {
-    const next = updateTeamReviewChecklist(teamReviewChecklist, checklistKey(teamId), patch);
+    const key = checklistKey(teamId);
+    const next = updateTeamReviewChecklist(teamReviewChecklist, key, patch);
     setTeamReviewChecklist(next);
     window.localStorage.setItem(teamReviewChecklistStorageKey, JSON.stringify(next));
+    if (isSupabaseConfigured()) {
+      void saveRemoteTeamReviewChecklist(key, next[key])
+        .then(() => setChecklistSyncStatus("Team review checklist synced to Supabase."))
+        .catch(() => setChecklistSyncStatus("Team review checklist saved locally; Supabase sync failed."));
+    }
     recordAudit("checklist", teamId, checklistPatchDetail(patch));
   }
 
@@ -353,6 +376,11 @@ export default function AdminTeamsPage() {
         warning={persistenceWarning}
         detail="Live generated teams and saved match runs are kept in local browser storage; participant and settings data can sync to Supabase when configured."
       />
+      {checklistSyncStatus ? (
+        <Card className="border-sky-200 bg-sky-50 py-3 text-sm font-medium text-sky-900">
+          {checklistSyncStatus}
+        </Card>
+      ) : null}
       <Card className="flex flex-wrap items-end justify-between gap-4">
         <label className="space-y-2 text-sm font-medium">
           <span>Active cohort</span>

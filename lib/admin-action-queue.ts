@@ -1,5 +1,5 @@
 import type { DeploymentReadiness } from "@/lib/deployment-readiness";
-import type { MatchingResult, Participant, SavedMatchRun } from "@/lib/matching/types";
+import type { MatchingResult, SavedMatchRun } from "@/lib/matching/types";
 import type { ParticipantIntakeSummary } from "@/lib/participant-intake";
 import type { SettingsHealth } from "@/lib/settings-guardrails";
 

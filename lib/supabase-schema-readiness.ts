@@ -30,8 +30,8 @@ const schemaItems: SupabaseSchemaReadinessItem[] = [
   },
   {
     label: "Team review checklist",
-    status: "planned",
-    detail: "The SQL schema includes checklist rows, but the current UI still stores review checklist state in browser storage."
+    status: "ready",
+    detail: "Remote adapter and schema cover organizer checklist rows while preserving local browser fallback."
   }
 ];
 
@@ -42,7 +42,7 @@ export function evaluateSupabaseSchemaReadiness(): SupabaseSchemaReadiness {
     readyCount,
     totalCount: schemaItems.length,
     title: `${readyCount}/${schemaItems.length} persistence surfaces are remote-ready`,
-    detail: "Supabase can be plugged in for editable participants, matching settings, and saved runs now. Review checklist metadata still needs a UI adapter before multi-admin production use.",
+    detail: "Supabase can be plugged in for editable participants, matching settings, saved runs, and team review checklist metadata while preserving local browser fallback.",
     items: schemaItems
   };
 }
