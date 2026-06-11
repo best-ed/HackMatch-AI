@@ -10,6 +10,8 @@ import {
 import { clearFinalSavedRun, markFinalSavedRun } from "@/lib/saved-run-final";
 import { createSavedMatchRun } from "@/lib/saved-run-factory";
 import { updateSavedRunNotes } from "@/lib/saved-run-notes";
+import type { HackMatchLocalBackup } from "@/lib/local-backup";
+import { teamReviewChecklistStorageKey } from "@/lib/local-backup";
 import type {
   AvailabilitySlot,
   MatchingSettings,
@@ -26,7 +28,8 @@ import {
   loadRemoteSettings,
   saveRemoteMatchRun,
   saveRemoteParticipant,
-  saveRemoteSettings
+  saveRemoteSettings,
+  saveRemoteTeamReviewChecklist
 } from "@/lib/supabase-store";
 import { useEffect, useMemo, useState } from "react";
 
@@ -448,6 +451,35 @@ export function useHackMatchData() {
             ...restoredParticipants.map((participant) => saveRemoteParticipant(participant)),
             saveRemoteSettings(restoredSettings)
           ]).catch(() => setPersistenceWarning("Supabase restore failed; local browser storage is still updated."));
+        }
+      },
+      restoreLocalBackup(backup: HackMatchLocalBackup) {
+        const restoredParticipants = normalizeParticipantsForStorage(backup.participants);
+        const restoredRuns = normalizeSavedRunsForStorage(backup.savedMatchRuns);
+        const restoredCohort = backup.activeCohort.trim() || defaultCohort;
+        const restoredArchivedCohorts = normalizeArchivedCohorts(backup.archivedCohorts);
+
+        setParticipantsState(restoredParticipants);
+        setSettingsState(backup.settings);
+        setSavedMatchRunsState(restoredRuns);
+        setActiveCohortState(restoredCohort);
+        setArchivedCohortsState(restoredArchivedCohorts);
+        writeJson(participantsKey, restoredParticipants);
+        writeJson(settingsKey, backup.settings);
+        writeJson(savedMatchRunsKey, restoredRuns);
+        writeJson(archivedCohortsKey, restoredArchivedCohorts);
+        writeJson(teamReviewChecklistStorageKey, backup.teamReviewChecklist);
+        window.localStorage.setItem(activeCohortKey, restoredCohort);
+
+        if (isSupabaseConfigured()) {
+          void Promise.all([
+            ...restoredParticipants.map((participant) => saveRemoteParticipant(participant)),
+            ...restoredRuns.map((run) => saveRemoteMatchRun(run)),
+            ...Object.entries(backup.teamReviewChecklist).map(([key, checklist]) =>
+              saveRemoteTeamReviewChecklist(key, checklist)
+            ),
+            saveRemoteSettings(backup.settings)
+          ]).catch(() => setPersistenceWarning("Backup restored locally; Supabase sync did not fully complete."));
         }
       },
       resetDemoData() {
