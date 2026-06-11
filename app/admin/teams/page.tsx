@@ -14,6 +14,10 @@ import {
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { buildTeamExportAudit } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
+import {
+  evaluateCohortFinalizationGate,
+  type CohortFinalizationStatus
+} from "@/lib/cohort-finalization";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
@@ -129,6 +133,17 @@ export default function AdminTeamsPage() {
   const savedRunIntegrityOverview = useMemo(
     () => summarizeSavedRunIntegrityOverview(savedRunIntegritySummaries),
     [savedRunIntegritySummaries]
+  );
+  const finalizationGate = useMemo(
+    () =>
+      evaluateCohortFinalizationGate({
+        cohort: activeCohort,
+        participants: cohortParticipants,
+        settings,
+        result,
+        savedRuns: savedMatchRuns
+      }),
+    [activeCohort, cohortParticipants, result, savedMatchRuns, settings]
   );
   const comparison = compareRun
     ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
@@ -436,6 +451,39 @@ export default function AdminTeamsPage() {
             </p>
           </div>
           <Badge>{lockedTeams.length} locked</Badge>
+        </Card>
+      ) : null}
+      {!isViewingSavedRun ? (
+        <Card className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Cohort finalization gate</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Confirm the active cohort is ready before treating a saved run as final.
+              </p>
+            </div>
+            <Badge className={finalizationStatusClass(finalizationGate.status)}>
+              {finalizationGate.status}
+            </Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <ReviewMetric label="Ready checks" value={finalizationGate.readyCount} />
+            <ReviewMetric label="Review checks" value={finalizationGate.reviewCount} />
+            <ReviewMetric label="Blocked checks" value={finalizationGate.blockedCount} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {finalizationGate.checks.map((check) => (
+              <div className="rounded-md border border-border bg-white p-4" key={check.label}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold">{check.label}</div>
+                  <Badge className={finalizationStatusClass(check.status)}>
+                    {check.status}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
+              </div>
+            ))}
+          </div>
         </Card>
       ) : null}
       <Card className="space-y-4">
@@ -1167,6 +1215,12 @@ function balanceSignalClass(status: TeamBalanceSignal["status"]) {
 
 function integrityBadgeClass(status: SavedRunIntegrityStatus) {
   if (status === "verified") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function finalizationStatusClass(status: CohortFinalizationStatus) {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
