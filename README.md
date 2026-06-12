@@ -110,6 +110,19 @@ ADMIN_PASSCODE=choose_a_private_admin_passcode
 ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
 ```
 
+## Security Readiness
+
+HackMatch AI is still an MVP, but the app includes security guardrails that make the current local workflow safer and prepare the codebase for production auth later.
+
+- Admin routes can be protected with `ADMIN_PASSCODE` and `ADMIN_SESSION_SECRET`. If those values are absent, admin pages remain open for local demo testing.
+- The admin dashboard includes a security readiness panel that reports admin passcode setup, session secret setup, Supabase env readiness, optional OpenAI key readiness, and the smoke-test command.
+- Participant team links use compact `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
+- Regenerating participant access tokens requires confirmation so organizers do not accidentally invalidate links participants already received.
+- Browser security headers are applied through `next.config.ts`, including content sniffing protection, frame blocking, referrer policy, and a restrictive permissions policy.
+- Team exports include a sensitive export audit that highlights whether contact fields are exposed, whether exports come from live editable data or saved snapshots, and whether warnings should be reviewed before handoff.
+
+These checks do not replace production authentication, row-level permissions, or server-side authorization. Before launch, add a real auth provider, configure Supabase row-level security, keep secrets outside the browser, and run `npm run build`, `npm run test`, and `npm run smoke`.
+
 ## Viability Workflow
 
 Use the MVP to test real matching behavior before adding Supabase persistence:
@@ -218,7 +231,7 @@ npm run typecheck
 npm run smoke
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, saved-run integrity, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant link audits, access token rotation guardrails, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, saved-run integrity, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, sensitive export warnings, security headers, security readiness checks, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
 
 ## Main Routes
 
