@@ -567,13 +567,14 @@ export default function AdminTeamsPage() {
               Confirm exactly what the team CSV will include before downloading.
             </p>
           </div>
-          <Badge className={exportAudit.checks.every((check) => check.status === "ready") ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
-            {exportAudit.checks.filter((check) => check.status === "ready").length}/{exportAudit.checks.length} ready
+          <Badge className={exportAuditStatusClass(exportAudit.status)}>
+            {exportAudit.status}
           </Badge>
         </div>
         <div className="rounded-md border border-border bg-white p-4">
           <div className="font-semibold">{exportAudit.filename}</div>
           <p className="mt-1 text-sm text-muted-foreground">{exportAudit.summary}</p>
+          <p className="mt-2 text-sm font-medium text-amber-800">{exportAudit.sensitiveSummary}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
           <ReviewMetric label="CSV rows" value={exportAudit.exportRows} />
@@ -581,14 +582,14 @@ export default function AdminTeamsPage() {
           <ReviewMetric label="Assigned" value={exportAudit.assignedCount} />
           <ReviewMetric label="Unassigned" value={exportAudit.unassignedCount} />
           <ReviewMetric label="Contact hidden" value={exportAudit.contactHiddenCount} />
-          <ReviewMetric label="Warnings" value={exportAudit.warningCount} />
+          <ReviewMetric label="Contact exposed" value={exportAudit.sensitiveContactCount} />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {exportAudit.checks.map((check) => (
             <div className="rounded-md border border-border bg-white p-4" key={check.label}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-semibold">{check.label}</div>
-                <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                <Badge className={exportAuditStatusClass(check.status)}>
                   {check.status}
                 </Badge>
               </div>
@@ -1220,6 +1221,12 @@ function integrityBadgeClass(status: SavedRunIntegrityStatus) {
 }
 
 function finalizationStatusClass(status: CohortFinalizationStatus) {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function exportAuditStatusClass(status: "ready" | "review" | "blocked") {
   if (status === "ready") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";

@@ -26,7 +26,54 @@ describe("team export audit", () => {
     expect(audit.assignedCount).toBe(assignedCount);
     expect(audit.contactSharedCount).toBe(contactSharedCount);
     expect(audit.contactHiddenCount).toBe(assignedCount - contactSharedCount);
+    expect(audit.sensitiveContactCount).toBe(contactSharedCount);
     expect(audit.lockedTeamCount).toBe(2);
     expect(audit.checks.map((check) => check.label)).toContain("Contact sharing");
+    expect(audit.checks.map((check) => check.label)).toContain("Sensitive contact fields");
+    expect(audit.status).toBe("review");
+    expect(audit.sensitiveSummary).toContain("shareable contact");
+  });
+
+  it("keeps saved exports under review when assigned contacts are hidden", () => {
+    const participants = demoParticipants.slice(0, 3).map((participant) => ({
+      ...participant,
+      consentToShareContact: false
+    }));
+    const result = {
+      teams: [{ id: "team-1", name: "Team 1", participantIds: participants.map((participant) => participant.id) }],
+      scoreBreakdowns: {},
+      explanations: [],
+      warnings: [],
+      unassignedParticipants: []
+    };
+
+    const audit = buildTeamExportAudit({
+      result,
+      participants,
+      cohort: "June",
+      scope: "saved"
+    });
+
+    expect(audit.status).toBe("review");
+    expect(audit.contactHiddenCount).toBe(3);
+    expect(audit.sensitiveContactCount).toBe(0);
+  });
+
+  it("blocks exports with no team rows", () => {
+    const audit = buildTeamExportAudit({
+      result: {
+        teams: [],
+        scoreBreakdowns: {},
+        explanations: [],
+        warnings: [],
+        unassignedParticipants: []
+      },
+      participants: [],
+      cohort: "Empty",
+      scope: "saved"
+    });
+
+    expect(audit.status).toBe("blocked");
+    expect(audit.checks.find((check) => check.label === "CSV content")?.status).toBe("blocked");
   });
 });
