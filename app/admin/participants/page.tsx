@@ -5,6 +5,10 @@ import { Eye, LinkIcon, SearchX, X } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
+import {
+  accessTokenRotationMessage,
+  buildAccessTokenRotationPreview
+} from "@/lib/access-token-rotation";
 import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
 import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -53,6 +57,7 @@ export default function AdminParticipantsPage() {
   const [importStatus, setImportStatus] = useState("");
   const [lastImportRollback, setLastImportRollback] = useState<ParticipantImportRollbackSnapshot | undefined>();
   const [linkStatus, setLinkStatus] = useState("");
+  const [pendingTokenRotationId, setPendingTokenRotationId] = useState("");
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
 
   const roles = useMemo(
@@ -184,9 +189,23 @@ export default function AdminParticipantsPage() {
   }
 
   function regenerateAccessToken(participant: Participant) {
+    if (pendingTokenRotationId !== participant.id) {
+      const preview = buildAccessTokenRotationPreview(participant);
+      setPendingTokenRotationId(participant.id);
+      setLinkStatus(`${preview.warning} Confirm rotation for ${preview.participantName} (${preview.oldTokenLabel}).`);
+      return;
+    }
+
+    const oldToken = participant.accessToken;
     const nextToken = createParticipantAccessToken();
     saveParticipant({ ...participant, accessToken: nextToken });
-    setLinkStatus(`Regenerated access token for ${participant.fullName}. Old links for this participant are now invalid.`);
+    setPendingTokenRotationId("");
+    setLinkStatus(accessTokenRotationMessage({ participant, oldToken, newToken: nextToken }));
+  }
+
+  function cancelTokenRotation(participant: Participant) {
+    setPendingTokenRotationId("");
+    setLinkStatus(`Token rotation cancelled for ${participant.fullName || participant.email || participant.id}.`);
   }
 
   function handleCsvFile(file?: File) {
@@ -760,12 +779,25 @@ export default function AdminParticipantsPage() {
                     Copy link
                   </button>
                   <button
-                    className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold text-amber-800"
+                    className={`w-full rounded-md border px-3 py-2 text-sm font-semibold ${
+                      pendingTokenRotationId === participant.id
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-border text-amber-800"
+                    }`}
                     onClick={() => regenerateAccessToken(participant)}
                     type="button"
                   >
-                    Regenerate token
+                    {pendingTokenRotationId === participant.id ? "Confirm rotation" : "Regenerate token"}
                   </button>
+                  {pendingTokenRotationId === participant.id ? (
+                    <button
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold"
+                      onClick={() => cancelTokenRotation(participant)}
+                      type="button"
+                    >
+                      Cancel rotation
+                    </button>
+                  ) : null}
                   <div className="break-all text-xs text-muted-foreground">
                     {participant.accessToken ? formatAccessToken(participant.accessToken) : "Token will be generated on next save"}
                   </div>
