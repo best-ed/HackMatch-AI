@@ -103,6 +103,13 @@ Deployment notes live in `DEPLOYMENT.md`.
 
 The admin dashboard includes a deployment preflight card for browser-visible launch readiness. It does not replace `npm run build`, but it helps organizers confirm persistence mode, participant data, generated teams, and saved-run readiness before a launch smoke test.
 
+Admin passcode protection is optional for local demos. To protect `/admin/*`, add these values to `.env.local` and restart the server:
+
+```bash
+ADMIN_PASSCODE=choose_a_private_admin_passcode
+ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
+```
+
 ## Viability Workflow
 
 Use the MVP to test real matching behavior before adding Supabase persistence:
@@ -183,6 +190,8 @@ The matching page also includes cohort health comparison. Organizers can compare
 The matching page also includes a readiness action plan. It classifies current run issues as blockers, warnings, or informational next steps using deterministic settings validation, assignment coverage, score floor, penalties, and matcher warnings. Cohort archive controls hide completed events from active setup lists while keeping their participant data and saved match runs available.
 
 The admin dashboard includes an action queue and recent activity timeline. The queue highlights the next best organizer actions from participant intake, settings health, assignment coverage, saved runs, and deployment status. The activity timeline summarizes recent participant changes and saved-run milestones for the active cohort.
+
+The admin dashboard also reports admin access protection status. If `ADMIN_PASSCODE` is not configured, admin pages stay open for local MVP testing. When it is configured, admin routes require the passcode and the dashboard offers a logout action.
 
 ## Supabase Persistence
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, Clock3, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import { AdminAuthStatus } from "@/components/admin-auth-status";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
@@ -125,6 +126,7 @@ export default function AdminPage() {
         </div>
         <Badge>{activeCohort} active</Badge>
       </div>
+      <AdminAuthStatus />
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard href="/admin/participants" title="Directory" value={cohortParticipants.length} detail={`${matchable.length} matchable in ${activeCohort}`} icon={<Users size={20} />} />
