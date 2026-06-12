@@ -11,6 +11,7 @@ import { generateTeams } from "@/lib/matching/algorithm";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
+import { buildParticipantLinkAudit, type ParticipantLinkAuditStatus } from "@/lib/participant-link-audit";
 import {
   createImportRollbackSnapshot,
   summarizeImportRollback,
@@ -45,6 +46,7 @@ export default function AdminParticipantsPage() {
   const [experienceFilter, setExperienceFilter] = useState<"all" | ExperienceLevel>("all");
   const [consentFilter, setConsentFilter] = useState<"all" | "matchable" | "excluded">("all");
   const [readinessFilter, setReadinessFilter] = useState<ParticipantReadinessFilter>("all");
+  const [linkRiskOnly, setLinkRiskOnly] = useState(false);
   const [exportStatus, setExportStatus] = useState("");
   const [importCsv, setImportCsv] = useState("");
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
@@ -66,6 +68,8 @@ export default function AdminParticipantsPage() {
     () => buildPrivacyAudit({ participants: cohortParticipants, result: generatedResult }),
     [cohortParticipants, generatedResult]
   );
+  const linkAudit = useMemo(() => buildParticipantLinkAudit(participants), [participants]);
+  const linkRiskParticipantIds = useMemo(() => new Set(linkAudit.riskParticipantIds), [linkAudit.riskParticipantIds]);
   const duplicateGroups = useMemo(() => findParticipantDuplicates(participants), [participants]);
   const duplicateParticipantIds = useMemo(() => duplicateParticipantIdsFromGroups(duplicateGroups), [duplicateGroups]);
   const filteredParticipants = useMemo(() => {
@@ -108,9 +112,10 @@ export default function AdminParticipantsPage() {
         duplicateParticipantIds,
         filter: readinessFilter
       });
-      return matchesQuery && matchesRole && matchesExperience && matchesConsent && matchesReadiness;
+      const matchesLinkRisk = !linkRiskOnly || linkRiskParticipantIds.has(participant.id);
+      return matchesQuery && matchesRole && matchesExperience && matchesConsent && matchesReadiness && matchesLinkRisk;
     });
-  }, [consentFilter, duplicateParticipantIds, experienceFilter, participants, query, readinessFilter, roleFilter]);
+  }, [consentFilter, duplicateParticipantIds, experienceFilter, linkRiskOnly, linkRiskParticipantIds, participants, query, readinessFilter, roleFilter]);
   const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId);
   const matchableCount = participants.filter((participant) => participant.consentToMatch).length;
   const advancedCount = participants.filter((participant) => participant.experienceLevel === "advanced").length;
@@ -319,6 +324,48 @@ export default function AdminParticipantsPage() {
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
+            <h2 className="font-semibold">Participant link security</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Audit team access links before copying or exporting participant lookup URLs.
+            </p>
+          </div>
+          <Badge className={linkAuditStatusClass(linkAudit.status)}>
+            {linkAudit.status}
+          </Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <PreviewMetric label="Exportable links" value={linkAudit.exportableLinks} />
+          <PreviewMetric label="Missing tokens" value={linkAudit.missingTokenCount} />
+          <PreviewMetric label="Duplicate tokens" value={linkAudit.duplicateTokenCount} />
+          <PreviewMetric label="Needs review" value={linkAudit.riskParticipantIds.length} />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-4">
+          {linkAudit.issues.map((issue) => (
+            <div className="rounded-md border border-border bg-white p-4" key={issue.label}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{issue.label}</div>
+                <Badge className={linkAuditStatusClass(issue.status)}>{issue.status}</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{issue.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ReadinessFilterButton
+            active={linkRiskOnly}
+            label={`Review risky links (${linkAudit.riskParticipantIds.length})`}
+            onClick={() => setLinkRiskOnly(true)}
+          />
+          <ReadinessFilterButton
+            active={!linkRiskOnly}
+            label="Show all links"
+            onClick={() => setLinkRiskOnly(false)}
+          />
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
             <h2 className="font-semibold">Intake quality</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Deterministic checks for participant readiness before matching.
@@ -461,6 +508,7 @@ export default function AdminParticipantsPage() {
               setExperienceFilter("all");
               setConsentFilter("all");
               setReadinessFilter("all");
+              setLinkRiskOnly(false);
             }}
             type="button"
           >
@@ -1038,6 +1086,12 @@ function intakeIssueClass(severity: "blocker" | "warning" | "info") {
 }
 
 function privacyStatusClass(status: PrivacyAuditStatus) {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function linkAuditStatusClass(status: ParticipantLinkAuditStatus) {
   if (status === "ready") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
