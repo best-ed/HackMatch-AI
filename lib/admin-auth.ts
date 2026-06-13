@@ -9,8 +9,58 @@ type AdminAuthEnv = {
   ADMIN_SESSION_SECRET?: string;
 };
 
+export type AdminAuthSetupStep = {
+  label: string;
+  status: "ready" | "review";
+  detail: string;
+};
+
+export type AdminAuthSetupSummary = {
+  enabled: boolean;
+  sessionSecretConfigured: boolean;
+  readyCount: number;
+  totalCount: number;
+  steps: AdminAuthSetupStep[];
+};
+
 export function isAdminAuthConfigured(env: AdminAuthEnv = process.env): boolean {
   return Boolean(env.ADMIN_PASSCODE?.trim());
+}
+
+export function summarizeAdminAuthSetup(env: AdminAuthEnv = process.env): AdminAuthSetupSummary {
+  const enabled = isAdminAuthConfigured(env);
+  const sessionSecretConfigured = Boolean(env.ADMIN_SESSION_SECRET?.trim());
+  const steps: AdminAuthSetupStep[] = [
+    {
+      label: "Admin passcode",
+      status: enabled ? "ready" : "review",
+      detail: enabled
+        ? "ADMIN_PASSCODE is configured, so admin routes can require login."
+        : "Set ADMIN_PASSCODE in .env.local before sharing an admin URL."
+    },
+    {
+      label: "Session secret",
+      status: sessionSecretConfigured ? "ready" : "review",
+      detail: sessionSecretConfigured
+        ? "ADMIN_SESSION_SECRET is configured for session token signing."
+        : "Set ADMIN_SESSION_SECRET to a long private value instead of relying on the passcode fallback."
+    },
+    {
+      label: "Server restart",
+      status: enabled && sessionSecretConfigured ? "ready" : "review",
+      detail: enabled && sessionSecretConfigured
+        ? "Restart completed after env setup or the server is already reading the configured values."
+        : "Restart the dev or production server after editing .env.local."
+    }
+  ];
+
+  return {
+    enabled,
+    sessionSecretConfigured,
+    readyCount: steps.filter((step) => step.status === "ready").length,
+    totalCount: steps.length,
+    steps
+  };
 }
 
 export function adminSessionMaxAgeSeconds() {

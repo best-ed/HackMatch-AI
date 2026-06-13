@@ -4,13 +4,12 @@ import {
   adminSessionMaxAgeSeconds,
   createAdminSessionToken,
   isAdminAuthConfigured,
+  summarizeAdminAuthSetup,
   verifyAdminPasscode
 } from "@/lib/admin-auth";
 
 export async function GET() {
-  return NextResponse.json({
-    enabled: isAdminAuthConfigured()
-  });
+  return NextResponse.json(summarizeAdminAuthSetup());
 }
 
 export async function POST(request: Request) {

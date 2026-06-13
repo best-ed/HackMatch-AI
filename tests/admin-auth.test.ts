@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createAdminSessionToken,
   isAdminAuthConfigured,
+  summarizeAdminAuthSetup,
   verifyAdminPasscode,
   verifyAdminSessionToken
 } from "@/lib/admin-auth";
@@ -11,6 +12,31 @@ describe("admin auth", () => {
     expect(isAdminAuthConfigured({})).toBe(false);
     expect(isAdminAuthConfigured({ ADMIN_PASSCODE: "  " })).toBe(false);
     expect(isAdminAuthConfigured({ ADMIN_PASSCODE: "secret" })).toBe(true);
+  });
+
+  it("summarizes setup steps without exposing secret values", () => {
+    const summary = summarizeAdminAuthSetup({
+      ADMIN_PASSCODE: "launch-code",
+      ADMIN_SESSION_SECRET: "session-secret"
+    });
+
+    expect(summary.enabled).toBe(true);
+    expect(summary.sessionSecretConfigured).toBe(true);
+    expect(summary.readyCount).toBe(3);
+    expect(summary.steps).toHaveLength(3);
+    expect(JSON.stringify(summary)).not.toContain("launch-code");
+    expect(JSON.stringify(summary)).not.toContain("session-secret");
+  });
+
+  it("keeps setup in review when session secret is missing", () => {
+    const summary = summarizeAdminAuthSetup({
+      ADMIN_PASSCODE: "launch-code"
+    });
+
+    expect(summary.enabled).toBe(true);
+    expect(summary.sessionSecretConfigured).toBe(false);
+    expect(summary.readyCount).toBe(1);
+    expect(summary.steps.map((step) => step.status)).toEqual(["ready", "review", "review"]);
   });
 
   it("verifies the configured passcode without accepting close values", async () => {
