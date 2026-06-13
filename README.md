@@ -15,7 +15,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Lets organizers mark one saved run as final for handoff.
 - Lets organizers add notes to saved match runs without changing deterministic assignments.
 - Generates compact saved-run share previews for organizer handoff.
-- Audits saved-run integrity, cohort finalization readiness, and consent/privacy posture before handoff.
+- Audits saved-run integrity, saved-run drift, cohort finalization readiness, and consent/privacy posture before handoff.
 - Exports and restores browser-local workspace backups for MVP data portability.
 - Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV.
 
@@ -115,9 +115,10 @@ ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
 HackMatch AI is still an MVP, but the app includes security guardrails that make the current local workflow safer and prepare the codebase for production auth later.
 
 - Admin routes can be protected with `ADMIN_PASSCODE` and `ADMIN_SESSION_SECRET`. If those values are absent, admin pages remain open for local demo testing.
-- The admin dashboard includes a security readiness panel that reports admin passcode setup, session secret setup, Supabase env readiness, optional OpenAI key readiness, and the smoke-test command.
+- The admin dashboard includes actionable admin auth setup, a security readiness panel, and an organizer launch checklist that reports admin passcode setup, session secret setup, Supabase env readiness, optional OpenAI key readiness, and the smoke-test command.
 - Participant team links use compact `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
 - Regenerating participant access tokens requires confirmation so organizers do not accidentally invalidate links participants already received.
+- Participant team handoff pages show a privacy summary so participants can see whether their contact details are shared, how many teammate contact records are visible, and which teammate records are hidden by consent.
 - Browser security headers are applied through `next.config.ts`, including content sniffing protection, frame blocking, referrer policy, and a restrictive permissions policy.
 - Team exports include a sensitive export audit that highlights whether contact fields are exposed, whether exports come from live editable data or saved snapshots, and whether warnings should be reviewed before handoff.
 
@@ -159,6 +160,8 @@ Generated teams can be saved from `/admin/teams` as frozen match runs. A saved r
 Saved runs can be marked as final from `/admin/teams`. The admin dashboard then treats that final run as the organizer-approved source of truth for handoff until another run is marked final or the final marker is cleared.
 
 Saved-run cards include integrity signals that compare frozen snapshots against live participants, settings, cohort context, and stored assignment metrics. This helps organizers see whether a run is verified, needs review, or appears stale.
+
+The teams page also compares a saved run against the current live generated teams. It highlights score movement, assignment movement, warning changes, participants added or removed from the live snapshot, and settings differences before organizers restore, export, or mark a run final.
 
 The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results. Each team also has compact balance indicators for role coverage, skill coverage, experience, and availability before the full score breakdown.
 
@@ -204,7 +207,7 @@ The matching page also includes a readiness action plan. It classifies current r
 
 The admin dashboard includes an action queue and recent activity timeline. The queue highlights the next best organizer actions from participant intake, settings health, assignment coverage, saved runs, and deployment status. The activity timeline summarizes recent participant changes and saved-run milestones for the active cohort.
 
-The admin dashboard also reports admin access protection status. If `ADMIN_PASSCODE` is not configured, admin pages stay open for local MVP testing. When it is configured, admin routes require the passcode and the dashboard offers a logout action.
+The admin dashboard also reports admin access protection status. If `ADMIN_PASSCODE` is not configured, admin pages stay open for local MVP testing. When it is configured, admin routes require the passcode and the dashboard offers a logout action. The setup card shows a safe checklist for admin passcode, session secret, and server restart state without exposing secret values.
 
 ## Supabase Persistence
 
@@ -223,6 +226,8 @@ When those variables are present, the app loads participants and matching settin
 
 The admin dashboard includes a Supabase plug-readiness card that checks whether the public project URL and anon key are absent, malformed, or ready-looking before launch. This is a local shape check only; the persistence status confirms whether the app actually connected.
 
+The dashboard also includes a Supabase RLS posture panel. It separates schema/adapter readiness from production authorization readiness, and calls out admin access boundaries, anon-client policy, participant contact privacy, and saved-run snapshot privacy before launch.
+
 ## Test The Project
 
 ```bash
@@ -231,7 +236,7 @@ npm run typecheck
 npm run smoke
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant link audits, access token rotation guardrails, participant team briefs, participant assignment status, saved-run share previews, saved-run notes, saved-run integrity, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, sensitive export warnings, security headers, security readiness checks, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant link audits, access token rotation guardrails, participant team briefs, participant assignment status, participant contact privacy summaries, saved-run share previews, saved-run notes, saved-run integrity, saved-run drift comparison, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, sensitive export warnings, security headers, security readiness checks, Supabase RLS posture checks, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
 
 ## Main Routes
 

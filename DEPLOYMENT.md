@@ -17,6 +17,11 @@ The `/admin` dashboard also includes a deployment preflight card. It checks brow
 
 Before handing the app to organizers, use `/admin` to confirm the Launch checklist:
 
+- Admin protection is configured for deployed organizer routes.
+- The active cohort has matchable participants.
+- Matching settings are viable.
+- Assignment coverage is complete or intentionally reviewed.
+- Export privacy is reviewed for contact-sharing exposure.
 - Production build is ready after `npm run build`.
 - Persistence mode is intentional.
 - A saved run exists and one saved run is marked final.
@@ -60,6 +65,21 @@ Current remote persistence coverage:
 
 Keep using the anon public key for the browser-facing adapter. Do not expose the service role key.
 
+## Supabase RLS Posture
+
+The Supabase schema and adapter are plug-ready, but production authorization still requires deliberate RLS policies and an authenticated organizer model.
+
+Before treating Supabase as production-ready:
+
+1. Configure `ADMIN_PASSCODE` and `ADMIN_SESSION_SECRET` or replace the passcode gate with a real auth provider.
+2. Enable RLS on organizer-owned tables before exposing the app to untrusted users.
+3. Restrict `participants` reads and writes so public clients cannot list participant contact details, access tokens, or consent fields without organizer authorization.
+4. Restrict `match_runs` because saved runs contain full participant and settings snapshots.
+5. Restrict `matching_settings` and `team_review_checklists` writes to authenticated organizers.
+6. Keep the service role key out of browser-visible `NEXT_PUBLIC_*` variables.
+
+The `/admin` Supabase RLS posture panel is a launch helper. It does not create Supabase policies automatically.
+
 ## Final Run Handoff
 
 Before the event goes live:
@@ -68,9 +88,10 @@ Before the event goes live:
 2. Open `/admin/teams`.
 3. Save the generated teams as a match run.
 4. Review warnings, score breakdowns, team balance, and checklist state.
-5. Mark one saved run as final.
-6. Download the CSV from the final saved run view.
-7. Open `/participant/team?access=...` for at least one participant in the final run.
+5. Compare the saved run against live teams for score movement, assignment drift, participant snapshot changes, and settings differences.
+6. Mark one saved run as final.
+7. Download the CSV from the final saved run view.
+8. Open `/participant/team?access=...` for at least one participant in the final run and confirm the privacy summary matches contact-sharing consent.
 
 If participants or settings change after this point, save a new run and mark the new run final only after review.
 
