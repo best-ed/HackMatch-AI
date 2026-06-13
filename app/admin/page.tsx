@@ -18,6 +18,7 @@ import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { getFinalSavedRun } from "@/lib/saved-run-final";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
+import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
 import { evaluateSupabaseSchemaReadiness, type SupabaseSchemaReadinessItem } from "@/lib/supabase-schema-readiness";
 
 export default function AdminPage() {
@@ -60,6 +61,11 @@ export default function AdminPage() {
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   });
   const supabaseSchemaReadiness = evaluateSupabaseSchemaReadiness();
+  const supabaseRlsReadiness = evaluateSupabaseRlsReadiness({
+    hasAdminPasscode: Boolean(process.env.ADMIN_PASSCODE?.trim()),
+    hasSupabaseEnv: supabaseReadiness.status === "ready",
+    usesAnonClient: true
+  });
   const deploymentReadiness = evaluateDeploymentReadiness({
     supabase: supabaseReadiness,
     hasParticipants: participants.length > 0,
@@ -331,6 +337,22 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="font-semibold">{supabaseRlsReadiness.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">{supabaseRlsReadiness.detail}</p>
+            </div>
+            <Badge className={supabaseRlsReadiness.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+              {supabaseRlsReadiness.readyCount}/{supabaseRlsReadiness.totalCount}
+            </Badge>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {supabaseRlsReadiness.items.map((item) => (
+              <SupabaseRlsItem item={item} key={item.label} />
+            ))}
+          </div>
+        </div>
       </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -437,6 +459,21 @@ function SupabaseSchemaItem({ item }: { item: SupabaseSchemaReadinessItem }) {
         <Badge className={supabaseSchemaBadgeClass(item.status)}>{item.status}</Badge>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+    </div>
+  );
+}
+
+function SupabaseRlsItem({ item }: { item: SupabaseRlsReadinessItem }) {
+  return (
+    <div className="rounded-md border border-border bg-muted/35 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{item.label}</div>
+        <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+          {item.status}
+        </Badge>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+      <p className="mt-2 text-xs font-medium text-foreground">{item.action}</p>
     </div>
   );
 }
