@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Eye, LinkIcon, SearchX, X } from "lucide-react";
+import {
+  ParticipantDuplicateReviewPanel,
+  ParticipantIntakeQualityPanel,
+  ParticipantLinkSecurityPanel,
+  ParticipantPrivacyAuditPanel
+} from "@/components/admin-participant-audit-panels";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
@@ -15,7 +21,7 @@ import { generateTeams } from "@/lib/matching/algorithm";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
-import { buildParticipantLinkAudit, type ParticipantLinkAuditStatus } from "@/lib/participant-link-audit";
+import { buildParticipantLinkAudit } from "@/lib/participant-link-audit";
 import {
   createImportRollbackSnapshot,
   summarizeImportRollback,
@@ -27,7 +33,7 @@ import {
   participantMatchesReadinessFilter,
   type ParticipantReadinessFilter
 } from "@/lib/participant-readiness-filter";
-import { buildPrivacyAudit, type PrivacyAuditStatus } from "@/lib/privacy-audit";
+import { buildPrivacyAudit } from "@/lib/privacy-audit";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
 export default function AdminParticipantsPage() {
@@ -287,197 +293,25 @@ export default function AdminParticipantsPage() {
         <Metric label="Matchable" value={matchableCount} />
         <Metric label="Advanced" value={advancedCount} />
       </div>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Consent and privacy audit</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Check matching consent, teammate contact sharing, and handoff privacy for {activeCohort}.
-            </p>
-          </div>
-          <Badge className={privacyStatusClass(privacyAudit.status)}>
-            {privacyAudit.status}
-          </Badge>
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <PreviewMetric label="Match consent" value={privacyAudit.matchConsentCount} />
-          <PreviewMetric label="Excluded" value={privacyAudit.matchExcludedCount} />
-          <PreviewMetric label="Can share contact" value={privacyAudit.contactSharingCount} />
-          <PreviewMetric label="Assigned hidden contact" value={privacyAudit.assignedWithoutContactCount} />
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
-          {privacyAudit.issues.map((issue) => (
-            <div className="rounded-md border border-border bg-white p-4" key={issue.label}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="font-semibold">{issue.label}</div>
-                <Badge className={privacyStatusClass(issue.status)}>{issue.status}</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{issue.detail}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ReadinessFilterButton
-            active={consentFilter === "excluded"}
-            label={`Review excluded (${privacyAudit.matchExcludedCount})`}
-            onClick={() => {
-              setConsentFilter("excluded");
-              setReadinessFilter("all");
-            }}
-          />
-          <ReadinessFilterButton
-            active={consentFilter === "matchable"}
-            label={`Review matchable (${privacyAudit.matchConsentCount})`}
-            onClick={() => {
-              setConsentFilter("matchable");
-              setReadinessFilter("all");
-            }}
-          />
-          <ReadinessFilterButton
-            active={consentFilter === "all"}
-            label="Show all consent states"
-            onClick={() => setConsentFilter("all")}
-          />
-        </div>
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Participant link security</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Audit team access links before copying or exporting participant lookup URLs.
-            </p>
-          </div>
-          <Badge className={linkAuditStatusClass(linkAudit.status)}>
-            {linkAudit.status}
-          </Badge>
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <PreviewMetric label="Exportable links" value={linkAudit.exportableLinks} />
-          <PreviewMetric label="Missing tokens" value={linkAudit.missingTokenCount} />
-          <PreviewMetric label="Duplicate tokens" value={linkAudit.duplicateTokenCount} />
-          <PreviewMetric label="Needs review" value={linkAudit.riskParticipantIds.length} />
-        </div>
-        <div className="grid gap-3 lg:grid-cols-4">
-          {linkAudit.issues.map((issue) => (
-            <div className="rounded-md border border-border bg-white p-4" key={issue.label}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="font-semibold">{issue.label}</div>
-                <Badge className={linkAuditStatusClass(issue.status)}>{issue.status}</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{issue.detail}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ReadinessFilterButton
-            active={linkRiskOnly}
-            label={`Review risky links (${linkAudit.riskParticipantIds.length})`}
-            onClick={() => setLinkRiskOnly(true)}
-          />
-          <ReadinessFilterButton
-            active={!linkRiskOnly}
-            label="Show all links"
-            onClick={() => setLinkRiskOnly(false)}
-          />
-        </div>
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Intake quality</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Deterministic checks for participant readiness before matching.
-            </p>
-          </div>
-          <Badge className={intakeSummary.incompleteCount ? "bg-rose-100 text-rose-800" : intakeSummary.lowSignalCount || intakeSummary.excludedCount ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
-            {intakeSummary.incompleteCount ? "Needs fixes" : intakeSummary.lowSignalCount || intakeSummary.excludedCount ? "Needs review" : "Ready"}
-          </Badge>
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <PreviewMetric label="Matchable" value={intakeSummary.matchableCount} />
-          <PreviewMetric label="Excluded" value={intakeSummary.excludedCount} />
-          <PreviewMetric label="Incomplete" value={intakeSummary.incompleteCount} />
-          <PreviewMetric label="Low signal" value={intakeSummary.lowSignalCount} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ReadinessFilterButton active={readinessFilter === "all"} label="All records" onClick={() => setReadinessFilter("all")} />
-          <ReadinessFilterButton active={readinessFilter === "incomplete"} label={`Incomplete (${intakeSummary.incompleteCount})`} onClick={() => setReadinessFilter("incomplete")} />
-          <ReadinessFilterButton active={readinessFilter === "excluded"} label={`Excluded (${intakeSummary.excludedCount})`} onClick={() => setReadinessFilter("excluded")} />
-          <ReadinessFilterButton active={readinessFilter === "low-signal"} label={`Low signal (${intakeSummary.lowSignalCount})`} onClick={() => setReadinessFilter("low-signal")} />
-          <ReadinessFilterButton active={readinessFilter === "duplicates"} label={`Duplicates (${duplicateParticipantIds.size})`} onClick={() => setReadinessFilter("duplicates")} />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-md border border-border bg-white p-4">
-            <div className="font-semibold">Top role coverage</div>
-            <div className="mt-3 space-y-2">
-              {intakeSummary.roleCoverage.map((role) => (
-                <div key={role.role}>
-                  <div className="mb-1 flex justify-between text-xs font-medium">
-                    <span>{role.role}</span>
-                    <span>{role.count}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.min(100, (role.count / Math.max(1, intakeSummary.totalCount)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-2">
-            {intakeSummary.issues.map((issue) => (
-              <div key={`${issue.title}-${issue.detail}`} className="rounded-md border border-border bg-white p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-sm font-semibold">{issue.title}</div>
-                  <Badge className={intakeIssueClass(issue.severity)}>{issue.severity}</Badge>
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">{issue.detail}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Duplicate review</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Likely duplicate records based on email, access token, or name plus institution.
-            </p>
-          </div>
-          <Badge className={duplicateGroups.length ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
-            {duplicateGroups.length ? `${duplicateGroups.length} group${duplicateGroups.length === 1 ? "" : "s"}` : "Clear"}
-          </Badge>
-        </div>
-        {duplicateGroups.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {duplicateGroups.slice(0, 6).map((group) => (
-              <div className="rounded-md border border-border bg-white p-3" key={`${group.reason}-${group.label}`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-medium">{group.reason}</div>
-                  <Badge>{group.participants.length} records</Badge>
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">{group.label}</div>
-                <div className="mt-3 space-y-1 text-sm">
-                  {group.participants.map((participant) => (
-                    <div className="flex justify-between gap-3" key={participant.id}>
-                      <span>{participant.fullName}</span>
-                      <span className="text-muted-foreground">{participant.email}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            No likely duplicate participants detected.
-          </div>
-        )}
-      </Card>
+      <ParticipantPrivacyAuditPanel
+        activeCohort={activeCohort}
+        audit={privacyAudit}
+        consentFilter={consentFilter}
+        onSetConsentFilter={setConsentFilter}
+        onSetReadinessAll={() => setReadinessFilter("all")}
+      />
+      <ParticipantLinkSecurityPanel
+        audit={linkAudit}
+        linkRiskOnly={linkRiskOnly}
+        onSetLinkRiskOnly={setLinkRiskOnly}
+      />
+      <ParticipantIntakeQualityPanel
+        duplicateCount={duplicateParticipantIds.size}
+        onSetReadinessFilter={setReadinessFilter}
+        readinessFilter={readinessFilter}
+        summary={intakeSummary}
+      />
+      <ParticipantDuplicateReviewPanel groups={duplicateGroups} />
       <Card className="grid gap-3 lg:grid-cols-[1fr_180px_180px_180px_auto]">
         <label className="space-y-2 text-sm font-medium">
           <span>Search participants</span>
@@ -1080,52 +914,10 @@ function PreviewMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ReadinessFilterButton({
-  active,
-  label,
-  onClick
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
-        active
-          ? "border-primary bg-emerald-50 text-foreground"
-          : "border-border bg-white text-muted-foreground hover:text-foreground"
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      {label}
-    </button>
-  );
-}
-
 function importActionClass(action: "create" | "update" | "skip" | "error") {
   if (action === "create") return "bg-emerald-100 text-emerald-800";
   if (action === "update") return "bg-sky-100 text-sky-800";
   if (action === "skip") return "bg-slate-100 text-slate-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-function intakeIssueClass(severity: "blocker" | "warning" | "info") {
-  if (severity === "blocker") return "bg-rose-100 text-rose-800";
-  if (severity === "warning") return "bg-amber-100 text-amber-800";
-  return "bg-emerald-100 text-emerald-800";
-}
-
-function privacyStatusClass(status: PrivacyAuditStatus) {
-  if (status === "ready") return "bg-emerald-100 text-emerald-800";
-  if (status === "review") return "bg-amber-100 text-amber-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-function linkAuditStatusClass(status: ParticipantLinkAuditStatus) {
-  if (status === "ready") return "bg-emerald-100 text-emerald-800";
-  if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
 
