@@ -8,6 +8,15 @@ export type ParticipantTeamBrief = {
     phone?: string;
     links: Array<{ label: string; url: string }>;
   }>;
+  contactPrivacy: {
+    visibleCount: number;
+    hiddenCount: number;
+    totalCount: number;
+    viewerCanShareContact: boolean;
+    summary: string;
+    viewerDetail: string;
+    hiddenNames: string[];
+  };
   sharedInterests: string[];
   sharedAvailability: string[];
   nextSteps: string[];
@@ -16,7 +25,8 @@ export type ParticipantTeamBrief = {
 
 export function buildParticipantTeamBrief(
   members: Participant[],
-  explanation?: TeamExplanation
+  explanation?: TeamExplanation,
+  viewerId?: string
 ): ParticipantTeamBrief {
   const sharedInterests = intersectLists(members.map((member) => member.interests)).slice(0, 6);
   const sharedAvailability = intersectLists(members.map((member) => member.availability)).slice(0, 6);
@@ -33,6 +43,26 @@ export function buildParticipantTeamBrief(
         member.portfolioUrl ? { label: "Portfolio", url: member.portfolioUrl } : undefined
       ].filter((link): link is { label: string; url: string } => Boolean(link))
     }));
+  const hiddenContactMembers = members.filter((member) => !member.consentToShareContact);
+  const viewer = viewerId ? members.find((member) => member.id === viewerId) : undefined;
+  const hiddenCount = hiddenContactMembers.length;
+  const contactPrivacy = {
+    visibleCount: visibleContacts.length,
+    hiddenCount,
+    totalCount: members.length,
+    viewerCanShareContact: Boolean(viewer?.consentToShareContact),
+    summary: hiddenCount
+      ? `${visibleContacts.length}/${members.length} teammate contact record(s) are visible. ${hiddenCount} remain hidden by consent.`
+      : members.length
+        ? "Every teammate has allowed contact details to appear in this handoff."
+        : "Contact visibility appears after a team assignment is loaded.",
+    viewerDetail: viewer
+      ? viewer.consentToShareContact
+        ? "Your email, phone, and profile links can appear to assigned teammates when available."
+        : "Your contact details stay hidden from assigned teammates; the organizer may need to coordinate introductions."
+      : "Look up your participant access link to see your own contact-sharing state.",
+    hiddenNames: hiddenContactMembers.map((member) => member.fullName).sort((left, right) => left.localeCompare(right))
+  };
   const warnings = [
     ...(explanation?.warnings ?? []),
     visibleContacts.length === 0 ? "No teammates have enabled contact sharing yet." : ""
@@ -40,6 +70,7 @@ export function buildParticipantTeamBrief(
 
   return {
     visibleContacts,
+    contactPrivacy,
     sharedInterests,
     sharedAvailability,
     warnings,

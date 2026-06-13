@@ -438,14 +438,36 @@ describe("deterministic matching", () => {
         consentToShareContact: false
       }
     ];
-    const brief = buildParticipantTeamBrief(members);
+    const brief = buildParticipantTeamBrief(members, undefined, members[0].id);
 
     expect(brief.sharedInterests).toEqual(["Health"]);
     expect(brief.sharedAvailability).toEqual(["weekend_morning"]);
     expect(brief.visibleContacts).toHaveLength(1);
+    expect(brief.contactPrivacy.visibleCount).toBe(1);
+    expect(brief.contactPrivacy.hiddenCount).toBe(1);
+    expect(brief.contactPrivacy.viewerCanShareContact).toBe(true);
+    expect(brief.contactPrivacy.hiddenNames).toEqual([members[1].fullName]);
     expect(brief.nextSteps.some((step) => step.includes("Weekend Morning"))).toBe(true);
     expect(brief.warnings).toEqual([]);
     expect(formatAvailability("weekday_evening")).toBe("Weekday Evening");
+  });
+
+  it("explains the viewer contact sharing state in participant team briefs", () => {
+    const members: Participant[] = [
+      {
+        ...demoParticipants[0],
+        consentToShareContact: true
+      },
+      {
+        ...demoParticipants[1],
+        consentToShareContact: false
+      }
+    ];
+    const brief = buildParticipantTeamBrief(members, undefined, members[1].id);
+
+    expect(brief.contactPrivacy.viewerCanShareContact).toBe(false);
+    expect(brief.contactPrivacy.viewerDetail).toContain("stay hidden");
+    expect(brief.contactPrivacy.summary).toContain("1/2");
   });
 
   it("warns when no teammate contacts can be shared", () => {

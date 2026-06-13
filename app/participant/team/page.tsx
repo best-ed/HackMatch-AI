@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, CheckCircle2, Clipboard, LinkIcon, Mail, Phone, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, Clipboard, EyeOff, LinkIcon, Mail, Phone, ShieldCheck, Users } from "lucide-react";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextInput } from "@/components/ui";
 import {
@@ -49,7 +49,7 @@ export default function ParticipantTeamPage() {
       .filter((member): member is Participant => Boolean(member))
     : [];
   const explanation = result.explanations.find((item) => item.teamId === team?.id);
-  const brief = buildParticipantTeamBrief(members, explanation);
+  const brief = buildParticipantTeamBrief(members, explanation, participant?.id);
   const isUnassigned = participant
     ? result.unassignedParticipants.includes(participant.id)
     : false;
@@ -220,6 +220,40 @@ export default function ParticipantTeamPage() {
                 ))}
               </div>
             </Card>
+            <Card className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Privacy summary</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    This handoff only reveals contact details that teammates consented to share.
+                  </p>
+                </div>
+                <Badge className={brief.contactPrivacy.hiddenCount ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+                  {brief.contactPrivacy.visibleCount}/{brief.contactPrivacy.totalCount} visible
+                </Badge>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PrivacyMetric
+                  icon={<ShieldCheck size={16} />}
+                  label="Your sharing"
+                  value={brief.contactPrivacy.viewerCanShareContact ? "On" : "Off"}
+                />
+                <PrivacyMetric
+                  icon={<EyeOff size={16} />}
+                  label="Hidden records"
+                  value={brief.contactPrivacy.hiddenCount}
+                />
+              </div>
+              <div className="rounded-md border border-border bg-white p-3 text-sm">
+                <div className="font-semibold">{brief.contactPrivacy.summary}</div>
+                <p className="mt-2 text-muted-foreground">{brief.contactPrivacy.viewerDetail}</p>
+                {brief.contactPrivacy.hiddenNames.length ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Hidden by consent: {brief.contactPrivacy.hiddenNames.join(", ")}
+                  </p>
+                ) : null}
+              </div>
+            </Card>
             {explanation ? (
               <Card className="space-y-4">
                 <div>
@@ -261,7 +295,7 @@ export default function ParticipantTeamPage() {
               <div>
                 <h2 className="font-semibold">Contact handoff</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Only teammates who consented to contact sharing appear here.
+                  Contact cards are generated from consent flags. Hidden teammates are still assigned to your team; only their contact details are withheld.
                 </p>
               </div>
               {brief.visibleContacts.length ? (
@@ -358,6 +392,18 @@ function SummaryMetric({ icon, label, value }: { icon: React.ReactNode; label: s
       <div className="text-primary">{icon}</div>
       <div className="mt-2 text-xl font-bold">{value}</div>
       <div className="text-sm text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function PrivacyMetric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        <span className="text-primary">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-2 text-xl font-bold">{value}</div>
     </div>
   );
 }
