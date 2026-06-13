@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, GitCompareArrows, UsersRound } from "lucide-react";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import {
+  ExportAuditPanel,
+  FinalizationGatePanel,
+  OperationsHistoryPanel,
+  ReviewBriefPanel,
+  TeamLocksPanel,
+  TeamRunScopePanel
+} from "@/components/admin-team-review-panels";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import {
@@ -14,10 +22,7 @@ import {
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { buildTeamExportAudit } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
-import {
-  evaluateCohortFinalizationGate,
-  type CohortFinalizationStatus
-} from "@/lib/cohort-finalization";
+import { evaluateCohortFinalizationGate } from "@/lib/cohort-finalization";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
@@ -430,182 +435,19 @@ export default function AdminTeamsPage() {
           {checklistSyncStatus}
         </Card>
       ) : null}
-      <Card className="flex flex-wrap items-end justify-between gap-4">
-        <label className="space-y-2 text-sm font-medium">
-          <span>Active cohort</span>
-          <input
-            className="w-72 rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
-            list="teams-cohorts"
-            value={activeCohort}
-            onChange={(event) => setActiveCohort(event.target.value)}
-            disabled={isViewingSavedRun}
-          />
-          <datalist id="teams-cohorts">
-            {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
-          </datalist>
-        </label>
-        <Badge>
-          {isViewingSavedRun
-            ? `${activeRun?.cohort ?? "Saved cohort"} snapshot`
-            : `${cohortParticipants.length} participant(s) in cohort`}
-        </Badge>
-      </Card>
-      {!isViewingSavedRun ? (
-        <Card className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Team locks</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Lock a live team to preserve its exact membership while regenerating the rest.
-            </p>
-          </div>
-          <Badge>{lockedTeams.length} locked</Badge>
-        </Card>
-      ) : null}
-      {!isViewingSavedRun ? (
-        <Card className="space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Cohort finalization gate</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Confirm the active cohort is ready before treating a saved run as final.
-              </p>
-            </div>
-            <Badge className={finalizationStatusClass(finalizationGate.status)}>
-              {finalizationGate.status}
-            </Badge>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <ReviewMetric label="Ready checks" value={finalizationGate.readyCount} />
-            <ReviewMetric label="Review checks" value={finalizationGate.reviewCount} />
-            <ReviewMetric label="Blocked checks" value={finalizationGate.blockedCount} />
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {finalizationGate.checks.map((check) => (
-              <div className="rounded-md border border-border bg-white p-4" key={check.label}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-semibold">{check.label}</div>
-                  <Badge className={finalizationStatusClass(check.status)}>
-                    {check.status}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Review brief</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Fast scan of the currently selected team run before export or sharing.
-            </p>
-          </div>
-          <Badge className={reviewSummary.highRiskCount ? "bg-rose-100 text-rose-800" : reviewSummary.risks.some((risk) => risk.severity === "medium") ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
-            {reviewSummary.highRiskCount ? `${reviewSummary.highRiskCount} high risk` : reviewSummary.risks.some((risk) => risk.severity === "medium") ? "Needs review" : "Ready"}
-          </Badge>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <ReviewMetric label="Teams" value={reviewSummary.teamCount} />
-          <ReviewMetric label="Assigned" value={reviewSummary.assignedCount} />
-          <ReviewMetric label="Unassigned" value={reviewSummary.unassignedCount} />
-          <ReviewMetric label="Avg score" value={reviewSummary.averageScore} />
-          <ReviewMetric label="Lowest score" value={reviewSummary.lowestScore} />
-          <ReviewMetric label="Locked" value={reviewSummary.lockedCount} />
-        </div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <ReviewMetric label="Coverage risks" value={reviewSummary.coverageRiskCount} />
-          <ReviewMetric label="Availability risks" value={reviewSummary.availabilityRiskCount} />
-          <ReviewMetric label="Constraint risks" value={reviewSummary.constraintRiskCount} />
-          <ReviewMetric label="Medium risks" value={reviewSummary.mediumRiskCount} />
-        </div>
-        <div className="grid gap-2 lg:grid-cols-2">
-          {reviewSummary.risks.slice(0, 6).map((risk) => (
-            <div key={`${risk.teamId}-${risk.label}-${risk.detail}`} className="rounded-md border border-border bg-white p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold">{risk.teamName}</div>
-                <Badge className={reviewRiskClass(risk.severity)}>{risk.label}</Badge>
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">{risk.detail}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Operations history</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Browser-local audit trail for saved-run actions, locks, shares, restores, and checklist review.
-            </p>
-          </div>
-          <Badge>{auditHistory.length} event{auditHistory.length === 1 ? "" : "s"}</Badge>
-        </div>
-        {auditHistory.length ? (
-          <div className="grid gap-2">
-            {auditHistory.slice(0, 8).map((entry) => (
-              <div className="rounded-md border border-border bg-white p-3" key={entry.id}>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="font-semibold">{entry.label}</div>
-                    <p className="mt-1 text-sm text-muted-foreground">{entry.detail}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={auditActionClass(entry.action)}>{auditActionLabel(entry.action)}</Badge>
-                    <span className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            description="Save, rename, mark final, restore, lock, share, or review teams to build an organizer history in this browser."
-            icon={<Archive size={20} />}
-            title="No operations recorded yet"
-          />
-        )}
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Export audit</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Confirm exactly what the team CSV will include before downloading.
-            </p>
-          </div>
-          <Badge className={exportAuditStatusClass(exportAudit.status)}>
-            {exportAudit.status}
-          </Badge>
-        </div>
-        <div className="rounded-md border border-border bg-white p-4">
-          <div className="font-semibold">{exportAudit.filename}</div>
-          <p className="mt-1 text-sm text-muted-foreground">{exportAudit.summary}</p>
-          <p className="mt-2 text-sm font-medium text-amber-800">{exportAudit.sensitiveSummary}</p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <ReviewMetric label="CSV rows" value={exportAudit.exportRows} />
-          <ReviewMetric label="Teams" value={exportAudit.teamCount} />
-          <ReviewMetric label="Assigned" value={exportAudit.assignedCount} />
-          <ReviewMetric label="Unassigned" value={exportAudit.unassignedCount} />
-          <ReviewMetric label="Contact hidden" value={exportAudit.contactHiddenCount} />
-          <ReviewMetric label="Contact exposed" value={exportAudit.sensitiveContactCount} />
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {exportAudit.checks.map((check) => (
-            <div className="rounded-md border border-border bg-white p-4" key={check.label}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="font-semibold">{check.label}</div>
-                <Badge className={exportAuditStatusClass(check.status)}>
-                  {check.status}
-                </Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{check.detail}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <TeamRunScopePanel
+        activeCohort={activeCohort}
+        activeRunCohort={activeRun?.cohort}
+        cohortParticipantCount={cohortParticipants.length}
+        cohorts={cohorts}
+        isViewingSavedRun={isViewingSavedRun}
+        onSetActiveCohort={setActiveCohort}
+      />
+      {!isViewingSavedRun ? <TeamLocksPanel lockedCount={lockedTeams.length} /> : null}
+      {!isViewingSavedRun ? <FinalizationGatePanel gate={finalizationGate} /> : null}
+      <ReviewBriefPanel summary={reviewSummary} />
+      <OperationsHistoryPanel history={auditHistory} />
+      <ExportAuditPanel audit={exportAudit} />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1267,23 +1109,6 @@ function checklistPatchDetail(patch: Partial<TeamReviewChecklistItem>) {
   return `${value ? "Checked" : "Unchecked"} ${label[key] ?? "review item"}.`;
 }
 
-function auditActionLabel(action: AdminAuditAction) {
-  return action.replace(/-/g, " ");
-}
-
-function auditActionClass(action: AdminAuditAction) {
-  if (action === "deleted-run") return "bg-rose-100 text-rose-800";
-  if (action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
-  if (action === "checklist" || action === "locked-team") return "bg-sky-100 text-sky-800";
-  return "bg-slate-100 text-slate-800";
-}
-
-function reviewRiskClass(severity: "high" | "medium" | "low") {
-  if (severity === "high") return "bg-rose-100 text-rose-800";
-  if (severity === "medium") return "bg-amber-100 text-amber-800";
-  return "bg-emerald-100 text-emerald-800";
-}
-
 function balanceSignalClass(status: TeamBalanceSignal["status"]) {
   if (status === "strong") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
@@ -1292,18 +1117,6 @@ function balanceSignalClass(status: TeamBalanceSignal["status"]) {
 
 function integrityBadgeClass(status: SavedRunIntegrityStatus) {
   if (status === "verified") return "bg-emerald-100 text-emerald-800";
-  if (status === "review") return "bg-amber-100 text-amber-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-function finalizationStatusClass(status: CohortFinalizationStatus) {
-  if (status === "ready") return "bg-emerald-100 text-emerald-800";
-  if (status === "review") return "bg-amber-100 text-amber-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-function exportAuditStatusClass(status: "ready" | "review" | "blocked") {
-  if (status === "ready") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
