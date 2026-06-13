@@ -21,6 +21,7 @@ import {
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
+import { compareSavedRunToLive, describeSavedRunComparison } from "@/lib/saved-run-comparison";
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
 import {
   summarizeSavedRunIntegrity,
@@ -146,7 +147,14 @@ export default function AdminTeamsPage() {
     [activeCohort, cohortParticipants, result, savedMatchRuns, settings]
   );
   const comparison = compareRun
-    ? compareRuns(result, cohortParticipants, compareRun.result, compareRun.participantsSnapshot)
+    ? compareSavedRunToLive({
+        liveResult: result,
+        liveParticipants: cohortParticipants,
+        liveSettings: settings,
+        savedResult: compareRun.result,
+        savedParticipants: compareRun.participantsSnapshot,
+        savedSettings: compareRun.settingsSnapshot
+      })
     : null;
 
   useEffect(() => {
@@ -837,7 +845,7 @@ export default function AdminTeamsPage() {
                   </Badge>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {describeComparison(comparison, compareRun.name)}
+                  {describeSavedRunComparison(comparison, compareRun.name)}
                 </p>
               </div>
               <div className="rounded-md border border-border bg-white p-4">
@@ -862,6 +870,54 @@ export default function AdminTeamsPage() {
                 ) : (
                   <p className="mt-2 text-sm text-muted-foreground">
                     No participant team changes against {compareRun.name}.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div className="rounded-md border border-border bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-semibold">Participant snapshot drift</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{comparison.addedParticipants.length} added</Badge>
+                    <Badge>{comparison.removedParticipants.length} removed</Badge>
+                  </div>
+                </div>
+                {comparison.addedParticipants.length || comparison.removedParticipants.length ? (
+                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                    <DriftList title="Added live" items={comparison.addedParticipants.map((item) => item.name)} />
+                    <DriftList title="Only in saved run" items={comparison.removedParticipants.map((item) => item.name)} />
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Live participant snapshot matches {compareRun.name}.
+                  </p>
+                )}
+              </div>
+              <div className="rounded-md border border-border bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-semibold">Settings differences</h3>
+                  <Badge>{comparison.settingsChanges.length} changed</Badge>
+                </div>
+                {comparison.settingsChanges.length ? (
+                  <div className="mt-3 max-h-48 space-y-2 overflow-auto text-sm">
+                    {comparison.settingsChanges.slice(0, 8).map((change) => (
+                      <div key={change.label} className="rounded-md bg-muted px-3 py-2">
+                        <div className="font-medium">{change.label}</div>
+                        <div className="mt-1 text-muted-foreground">
+                          Live {change.liveValue} / saved {change.savedValue}
+                        </div>
+                      </div>
+                    ))}
+                    {comparison.settingsChanges.length > 8 ? (
+                      <div className="text-xs text-muted-foreground">
+                        +{comparison.settingsChanges.length - 8} more setting changes
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Live settings match the selected saved run.
                   </p>
                 )}
               </div>
@@ -1107,6 +1163,26 @@ function CompareMetric({
   );
 }
 
+function DriftList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-md bg-muted p-3">
+      <div className="font-semibold">{title}</div>
+      {items.length ? (
+        <div className="mt-2 space-y-1">
+          {items.slice(0, 6).map((item) => (
+            <div className="text-muted-foreground" key={item}>{item}</div>
+          ))}
+          {items.length > 6 ? (
+            <div className="text-xs text-muted-foreground">+{items.length - 6} more</div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-2 text-muted-foreground">No changes.</div>
+      )}
+    </div>
+  );
+}
+
 function ReviewMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md border border-border bg-white p-3">
@@ -1293,109 +1369,4 @@ function runButtonClass(active: boolean) {
   return `rounded-md border px-4 py-3 text-left text-sm font-semibold ${
     active ? "border-primary bg-emerald-50 text-foreground" : "border-border bg-white text-muted-foreground"
   }`;
-}
-
-function summarizeResult(result: MatchingResult) {
-  const scoredTeams = result.teams.filter((team) => typeof team.score?.totalScore === "number");
-  const assignedCount = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
-  return {
-    averageScore: scoredTeams.length
-      ? Math.round(scoredTeams.reduce((sum, team) => sum + (team.score?.totalScore ?? 0), 0) / scoredTeams.length)
-      : 0,
-    assignedCount,
-    teamCount: result.teams.length,
-    unassignedCount: result.unassignedParticipants.length,
-    warningCount: result.warnings.length
-  };
-}
-
-function participantTeamMap(result: MatchingResult, participants: Participant[]) {
-  const participantsById = new Map(participants.map((participant) => [participant.id, participant]));
-  const map = new Map<string, { id: string; name: string; team: string }>();
-  result.teams.forEach((team) => {
-    team.participantIds.forEach((participantId) => {
-      const participant = participantsById.get(participantId);
-      map.set(participantId, {
-        id: participantId,
-        name: participant?.fullName ?? participantId,
-        team: team.name
-      });
-    });
-  });
-  result.unassignedParticipants.forEach((participantId) => {
-    const participant = participantsById.get(participantId);
-    map.set(participantId, {
-      id: participantId,
-      name: participant?.fullName ?? participantId,
-      team: "Unassigned"
-    });
-  });
-  return map;
-}
-
-function compareRuns(
-  liveResult: MatchingResult,
-  liveParticipants: Participant[],
-  savedResult: MatchingResult,
-  savedParticipants: Participant[]
-) {
-  const live = summarizeResult(liveResult);
-  const saved = summarizeResult(savedResult);
-  const liveTeams = participantTeamMap(liveResult, liveParticipants);
-  const savedTeams = participantTeamMap(savedResult, savedParticipants);
-  const movedParticipants = Array.from(liveTeams.values())
-    .map((liveParticipant) => {
-      const savedParticipant = savedTeams.get(liveParticipant.id);
-      if (!savedParticipant || savedParticipant.team === liveParticipant.team) return null;
-      return {
-        id: liveParticipant.id,
-        name: liveParticipant.name,
-        liveTeam: liveParticipant.team,
-        savedTeam: savedParticipant.team
-      };
-    })
-    .filter((move): move is { id: string; name: string; liveTeam: string; savedTeam: string } => Boolean(move))
-    .sort((left, right) => left.name.localeCompare(right.name));
-
-  return {
-    live,
-    saved,
-    scoreDelta: live.averageScore - saved.averageScore,
-    assignedDelta: live.assignedCount - saved.assignedCount,
-    unassignedDelta: live.unassignedCount - saved.unassignedCount,
-    warningDelta: live.warningCount - saved.warningCount,
-    movedParticipants
-  };
-}
-
-function describeComparison(
-  comparison: ReturnType<typeof compareRuns>,
-  savedRunName: string
-) {
-  const notes: string[] = [];
-  if (comparison.scoreDelta > 0) {
-    notes.push(`Live teams average ${comparison.scoreDelta} points higher than ${savedRunName}.`);
-  } else if (comparison.scoreDelta < 0) {
-    notes.push(`${savedRunName} averages ${Math.abs(comparison.scoreDelta)} points higher than the live teams.`);
-  } else {
-    notes.push(`Live teams and ${savedRunName} have the same average score.`);
-  }
-
-  if (comparison.assignedDelta > 0) {
-    notes.push(`Live assigns ${comparison.assignedDelta} more participant${comparison.assignedDelta === 1 ? "" : "s"}.`);
-  } else if (comparison.assignedDelta < 0) {
-    notes.push(`${savedRunName} assigns ${Math.abs(comparison.assignedDelta)} more participant${comparison.assignedDelta === -1 ? "" : "s"}.`);
-  }
-
-  if (comparison.warningDelta > 0) {
-    notes.push(`Live has ${comparison.warningDelta} more warning${comparison.warningDelta === 1 ? "" : "s"} to review.`);
-  } else if (comparison.warningDelta < 0) {
-    notes.push(`Live has ${Math.abs(comparison.warningDelta)} fewer warning${comparison.warningDelta === -1 ? "" : "s"}.`);
-  }
-
-  if (comparison.movedParticipants.length > 0) {
-    notes.push(`${comparison.movedParticipants.length} participant${comparison.movedParticipants.length === 1 ? " has" : "s have"} moved teams.`);
-  }
-
-  return notes.join(" ");
 }
