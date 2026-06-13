@@ -9,6 +9,7 @@ import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
+import { buildTeamExportAudit } from "@/lib/export-audit";
 import { buildLaunchChecklist, type LaunchChecklistItem } from "@/lib/launch-checklist";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -47,6 +48,13 @@ export default function AdminPage() {
     savedRuns: savedMatchRuns
   });
   const settingsHealth = validateMatchingSettings(settings, cohortParticipants);
+  const exportAudit = buildTeamExportAudit({
+    result,
+    participants: cohortParticipants,
+    cohort: activeCohort,
+    scope: finalRun ? "saved" : "live",
+    lockedTeamCount: settings.lockedTeams?.length ?? 0
+  });
   const supabaseReadiness = evaluateSupabaseReadiness({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL,
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -64,7 +72,12 @@ export default function AdminPage() {
     hasFinalRun: Boolean(finalRun),
     hasSavedRun: Boolean(latestRun),
     hasRemoteSavedRunSupport: supabaseSchemaReadiness.items.some((item) => item.label === "Saved match runs" && item.status === "ready"),
-    hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY)
+    hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+    activeCohort,
+    matchableCount: matchable.length,
+    assignedCount: assigned,
+    settingsStatus: settingsHealth.status,
+    exportStatus: exportAudit.status
   });
   const actionQueue = buildAdminActionQueue({
     intake: intakeSummary,
@@ -353,12 +366,12 @@ export default function AdminPage() {
         <div className="rounded-md border border-border bg-white p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="font-semibold">Launch checklist</div>
+              <div className="font-semibold">Organizer launch checklist</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Production-facing checks to review after the build and before event handoff.
+                {launchChecklist.detail}
               </p>
             </div>
-            <Badge className={launchChecklist.readyCount === launchChecklist.totalCount ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+            <Badge className={launchChecklist.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
               {launchChecklist.readyCount}/{launchChecklist.totalCount} ready
             </Badge>
           </div>
@@ -402,12 +415,16 @@ function LaunchChecklistCard({ item }: { item: LaunchChecklistItem }) {
   return (
     <div className="rounded-md border border-border bg-muted/35 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-semibold">{item.label}</div>
-        <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
-          {item.status}
-        </Badge>
+        <div>
+          <Badge className="mb-2 bg-white text-muted-foreground">{item.category}</Badge>
+          <div className="font-semibold">{item.label}</div>
+        </div>
+        <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>{item.status}</Badge>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+      <Link className="mt-3 inline-flex text-sm font-semibold text-primary" href={item.href}>
+        {item.actionLabel}
+      </Link>
     </div>
   );
 }

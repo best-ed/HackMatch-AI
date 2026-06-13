@@ -25,10 +25,16 @@ describe("launch checklist", () => {
       hasFinalRun: true,
       hasSavedRun: true,
       hasRemoteSavedRunSupport: true,
-      hasOpenAiKey: false
+      hasOpenAiKey: false,
+      matchableCount: 4,
+      assignedCount: 4,
+      settingsStatus: "healthy",
+      exportStatus: "ready",
+      adminProtectionConfigured: true
     });
 
     expect(checklist.readyCount).toBe(checklist.totalCount);
+    expect(checklist.status).toBe("ready");
     expect(checklist.items.find((item) => item.label === "Saved-run handoff")?.status).toBe("ready");
   });
 
@@ -39,10 +45,38 @@ describe("launch checklist", () => {
       hasFinalRun: false,
       hasSavedRun: true,
       hasRemoteSavedRunSupport: true,
-      hasOpenAiKey: true
+      hasOpenAiKey: true,
+      matchableCount: 4,
+      assignedCount: 4,
+      settingsStatus: "healthy",
+      exportStatus: "ready",
+      adminProtectionConfigured: true
     });
 
+    expect(checklist.status).toBe("review");
     expect(checklist.items.find((item) => item.label === "Saved-run handoff")?.status).toBe("review");
     expect(checklist.items.find((item) => item.label === "AI explanation mode")?.detail).toContain("OpenAI");
+  });
+
+  it("flags launch blockers across admin protection, assignment coverage, and export privacy", () => {
+    const checklist = buildLaunchChecklist({
+      deployment: readyDeployment,
+      supabase: localSupabase,
+      hasFinalRun: true,
+      hasSavedRun: true,
+      hasRemoteSavedRunSupport: true,
+      hasOpenAiKey: false,
+      activeCohort: "June Hackathon",
+      matchableCount: 6,
+      assignedCount: 4,
+      settingsStatus: "warning",
+      exportStatus: "review",
+      adminProtectionConfigured: false
+    });
+
+    expect(checklist.status).toBe("review");
+    expect(checklist.items.find((item) => item.label === "Admin protection")?.status).toBe("review");
+    expect(checklist.items.find((item) => item.label === "Assignment coverage")?.detail).toContain("2 matchable");
+    expect(checklist.items.find((item) => item.label === "Export privacy")?.href).toBe("/admin/teams");
   });
 });
