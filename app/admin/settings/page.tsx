@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
@@ -30,6 +31,7 @@ export default function AdminSettingsPage() {
     savedMatchRuns,
     archivedCohorts,
     activeCohort,
+    loaded,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -159,6 +161,7 @@ export default function AdminSettingsPage() {
         warning={persistenceWarning}
         detail="Matching settings are stored in this browser until Supabase env vars are configured."
       />
+      <AdminDataLoadNotice loaded={loaded} label="settings workspace" />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

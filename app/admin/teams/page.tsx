@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Archive, GitCompareArrows, UsersRound } from "lucide-react";
+import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import {
   ExportAuditPanel,
@@ -71,6 +72,7 @@ export default function AdminTeamsPage() {
     activeCohort,
     setActiveCohort,
     cohorts,
+    loaded,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -430,6 +432,7 @@ export default function AdminTeamsPage() {
         warning={persistenceWarning}
         detail="Live generated teams and saved match runs are kept in local browser storage; participant and settings data can sync to Supabase when configured."
       />
+      <AdminDataLoadNotice loaded={loaded} label="team review data" />
       {checklistSyncStatus ? (
         <Card className="border-sky-200 bg-sky-50 py-3 text-sm font-medium text-sky-900">
           {checklistSyncStatus}

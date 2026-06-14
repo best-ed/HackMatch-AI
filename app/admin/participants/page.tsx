@@ -8,6 +8,7 @@ import {
   ParticipantLinkSecurityPanel,
   ParticipantPrivacyAuditPanel
 } from "@/components/admin-participant-audit-panels";
+import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
@@ -48,6 +49,7 @@ export default function AdminParticipantsPage() {
     cohorts,
     cohortParticipants,
     settings,
+    loaded,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -287,6 +289,7 @@ export default function AdminParticipantsPage() {
         warning={persistenceWarning}
         detail="Participant edits, imports, access tokens, and cohorts are stored in this browser until Supabase env vars are configured."
       />
+      <AdminDataLoadNotice loaded={loaded} label="participant directory" />
       <div className="grid gap-4 md:grid-cols-4">
         <Metric label="Total" value={participants.length} />
         <Metric label="Showing" value={filteredParticipants.length} />

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, Archive, CheckCircle2, Gauge, RotateCcw, Settings2, Users } from "lucide-react";
+import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
@@ -26,6 +27,7 @@ export default function AdminMatchingPage() {
     archivedCohorts,
     archiveCohort,
     restoreCohort,
+    loaded,
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
@@ -89,6 +91,7 @@ export default function AdminMatchingPage() {
         warning={persistenceWarning}
         detail="Cohort selection is stored locally; participant and settings edits can sync to Supabase when env vars are configured."
       />
+      <AdminDataLoadNotice loaded={loaded} label="matching workspace" />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -286,9 +289,12 @@ export default function AdminMatchingPage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-3 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
-                No archived cohorts. Completed events can be archived here after their final saved run is recorded.
-              </p>
+              <EmptyState
+                className="mt-3"
+                description="Completed events can be archived here after their final saved run is recorded."
+                icon={<Archive size={20} />}
+                title="No archived cohorts"
+              />
             )}
           </div>
         </div>
