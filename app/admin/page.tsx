@@ -6,6 +6,7 @@ import { AdminAuthStatus } from "@/components/admin-auth-status";
 import { AdminLocalStorageDiagnostics } from "@/components/admin-local-storage-diagnostics";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { AdminSecurityReadiness } from "@/components/admin-security-readiness";
+import { AdminSupabaseSyncSummary } from "@/components/admin-supabase-sync-summary";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
@@ -21,6 +22,7 @@ import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
 import { evaluateSupabaseSchemaReadiness, type SupabaseSchemaReadinessItem } from "@/lib/supabase-schema-readiness";
+import { buildSupabaseSyncSummary } from "@/lib/supabase-sync-status";
 
 export default function AdminPage() {
   const {
@@ -66,6 +68,14 @@ export default function AdminPage() {
     hasAdminPasscode: Boolean(process.env.ADMIN_PASSCODE?.trim()),
     hasSupabaseEnv: supabaseReadiness.status === "ready",
     usesAnonClient: true
+  });
+  const supabaseSyncSummary = buildSupabaseSyncSummary({
+    persistenceMode,
+    persistenceWarning,
+    readiness: supabaseReadiness,
+    schema: supabaseSchemaReadiness,
+    participantsCount: participants.length,
+    savedRunsCount: savedMatchRuns.length
   });
   const deploymentReadiness = evaluateDeploymentReadiness({
     supabase: supabaseReadiness,
@@ -310,6 +320,7 @@ export default function AdminPage() {
           <div className="font-semibold">{supabaseReadiness.title}</div>
           <p className="mt-1 text-sm text-muted-foreground">{supabaseReadiness.detail}</p>
         </div>
+        <AdminSupabaseSyncSummary summary={supabaseSyncSummary} />
         <div className="grid gap-3 md:grid-cols-2">
           {supabaseReadiness.checks.map((check) => (
             <div key={check.label} className="rounded-md border border-border bg-white p-4">
