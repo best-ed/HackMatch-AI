@@ -16,7 +16,7 @@ import {
   buildAccessTokenRotationPreview
 } from "@/lib/access-token-rotation";
 import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToCsv, participantsToCsv } from "@/lib/export";
-import { createParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
+import { createUniqueParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
@@ -203,7 +203,7 @@ export default function AdminParticipantsPage() {
     }
 
     const oldToken = participant.accessToken;
-    const nextToken = createParticipantAccessToken();
+    const nextToken = createUniqueParticipantAccessToken(participants);
     saveParticipant({ ...participant, accessToken: nextToken });
     setPendingTokenRotationId("");
     setLinkStatus(accessTokenRotationMessage({ participant, oldToken, newToken: nextToken }));

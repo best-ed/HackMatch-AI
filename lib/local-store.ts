@@ -104,21 +104,48 @@ export function createParticipantAccessToken(): string {
   return `hm-${token}`;
 }
 
-function ensureParticipantAccessToken(participant: Participant): Participant {
+export function createUniqueParticipantAccessToken(
+  participants: Participant[],
+  generateToken: () => string = createParticipantAccessToken
+): string {
+  const existingTokens = new Set(
+    participants
+      .map((participant) => participant.accessToken?.trim().toLowerCase())
+      .filter((token): token is string => Boolean(token))
+  );
+
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const token = generateToken();
+    if (!existingTokens.has(token.toLowerCase())) return token;
+  }
+
+  throw new Error("Could not create a unique participant access token.");
+}
+
+function ensureParticipantAccessToken(participant: Participant, participants: Participant[] = []): Participant {
+  const existingParticipants = participants.filter((item) => item.id !== participant.id);
+  const token = participant.accessToken?.trim();
+  const tokenIsDuplicate = token
+    ? existingParticipants.some((item) => item.accessToken?.trim().toLowerCase() === token.toLowerCase())
+    : false;
+
   return {
     ...participant,
-    accessToken: participant.accessToken || createParticipantAccessToken(),
+    accessToken: token && !tokenIsDuplicate
+      ? token
+      : createUniqueParticipantAccessToken(existingParticipants),
     cohort: participant.cohort?.trim() || defaultCohort
   };
 }
 
 function normalizeParticipantsForStorage(participants: Participant[]): Participant[] {
-  return participants.map((participant) =>
-    ensureParticipantAccessToken({
+  return participants.reduce<Participant[]>((normalized, participant) => {
+    const next = ensureParticipantAccessToken({
       ...participant,
       updatedAt: participant.updatedAt || new Date().toISOString()
-    })
-  );
+    }, normalized);
+    return [...normalized, next];
+  }, []);
 }
 
 function normalizeSavedRunsForStorage(runs: SavedMatchRun[]): SavedMatchRun[] {
@@ -134,7 +161,7 @@ export function createBlankParticipant(participants: Participant[]): Participant
   const timestamp = new Date().toISOString();
   return {
     id: createParticipantId(participants),
-    accessToken: createParticipantAccessToken(),
+    accessToken: createUniqueParticipantAccessToken(participants),
     cohort: readActiveCohort(),
     fullName: "",
     email: "",
@@ -305,9 +332,16 @@ export function useHackMatchData() {
       },
       saveParticipant(participant: Participant) {
         const timestamp = new Date().toISOString();
+        const existingParticipants = participants.filter((item) => item.id !== participant.id);
+        const accessToken = participant.accessToken?.trim();
+        const accessTokenIsDuplicate = accessToken
+          ? existingParticipants.some((item) => item.accessToken?.trim().toLowerCase() === accessToken.toLowerCase())
+          : false;
         const cleaned: Participant = {
           ...participant,
-          accessToken: participant.accessToken || createParticipantAccessToken(),
+          accessToken: accessToken && !accessTokenIsDuplicate
+            ? accessToken
+            : createUniqueParticipantAccessToken(existingParticipants),
           cohort: participant.cohort?.trim() || activeCohort || defaultCohort,
           fullName: participant.fullName.trim(),
           email: participant.email.trim(),

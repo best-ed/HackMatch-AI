@@ -6,8 +6,8 @@ import { SectionTrail } from "@/components/section-trail";
 import { Card, TextArea, TextInput } from "@/components/ui";
 import {
   createBlankParticipant,
-  createParticipantAccessToken,
   createParticipantId,
+  createUniqueParticipantAccessToken,
   splitList,
   useHackMatchData,
   writeCurrentParticipantLookup
@@ -86,7 +86,7 @@ export default function RegisterPage() {
     const participantToSave = {
       ...form,
       id: createParticipantId(participants),
-      accessToken: createParticipantAccessToken(),
+      accessToken: createUniqueParticipantAccessToken(participants),
       secondaryRoles: splitList(listDrafts.secondaryRoles),
       technicalSkills: splitList(listDrafts.technicalSkills),
       nonTechnicalSkills: splitList(listDrafts.nonTechnicalSkills),
