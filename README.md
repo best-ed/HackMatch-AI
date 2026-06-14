@@ -17,6 +17,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Generates compact saved-run share previews for organizer handoff.
 - Audits saved-run integrity, saved-run drift, cohort finalization readiness, and consent/privacy posture before handoff.
 - Exports and restores browser-local workspace backups for MVP data portability.
+- Reports local storage health and Supabase sync posture so organizers can see what is local-only, remote-ready, or active.
 - Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV.
 
 ## Deterministic Matching
@@ -99,6 +100,8 @@ After starting a production or local server, run the route smoke test:
 SMOKE_BASE_URL=http://localhost:3000 npm run smoke
 ```
 
+The smoke runner reads `smoke-routes.json`, which is also covered by tests so public, participant, and admin route coverage stays in sync with the app navigation.
+
 Deployment notes live in `DEPLOYMENT.md`.
 
 The admin dashboard includes a deployment preflight card for browser-visible launch readiness. It does not replace `npm run build`, but it helps organizers confirm persistence mode, participant data, generated teams, and saved-run readiness before a launch smoke test.
@@ -116,7 +119,7 @@ HackMatch AI is still an MVP, but the app includes security guardrails that make
 
 - Admin routes can be protected with `ADMIN_PASSCODE` and `ADMIN_SESSION_SECRET`. If those values are absent, admin pages remain open for local demo testing.
 - The admin dashboard includes actionable admin auth setup, a security readiness panel, and an organizer launch checklist that reports admin passcode setup, session secret setup, Supabase env readiness, optional OpenAI key readiness, and the smoke-test command.
-- Participant team links use compact `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
+- Participant team links use compact, collision-checked `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
 - Regenerating participant access tokens requires confirmation so organizers do not accidentally invalidate links participants already received.
 - Participant team handoff pages show a privacy summary so participants can see whether their contact details are shared, how many teammate contact records are visible, and which teammate records are hidden by consent.
 - Browser security headers are applied through `next.config.ts`, including content sniffing protection, frame blocking, referrer policy, and a restrictive permissions policy.
@@ -138,6 +141,8 @@ Use the MVP to test real matching behavior before adding Supabase persistence:
 
 The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
+
+Admin pages show a short data-loading notice while browser-local data is loading and remote persistence is checked. The admin dashboard also includes local storage diagnostics for storage availability, HackMatch key count, stored data size, and the largest local data surface.
 
 The settings page includes local workspace backup and restore controls. A backup captures participants, matching settings, saved runs, active cohort, archived cohorts, and team review checklist state. Restores are previewed before replacing local browser data.
 
@@ -226,6 +231,8 @@ When those variables are present, the app loads participants and matching settin
 
 The admin dashboard includes a Supabase plug-readiness card that checks whether the public project URL and anon key are absent, malformed, or ready-looking before launch. This is a local shape check only; the persistence status confirms whether the app actually connected.
 
+The dashboard also includes a Supabase sync summary. It separates the active runtime mode, public env readiness, remote-ready persistence surfaces, and local fallback posture so organizers know whether Supabase is actually active or only plug-ready.
+
 The dashboard also includes a Supabase RLS posture panel. It separates schema/adapter readiness from production authorization readiness, and calls out admin access boundaries, anon-client policy, participant contact privacy, and saved-run snapshot privacy before launch.
 
 ## Test The Project
@@ -236,7 +243,7 @@ npm run typecheck
 npm run smoke
 ```
 
-Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, participant link audits, access token rotation guardrails, participant team briefs, participant assignment status, participant contact privacy summaries, saved-run share previews, saved-run notes, saved-run integrity, saved-run drift comparison, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, sensitive export warnings, security headers, security readiness checks, Supabase RLS posture checks, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
+Tests cover determinism, uniqueness, team sizes, blocked teammates, consent exclusion, advanced distribution, beginner-only penalties, locked teams, score breakdowns, CSV export, access link export, CSV import duplicate handling, CSV import validation, participant import rollback summaries, participant registration validation, participant intake quality, duplicate participant review, readiness filters, privacy audits, local backup guardrails, local storage diagnostics, participant link audits, access token rotation and uniqueness guardrails, participant team briefs, participant assignment status, participant contact privacy summaries, saved-run share previews, saved-run notes, saved-run integrity, saved-run drift comparison, final saved-run marking, cohort finalization, team review summaries, team review checklists, team balance indicators, export audits, sensitive export warnings, security headers, security readiness checks, Supabase sync posture, Supabase RLS posture checks, settings presets, settings validation, settings explanations, settings impact summaries, matching readiness evaluation, cohort health comparison, admin action queues, participant activity timelines, Supabase readiness checks, deployment readiness checks, and route smoke testing.
 
 ## Main Routes
 
@@ -245,6 +252,7 @@ Tests cover determinism, uniqueness, team sizes, blocked teammates, consent excl
 - `/participant/register`
 - `/participant/confirmation`
 - `/participant/team`
+- `/admin/login`
 - `/admin`
 - `/admin/participants`
 - `/admin/matching`
