@@ -1,16 +1,9 @@
-const baseUrl = normalizeBaseUrl(process.env.SMOKE_BASE_URL || "http://localhost:3000");
+import { readFile } from "node:fs/promises";
 
-const routes = [
-  "/",
-  "/participant",
-  "/participant/register",
-  "/participant/team",
-  "/admin",
-  "/admin/participants",
-  "/admin/matching",
-  "/admin/teams",
-  "/admin/settings"
-];
+const baseUrl = normalizeBaseUrl(process.env.SMOKE_BASE_URL || "http://localhost:3000");
+const routes = JSON.parse(
+  await readFile(new URL("../smoke-routes.json", import.meta.url), "utf8")
+);
 
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 12000);
 

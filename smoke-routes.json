@@ -1,0 +1,13 @@
+[
+  "/",
+  "/participant",
+  "/participant/register",
+  "/participant/confirmation",
+  "/participant/team",
+  "/admin/login",
+  "/admin",
+  "/admin/participants",
+  "/admin/matching",
+  "/admin/teams",
+  "/admin/settings"
+]
