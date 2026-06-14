@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, Clock3, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminAuthStatus } from "@/components/admin-auth-status";
+import { AdminLocalStorageDiagnostics } from "@/components/admin-local-storage-diagnostics";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { AdminSecurityReadiness } from "@/components/admin-security-readiness";
 import { Badge, Card, EmptyState } from "@/components/ui";
@@ -149,6 +150,7 @@ export default function AdminPage() {
       <AdminAuthStatus />
       <AdminSecurityReadiness />
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
+      <AdminLocalStorageDiagnostics />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard href="/admin/participants" title="Directory" value={cohortParticipants.length} detail={`${matchable.length} matchable in ${activeCohort}`} icon={<Users size={20} />} />
         <MetricCard href="/admin/matching" title="Match setup" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned live`} icon={<Settings2 size={20} />} />
