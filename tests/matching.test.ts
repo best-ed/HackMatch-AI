@@ -378,6 +378,8 @@ describe("deterministic matching", () => {
     expect(readiness.assignedCount).toBe(assignedIds(result).length);
     expect(readiness.items.length).toBeGreaterThan(0);
     expect(readiness.items.every((item) => item.action.length > 0)).toBe(true);
+    expect(readiness.items.every((item) => item.actionHref.startsWith("/"))).toBe(true);
+    expect(readiness.items.every((item) => item.actionLabel.length > 0)).toBe(true);
   });
 
   it("flags readiness blockers for impossible settings", () => {
@@ -394,6 +396,7 @@ describe("deterministic matching", () => {
 
     expect(readiness.items.some((item) => item.severity === "blocker")).toBe(true);
     expect(readiness.items.some((item) => item.title === "No matchable participants")).toBe(true);
+    expect(readiness.items.find((item) => item.title === "Settings need fixing")?.actionHref).toBe("/admin/settings");
   });
 
   it("evaluates participant intake quality", () => {

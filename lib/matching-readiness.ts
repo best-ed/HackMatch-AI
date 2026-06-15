@@ -8,6 +8,8 @@ export type ReadinessItem = {
   title: string;
   detail: string;
   action: string;
+  actionHref: string;
+  actionLabel: string;
 };
 
 export type MatchingReadiness = {
@@ -40,7 +42,9 @@ export function evaluateMatchingReadiness(
       severity: "blocker",
       title: "Settings need fixing",
       detail: error,
-      action: "Open settings and adjust the invalid constraint before trusting this run."
+      action: "Open settings and adjust the invalid constraint before trusting this run.",
+      actionHref: "/admin/settings",
+      actionLabel: "Fix settings"
     });
   });
 
@@ -49,7 +53,9 @@ export function evaluateMatchingReadiness(
       severity: "warning",
       title: "Settings need review",
       detail: warning,
-      action: "Review cohort coverage or relax the matching setting that caused this warning."
+      action: "Review cohort coverage or relax the matching setting that caused this warning.",
+      actionHref: "/admin/settings",
+      actionLabel: "Review settings"
     });
   });
 
@@ -58,14 +64,18 @@ export function evaluateMatchingReadiness(
       severity: "blocker",
       title: "No matchable participants",
       detail: "No participant in this cohort has consented to matching.",
-      action: "Register participants or confirm consent before generating final teams."
+      action: "Register participants or confirm consent before generating final teams.",
+      actionHref: "/admin/participants",
+      actionLabel: "Review directory"
     });
   } else if (assignedCount < eligible.length) {
     items.push({
       severity: settings.allowUnassignedParticipants ? "warning" : "blocker",
       title: "Unassigned matchable participants",
       detail: `${eligible.length - assignedCount} matchable participant(s) are not currently placed.`,
-      action: "Increase team capacity, reduce fixed team count, or inspect blocked teammate constraints."
+      action: "Increase team capacity, reduce fixed team count, or inspect blocked teammate constraints.",
+      actionHref: "/admin/settings",
+      actionLabel: "Tune capacity"
     });
   }
 
@@ -74,7 +84,9 @@ export function evaluateMatchingReadiness(
       severity: "warning",
       title: "Low team score floor",
       detail: `The lowest team score is ${lowestScore}.`,
-      action: "Inspect the lowest-scoring team for role, skill, or experience balance gaps."
+      action: "Inspect the lowest-scoring team for role, skill, or experience balance gaps.",
+      actionHref: "/admin/teams",
+      actionLabel: "Inspect teams"
     });
   }
 
@@ -84,7 +96,9 @@ export function evaluateMatchingReadiness(
       severity: "warning",
       title: "Constraint penalties present",
       detail: `${penaltyTeams.length} team(s) include scoring penalties.`,
-      action: "Review beginner-only, preference, blocked teammate, or role coverage pressure."
+      action: "Review beginner-only, preference, blocked teammate, or role coverage pressure.",
+      actionHref: "/admin/teams",
+      actionLabel: "Review penalties"
     });
   }
 
@@ -93,7 +107,9 @@ export function evaluateMatchingReadiness(
       severity: "warning",
       title: "Matcher warning",
       detail: warning,
-      action: "Review the generated teams and matching settings before saving a final run."
+      action: "Review the generated teams and matching settings before saving a final run.",
+      actionHref: "/admin/teams",
+      actionLabel: "Open team review"
     });
   });
 
@@ -102,7 +118,9 @@ export function evaluateMatchingReadiness(
       severity: "info",
       title: "Ready to review",
       detail: "The current run has no blocking readiness signals.",
-      action: "Review teams, save the run, and export when the lineup looks right."
+      action: "Review teams, save the run, and export when the lineup looks right.",
+      actionHref: "/admin/teams",
+      actionLabel: "Review teams"
     });
   }
 
