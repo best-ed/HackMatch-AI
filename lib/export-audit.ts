@@ -26,6 +26,14 @@ export type TeamExportAudit = {
   }>;
 };
 
+export type TeamExportGate = {
+  status: TeamExportAuditStatus;
+  canDownload: boolean;
+  requiresConfirmation: boolean;
+  buttonLabel: string;
+  message: string;
+};
+
 export function buildTeamExportAudit({
   result,
   participants,
@@ -126,4 +134,35 @@ function summarizeExportAuditStatus(checks: TeamExportAudit["checks"]): TeamExpo
   if (checks.some((check) => check.status === "blocked")) return "blocked";
   if (checks.some((check) => check.status === "review")) return "review";
   return "ready";
+}
+
+export function buildTeamExportGate(audit: TeamExportAudit): TeamExportGate {
+  if (audit.status === "blocked") {
+    return {
+      status: audit.status,
+      canDownload: false,
+      requiresConfirmation: false,
+      buttonLabel: "Export blocked",
+      message: "Resolve blocked export checks before downloading the team CSV."
+    };
+  }
+
+  if (audit.status === "review") {
+    const reviewCount = audit.checks.filter((check) => check.status === "review").length;
+    return {
+      status: audit.status,
+      canDownload: true,
+      requiresConfirmation: true,
+      buttonLabel: "Confirm CSV export",
+      message: `${reviewCount} export check${reviewCount === 1 ? "" : "s"} need organizer review before downloading.`
+    };
+  }
+
+  return {
+    status: audit.status,
+    canDownload: true,
+    requiresConfirmation: false,
+    buttonLabel: "Download CSV",
+    message: "Export checks are ready for download."
+  };
 }

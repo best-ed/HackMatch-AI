@@ -21,7 +21,7 @@ import {
   type AdminAuditEntry
 } from "@/lib/admin-audit-history";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
-import { buildTeamExportAudit } from "@/lib/export-audit";
+import { buildTeamExportAudit, buildTeamExportGate } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { evaluateCohortFinalizationGate } from "@/lib/cohort-finalization";
 import { useHackMatchData } from "@/lib/local-store";
@@ -105,6 +105,7 @@ export default function AdminTeamsPage() {
       }),
     [activeParticipants, activeResult, activeRun?.settingsSnapshot.lockedTeams?.length, exportCohort, isViewingSavedRun, lockedTeams.length]
   );
+  const exportGate = useMemo(() => buildTeamExportGate(exportAudit), [exportAudit]);
   const csv = teamsToCsv(activeResult, activeParticipants);
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
   const [explanations, setExplanations] = useState<TeamExplanation[]>(activeResult.explanations);
@@ -118,6 +119,8 @@ export default function AdminTeamsPage() {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
+  const [exportStatus, setExportStatus] = useState("");
+  const [exportConfirmationArmed, setExportConfirmationArmed] = useState(false);
   const [checklistSyncStatus, setChecklistSyncStatus] = useState("");
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
   const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
@@ -216,17 +219,32 @@ export default function AdminTeamsPage() {
   }
 
   function downloadCsv() {
+    if (!exportGate.canDownload) {
+      setExportConfirmationArmed(false);
+      setExportStatus(exportGate.message);
+      return;
+    }
+
+    if (exportGate.requiresConfirmation && !exportConfirmationArmed) {
+      setExportConfirmationArmed(true);
+      setExportStatus(`${exportGate.message} Click again to confirm this CSV export.`);
+      return;
+    }
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = hackMatchCsvFilename({
+    const filename = hackMatchCsvFilename({
       cohort: exportCohort,
       kind: "teams",
       scope: isViewingSavedRun ? "saved" : "live"
     });
+    link.href = url;
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
+    setExportConfirmationArmed(false);
+    setExportStatus(`Downloaded ${filename}.`);
   }
 
   async function refreshExplanations() {
@@ -422,8 +440,12 @@ export default function AdminTeamsPage() {
           <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={refreshExplanations} disabled={isRefreshing}>
             {isRefreshing ? "Refreshing..." : "Refresh explanations"}
           </button>
-          <button className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onClick={downloadCsv}>
-            Download CSV
+          <button
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={!exportGate.canDownload}
+            onClick={downloadCsv}
+          >
+            {exportConfirmationArmed ? "Confirm download" : exportGate.buttonLabel}
           </button>
         </div>
       </div>
@@ -436,6 +458,17 @@ export default function AdminTeamsPage() {
       {checklistSyncStatus ? (
         <Card className="border-sky-200 bg-sky-50 py-3 text-sm font-medium text-sky-900">
           {checklistSyncStatus}
+        </Card>
+      ) : null}
+      {exportStatus ? (
+        <Card className={`py-3 text-sm font-medium ${
+          exportGate.status === "blocked"
+            ? "border-rose-200 bg-rose-50 text-rose-900"
+            : exportGate.status === "review"
+              ? "border-amber-200 bg-amber-50 text-amber-900"
+              : "border-emerald-200 bg-emerald-50 text-emerald-900"
+        }`}>
+          {exportStatus}
         </Card>
       ) : null}
       <TeamRunScopePanel

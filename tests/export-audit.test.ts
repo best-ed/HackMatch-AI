@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTeamExportAudit } from "@/lib/export-audit";
+import { buildTeamExportAudit, buildTeamExportGate } from "@/lib/export-audit";
 import { demoParticipants } from "@/lib/demo-data";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { demoMatchingSettings } from "@/lib/demo-data";
@@ -32,6 +32,9 @@ describe("team export audit", () => {
     expect(audit.checks.map((check) => check.label)).toContain("Sensitive contact fields");
     expect(audit.status).toBe("review");
     expect(audit.sensitiveSummary).toContain("shareable contact");
+    const gate = buildTeamExportGate(audit);
+    expect(gate.canDownload).toBe(true);
+    expect(gate.requiresConfirmation).toBe(true);
   });
 
   it("keeps saved exports under review when assigned contacts are hidden", () => {
@@ -75,5 +78,37 @@ describe("team export audit", () => {
 
     expect(audit.status).toBe("blocked");
     expect(audit.checks.find((check) => check.label === "CSV content")?.status).toBe("blocked");
+    const gate = buildTeamExportGate(audit);
+    expect(gate.canDownload).toBe(false);
+    expect(gate.buttonLabel).toBe("Export blocked");
+  });
+
+  it("allows ready exports without confirmation", () => {
+    const participants = demoParticipants.slice(0, 2).map((participant) => ({
+      ...participant,
+      email: "",
+      phone: "",
+      consentToShareContact: true
+    }));
+    const result = {
+      teams: [{ id: "team-1", name: "Team 1", participantIds: participants.map((participant) => participant.id) }],
+      scoreBreakdowns: {},
+      explanations: [],
+      warnings: [],
+      unassignedParticipants: []
+    };
+
+    const audit = buildTeamExportAudit({
+      result,
+      participants,
+      cohort: "Final",
+      scope: "saved"
+    });
+    const gate = buildTeamExportGate(audit);
+
+    expect(audit.status).toBe("ready");
+    expect(gate.canDownload).toBe(true);
+    expect(gate.requiresConfirmation).toBe(false);
+    expect(gate.buttonLabel).toBe("Download CSV");
   });
 });
