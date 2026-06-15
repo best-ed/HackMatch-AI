@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTrail } from "@/components/section-trail";
@@ -8,11 +9,13 @@ import {
   createBlankParticipant,
   createParticipantId,
   createUniqueParticipantAccessToken,
+  joinList,
   splitList,
   useHackMatchData,
   writeCurrentParticipantLookup
 } from "@/lib/local-store";
 import type { AvailabilitySlot, ExperienceLevel, Participant } from "@/lib/matching/types";
+import { findExistingRegistrationByEmail } from "@/lib/participant-registration-guardrails";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
 const availabilitySlots: AvailabilitySlot[] = [
@@ -78,6 +81,10 @@ export default function RegisterPage() {
     () => validateParticipantRegistration(participantPreview, participants),
     [participantPreview, participants]
   );
+  const existingRegistration = useMemo(
+    () => findExistingRegistrationByEmail(form.email, participants),
+    [form.email, participants]
+  );
 
   function submit() {
     setAttemptedSubmit(true);
@@ -119,6 +126,9 @@ export default function RegisterPage() {
           <SectionTitle title="Identity" detail="Basic profile details used by organizers and access-link lookup." />
           <Field label="Full name" value={form.fullName} onChange={(value) => update("fullName", value)} />
           <Field label="Email" value={form.email} onChange={(value) => update("email", value)} />
+          {existingRegistration ? (
+            <ExistingRegistrationPanel notice={existingRegistration} />
+          ) : null}
           <label className="space-y-2 text-sm font-medium">
             <span>Cohort</span>
             <TextInput
@@ -250,6 +260,58 @@ function buildParticipantFromDrafts(
     preferredTeammates: splitList(listDrafts.preferredTeammates),
     blockedTeammates: splitList(listDrafts.blockedTeammates)
   };
+}
+
+function ExistingRegistrationPanel({
+  notice
+}: {
+  notice: NonNullable<ReturnType<typeof findExistingRegistrationByEmail>>;
+}) {
+  const participant = notice.participant;
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm md:col-span-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-amber-950">Existing registration found</h2>
+          <p className="mt-1 text-amber-900">
+            {participant.fullName || participant.email} is already saved for {participant.cohort ?? "General"}.
+          </p>
+        </div>
+        <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-amber-900">
+          {notice.submittedLabel}
+        </span>
+      </div>
+      <dl className="mt-3 grid gap-2 text-amber-950 sm:grid-cols-3">
+        <div>
+          <dt className="text-xs uppercase text-amber-800">Role</dt>
+          <dd className="font-medium">{participant.primaryRole || "Not set"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-amber-800">Experience</dt>
+          <dd className="font-medium capitalize">{participant.experienceLevel}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase text-amber-800">Interests</dt>
+          <dd className="font-medium">{participant.interests.length ? joinList(participant.interests.slice(0, 2)) : "Not set"}</dd>
+        </div>
+      </dl>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          className="rounded-md bg-amber-900 px-3 py-2 text-xs font-semibold text-white transition hover:-translate-y-0.5"
+          href={notice.confirmationHref}
+        >
+          Open confirmation
+        </Link>
+        <Link
+          className="rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-950 transition hover:-translate-y-0.5"
+          href={notice.teamLookupHref}
+        >
+          Check team status
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 function SectionTitle({ title, detail }: { title: string; detail: string }) {
