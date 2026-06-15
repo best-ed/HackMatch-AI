@@ -20,6 +20,11 @@ import { hackMatchCsvFilename, participantImportTemplateCsv, participantLinksToC
 import { createUniqueParticipantAccessToken, joinListLines, splitList, useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { ExperienceLevel, Participant } from "@/lib/matching/types";
+import {
+  applyParticipantBulkAction,
+  participantBulkActionLabel,
+  type ParticipantBulkAction
+} from "@/lib/participant-bulk-actions";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import { buildParticipantLinkAudit } from "@/lib/participant-link-audit";
@@ -67,6 +72,9 @@ export default function AdminParticipantsPage() {
   const [linkStatus, setLinkStatus] = useState("");
   const [pendingTokenRotationId, setPendingTokenRotationId] = useState("");
   const [selectedParticipantId, setSelectedParticipantId] = useState("");
+  const [bulkAction, setBulkAction] = useState<ParticipantBulkAction>("move-cohort");
+  const [bulkCohort, setBulkCohort] = useState(activeCohort);
+  const [bulkStatus, setBulkStatus] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -214,6 +222,26 @@ export default function AdminParticipantsPage() {
   function cancelTokenRotation(participant: Participant) {
     setPendingTokenRotationId("");
     setLinkStatus(`Token rotation cancelled for ${participant.fullName || participant.email || participant.id}.`);
+  }
+
+  function applyFilteredBulkAction() {
+    const filteredIds = filteredParticipants.map((participant) => participant.id);
+    const result = applyParticipantBulkAction({
+      action: bulkAction,
+      cohort: bulkCohort,
+      participantIds: filteredIds,
+      participants
+    });
+
+    if (result.affectedCount === 0) {
+      setBulkStatus("No participant records changed for the current filter.");
+      return;
+    }
+
+    setParticipants(result.participants);
+    setBulkStatus(
+      `${participantBulkActionLabel(bulkAction)} updated ${result.affectedCount} filtered participant${result.affectedCount === 1 ? "" : "s"}.`
+    );
   }
 
   function handleCsvFile(file?: File) {
@@ -371,6 +399,54 @@ export default function AdminParticipantsPage() {
             Clear
           </Button>
         </div>
+      </Card>
+      <Card className="space-y-4 border-primary/20 bg-emerald-50/30">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Filtered batch review</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Apply one organizer review action to the {filteredParticipants.length} participant{filteredParticipants.length === 1 ? "" : "s"} currently in view.
+            </p>
+          </div>
+          <Badge className="bg-white text-primary">{filteredParticipants.length} selected by filters</Badge>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[220px_1fr_auto]">
+          <FilterSelect label="Batch action" value={bulkAction} onChange={(value) => setBulkAction(value as ParticipantBulkAction)}>
+            <option value="move-cohort">Move to cohort</option>
+            <option value="mark-matchable">Mark matchable</option>
+            <option value="mark-excluded">Exclude from matching</option>
+            <option value="allow-contact">Allow contact sharing</option>
+            <option value="hide-contact">Hide contact sharing</option>
+          </FilterSelect>
+          <label className="space-y-2 text-sm font-medium">
+            <span>Target cohort</span>
+            <TextInput
+              disabled={bulkAction !== "move-cohort"}
+              list="bulk-cohorts"
+              onChange={(event) => setBulkCohort(event.target.value)}
+              placeholder="General, May Hackathon, Workshop A"
+              value={bulkCohort}
+            />
+            <datalist id="bulk-cohorts">
+              {cohorts.map((cohort) => <option key={cohort} value={cohort} />)}
+            </datalist>
+          </label>
+          <div className="flex items-end">
+            <Button
+              className="w-full"
+              disabled={filteredParticipants.length === 0 || (bulkAction === "move-cohort" && !bulkCohort.trim())}
+              onClick={applyFilteredBulkAction}
+              type="button"
+            >
+              Apply to filtered
+            </Button>
+          </div>
+        </div>
+        {bulkStatus ? (
+          <div className="rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+            {bulkStatus}
+          </div>
+        ) : null}
       </Card>
       {selectedParticipant ? (
         <ParticipantDetailPanel
