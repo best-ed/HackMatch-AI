@@ -28,6 +28,7 @@ import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingResult, Participant, SavedMatchRun, TeamExplanation } from "@/lib/matching/types";
 import { compareSavedRunToLive, describeSavedRunComparison } from "@/lib/saved-run-comparison";
+import { buildSavedRunRestorePreview } from "@/lib/saved-run-restore-preview";
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
 import {
   summarizeSavedRunIntegrity,
@@ -58,6 +59,7 @@ const adminAuditHistoryStorageKey = "hackmatch.adminAuditHistory.v1";
 export default function AdminTeamsPage() {
   const {
     cohortParticipants,
+    participants,
     settings,
     setSettings,
     savedMatchRuns,
@@ -118,6 +120,7 @@ export default function AdminTeamsPage() {
   const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
+  const [restorePreviewId, setRestorePreviewId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
   const [exportStatus, setExportStatus] = useState("");
   const [exportConfirmationArmed, setExportConfirmationArmed] = useState(false);
@@ -385,10 +388,28 @@ export default function AdminTeamsPage() {
   }
 
   function restoreRun(run: SavedMatchRun) {
+    if (restorePreviewId !== run.id) {
+      const preview = buildSavedRunRestorePreview({
+        activeCohort,
+        currentParticipants: participants,
+        currentSettings: settings,
+        run
+      });
+      setRestorePreviewId(run.id);
+      setRunActionStatus(`${preview.summary} Click confirm restore to replace the live baseline.`);
+      return;
+    }
+
     restoreMatchRunSnapshot(run.id);
     setActiveRunId("live");
+    setRestorePreviewId("");
     setRunActionStatus(`Restored ${run.name} as the live baseline.`);
     recordAudit("restored-run", run.name, "Restored participant snapshot, settings snapshot, and cohort as live baseline.");
+  }
+
+  function cancelRestorePreview(run: SavedMatchRun) {
+    setRestorePreviewId("");
+    setRunActionStatus(`Restore cancelled for ${run.name}.`);
   }
 
   async function copySavedRunSharePreview(run: SavedMatchRun) {
@@ -536,6 +557,16 @@ export default function AdminTeamsPage() {
                         </div>
                       </div>
                       {integrity ? <SavedRunIntegrityPanel integrity={integrity} /> : null}
+                      {restorePreviewId === run.id ? (
+                        <SavedRunRestorePreviewPanel
+                          preview={buildSavedRunRestorePreview({
+                            activeCohort,
+                            currentParticipants: participants,
+                            currentSettings: settings,
+                            run
+                          })}
+                        />
+                      ) : null}
                     </div>
                   );
                 })()}
@@ -625,12 +656,25 @@ export default function AdminTeamsPage() {
                       Duplicate
                     </button>
                     <button
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                      className={`rounded-md border px-3 py-2 text-xs font-semibold ${
+                        restorePreviewId === run.id
+                          ? "border-amber-300 bg-amber-50 text-amber-900"
+                          : "border-border bg-white"
+                      }`}
                       onClick={() => restoreRun(run)}
                       type="button"
                     >
-                      Restore as live baseline
+                      {restorePreviewId === run.id ? "Confirm restore" : "Preview restore"}
                     </button>
+                    {restorePreviewId === run.id ? (
+                      <button
+                        className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
+                        onClick={() => cancelRestorePreview(run)}
+                        type="button"
+                      >
+                        Cancel restore
+                      </button>
+                    ) : null}
                     {deleteConfirmId === run.id ? (
                       <>
                         <button
@@ -1088,6 +1132,33 @@ function SavedRunIntegrityPanel({ integrity }: { integrity: SavedRunIntegritySum
             {check.label}
           </Badge>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function SavedRunRestorePreviewPanel({
+  preview
+}: {
+  preview: ReturnType<typeof buildSavedRunRestorePreview>;
+}) {
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+      <div className="font-semibold">Restore impact preview</div>
+      <p className="mt-2 text-amber-900">{preview.summary}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+        <ReviewMetric label="Current records" value={preview.currentParticipantCount} />
+        <ReviewMetric label="Restored records" value={preview.restoredParticipantCount} />
+        <ReviewMetric label="Teams" value={preview.teamCount} />
+        <ReviewMetric label="Warnings" value={preview.warningCount} />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Badge className={preview.cohortWillChange ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+          {preview.currentCohort} to {preview.restoredCohort}
+        </Badge>
+        <Badge className={preview.settingsWillChange ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
+          {preview.settingsWillChange ? "settings change" : "settings match"}
+        </Badge>
       </div>
     </div>
   );
