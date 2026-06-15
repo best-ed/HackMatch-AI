@@ -18,6 +18,7 @@ import { summarizeSettingsChanges } from "@/lib/settings-changes";
 import { explainMatchingSettings, type SettingsExplanation } from "@/lib/settings-explainer";
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
+import { buildSettingsPresetPreviews } from "@/lib/settings-preset-preview";
 import type { TeamReviewChecklistStore } from "@/lib/team-review-checklist";
 
 export default function AdminSettingsPage() {
@@ -71,6 +72,15 @@ export default function AdminSettingsPage() {
   const settingExplanations = useMemo(
     () => explainMatchingSettings(draftSettings),
     [draftSettings]
+  );
+  const presetPreviews = useMemo(
+    () =>
+      buildSettingsPresetPreviews({
+        currentSettings: settings,
+        participants: cohortParticipants,
+        presets: matchingPresets
+      }),
+    [cohortParticipants, settings]
   );
   const draftStatusText = hasDraftChanges
     ? "Draft changes are ready to apply."
@@ -278,15 +288,11 @@ export default function AdminSettingsPage() {
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {matchingPresets.map((preset) => (
-            <button
-              className="rounded-md border border-border bg-white p-4 text-left transition hover:border-primary hover:bg-emerald-50"
+            <PresetCard
               key={preset.id}
-              onClick={() => applyPresetToDraft(preset.settings)}
-              type="button"
-            >
-              <div className="font-semibold">{preset.name}</div>
-              <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
-            </button>
+              onApply={() => applyPresetToDraft(preset.settings)}
+              preview={presetPreviews.find((preview) => preview.id === preset.id)}
+            />
           ))}
         </div>
       </Card>
@@ -460,6 +466,48 @@ function HealthMetric({ label, value }: { label: string; value: string | number 
     <div className="rounded-md border border-border bg-white p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+function PresetCard({
+  onApply,
+  preview
+}: {
+  onApply: () => void;
+  preview?: ReturnType<typeof buildSettingsPresetPreviews>[number];
+}) {
+  if (!preview) return null;
+
+  return (
+    <div className="rounded-md border border-border bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold">{preview.name}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{preview.description}</p>
+        </div>
+        <Badge className={healthBadgeClass(preview.health.status)}>{preview.health.status}</Badge>
+      </div>
+      <div className="mt-4 grid gap-3 text-sm">
+        <div className="rounded-md bg-muted p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Optimizes</div>
+          <p className="mt-1">{preview.objective}</p>
+        </div>
+        <div className="rounded-md bg-amber-50 p-3 text-amber-950">
+          <div className="text-xs font-semibold uppercase text-amber-800">Tradeoff</div>
+          <p className="mt-1">{preview.tradeoff}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <Badge>{preview.changeCount} draft change{preview.changeCount === 1 ? "" : "s"}</Badge>
+        <button
+          className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:-translate-y-0.5"
+          onClick={onApply}
+          type="button"
+        >
+          Apply to draft
+        </button>
+      </div>
     </div>
   );
 }
