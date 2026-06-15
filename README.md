@@ -10,6 +10,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Generates balanced teams with deterministic hard constraints and weighted soft constraints.
 - Shows score breakdowns for every team.
 - Provides matching settings presets and health checks before generation.
+- Explains preset objectives and tradeoffs before organizers apply them to a draft.
 - Lets organizers lock live teams so their membership is preserved during later regeneration.
 - Saves generated match runs as frozen snapshots for later review.
 - Lets organizers mark one saved run as final for handoff.
@@ -18,7 +19,7 @@ HackMatch AI is an MVP for deterministic hackathon team matching with transparen
 - Audits saved-run integrity, saved-run drift, cohort finalization readiness, and consent/privacy posture before handoff.
 - Exports and restores browser-local workspace backups for MVP data portability.
 - Reports local storage health and Supabase sync posture so organizers can see what is local-only, remote-ready, or active.
-- Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV.
+- Exports and imports participant CSV files, previews rollback after import, and exports generated teams to CSV with audit-based safety gates.
 
 ## Deterministic Matching
 
@@ -148,13 +149,13 @@ The settings page includes local workspace backup and restore controls. A backup
 
 Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, default missing cohort values to the active cohort, and roll back the most recent import in the current browser session.
 
-The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation. It also flags duplicate emails, names, and access tokens so organizers can resolve messy intake data before matching. Readiness quick filters let organizers jump directly to incomplete, excluded, low-signal, or duplicate participant records.
+The participants page includes an intake quality panel for consent coverage, incomplete records, low matching signal, and role concentration before organizers move into team generation. It also flags duplicate emails, names, and access tokens so organizers can resolve messy intake data before matching. Readiness quick filters let organizers jump directly to incomplete, excluded, low-signal, or duplicate participant records. Filtered batch actions let organizers move the current filtered participant set into a cohort or adjust consent/contact review states in one controlled step.
 
 The participant directory also includes a consent and privacy audit for the active cohort. It counts matching consent, excluded participants, contact-sharing consent, assigned participants with hidden contact details, and quick filters for consent review.
 
 The participant directory includes a detail panel for each participant. Organizers can inspect profile readiness, contact links, skills, interests, preferences, blocked teammates, and grouped edit sections without leaving the table.
 
-Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link, review saved profile details, and see whether their current cohort assignment is ready, waiting, unassigned, or blocked by consent. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
+Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. If a participant enters an email that already exists, the registration page surfaces the existing record with confirmation and team-status links instead of silently creating confusion. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link, review saved profile details, and see whether their current cohort assignment is ready, waiting, unassigned, or blocked by consent. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`. Manual lookup by name, email, or ID remains available for local testing.
 
 The participant team page turns each access link into a team handoff with members, suggested internal roles, strengths, watch points, shared interests, shared availability, next steps, and contact details only for teammates who consented to sharing.
 
@@ -174,9 +175,9 @@ Each team also includes a manual review checklist for role confirmation, contact
 
 The teams page includes a cohort finalization gate for live generated teams. It checks minimum cohort size, generated assignments, assignment coverage, matcher warnings, consent posture, and whether the cohort has a final saved run before organizers treat the cohort as ready.
 
-Team exports include an audit panel that previews filename, CSV row count, assigned/unassigned counts, hidden contact count, matcher warnings, and whether the export uses live editable data or a saved snapshot.
+Team exports include an audit panel that previews filename, CSV row count, assigned/unassigned counts, hidden contact count, matcher warnings, and whether the export uses live editable data or a saved snapshot. Blocked export audits disable CSV download, while review-state exports require a second confirmation click before downloading.
 
-Saved runs can be renamed, annotated with organizer notes, duplicated, restored as the live baseline, compared against current live teams, or deleted with confirmation. Restoring a saved run brings back its participant snapshot, settings snapshot, and cohort as the current editable baseline.
+Saved runs can be renamed, annotated with organizer notes, duplicated, restored as the live baseline, compared against current live teams, or deleted with confirmation. Restoring a saved run now starts with an impact preview that shows participant record replacement count, cohort switch, settings drift, team count, and warning count before the organizer confirms the restore.
 
 Live teams can also be locked from `/admin/teams`. Locked teams are passed back into the deterministic matcher through explicit settings, so their participants stay together while the rest of the cohort can be regenerated and optimized.
 
@@ -202,13 +203,25 @@ For a realistic event rehearsal:
 6. Save the final match run before making later participant edits.
 7. Export teams or participant records as CSV for sharing and operational follow-up.
 
-The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. It also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals. Settings edits are previewed as a draft before they are applied, so organizers can compare live versus draft team count, assigned participants, unassigned participants, average score, and warning count. A settings guide explains current draft values in plain English across team sizing, hard constraints, and scoring weights.
+The settings page includes presets for balanced, skill-heavy, beginner-friendly, and strict-constraint matching. Preset cards explain what each preset optimizes, the tradeoff it makes, how many draft settings would change, and whether the active cohort passes preset health checks. The page also reports settings health for the active cohort, including impossible team size combinations, negative weights, participant capacity issues, and missing role coverage signals. Settings edits are previewed as a draft before they are applied, so organizers can compare live versus draft team count, assigned participants, unassigned participants, average score, and warning count. A settings guide explains current draft values in plain English across team sizing, hard constraints, and scoring weights.
 
 The matching page includes an event setup panel for cohort name, preset, desired/min/max team size, and a shareable registration link. This gives organizers a fast path from event setup to participant intake without changing the deterministic matching rules.
 
 The matching page also includes cohort health comparison. Organizers can compare active cohorts by participant count, matchable count, advanced participant signal, saved runs, and ready/watch/blocked status before switching the active cohort.
 
-The matching page also includes a readiness action plan. It classifies current run issues as blockers, warnings, or informational next steps using deterministic settings validation, assignment coverage, score floor, penalties, and matcher warnings. Cohort archive controls hide completed events from active setup lists while keeping their participant data and saved match runs available.
+The matching page also includes a readiness action plan. It classifies current run issues as blockers, warnings, or informational next steps using deterministic settings validation, assignment coverage, score floor, penalties, and matcher warnings, then routes each action to the relevant admin area such as Settings, Directory, or Team review. Cohort archive controls hide completed events from active setup lists while keeping their participant data and saved match runs available.
+
+## Organizer Safety Workflow
+
+Before treating a cohort as final, organizers should use the built-in safety loop:
+
+1. Confirm repeat registrations from `/participant/register` instead of creating accidental duplicates.
+2. Use `/admin/participants` filters and filtered batch actions to place the right people into the active cohort.
+3. Use `/admin/matching` readiness action links to resolve blockers in Settings, Directory, or Team review.
+4. Use `/admin/settings` preset cards to understand preset objectives and tradeoffs before applying a draft.
+5. Save a run from `/admin/teams` before exports or later participant edits.
+6. Review the export audit and confirm review-state CSV downloads deliberately.
+7. Preview saved-run restore impact before replacing live participants, settings, and cohort context.
 
 The admin dashboard includes an action queue and recent activity timeline. The queue highlights the next best organizer actions from participant intake, settings health, assignment coverage, saved runs, and deployment status. The activity timeline summarizes recent participant changes and saved-run milestones for the active cohort.
 
