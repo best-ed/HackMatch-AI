@@ -11,6 +11,9 @@ export type ParticipantImportPlan = {
   errors: string[];
   warnings: string[];
   rowPreviews: ParticipantImportRowPreview[];
+  headers: string[];
+  unknownHeaders: string[];
+  missingRecommendedHeaders: string[];
 };
 
 export type ParticipantImportRowPreview = {
@@ -90,6 +93,47 @@ const columnAliases: Record<string, string> = {
   updated_at: "updated_at",
   availability: "availability"
 };
+
+const knownImportHeaders = Array.from(new Set([
+  "access_token",
+  "availability",
+  "blocked_teammates",
+  "cohort",
+  "consent_to_match",
+  "consent_to_share_contact",
+  "created_at",
+  "email",
+  "experience_level",
+  "full_name",
+  "github_url",
+  "institution",
+  "interests",
+  "linkedin_url",
+  "non_technical_skills",
+  "participant_id",
+  "personal_statement",
+  "phone",
+  "portfolio_url",
+  "preferred_team_size",
+  "preferred_teammates",
+  "primary_role",
+  "project_ideas",
+  "secondary_roles",
+  "technical_skills",
+  "tools",
+  "updated_at",
+  ...Object.values(columnAliases)
+]));
+
+const recommendedImportHeaders = [
+  "full_name",
+  "email",
+  "primary_role",
+  "technical_skills",
+  "availability",
+  "consent_to_match",
+  "cohort"
+];
 
 function normalizeHeader(value: string): string {
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -217,11 +261,16 @@ export function planParticipantCsvImport({
       invalidCount: 0,
       errors: ["CSV must include a header row and at least one participant row."],
       warnings,
-      rowPreviews
+      rowPreviews,
+      headers: [],
+      unknownHeaders: [],
+      missingRecommendedHeaders: recommendedImportHeaders
     };
   }
 
   const headers = rows[0].map(normalizeHeader);
+  const unknownHeaders = headers.filter((header) => header && !knownImportHeaders.includes(header));
+  const missingRecommendedHeaders = recommendedImportHeaders.filter((header) => !headers.includes(header));
   const planned = [...existingParticipants];
   let createdCount = 0;
   let updatedCount = 0;
@@ -365,6 +414,9 @@ export function planParticipantCsvImport({
     invalidCount,
     errors,
     warnings,
-    rowPreviews
+    rowPreviews,
+    headers,
+    unknownHeaders,
+    missingRecommendedHeaders
   };
 }

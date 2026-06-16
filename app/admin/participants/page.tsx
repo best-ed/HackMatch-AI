@@ -28,6 +28,11 @@ import {
 } from "@/lib/participant-bulk-actions";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
+import {
+  buildParticipantImportDiagnostics,
+  filterParticipantImportRows,
+  type ParticipantImportPreviewFilter
+} from "@/lib/participant-import-diagnostics";
 import { buildParticipantLinkAudit } from "@/lib/participant-link-audit";
 import {
   createImportRollbackSnapshot,
@@ -69,6 +74,7 @@ export default function AdminParticipantsPage() {
   const [importCsv, setImportCsv] = useState("");
   const [importMode, setImportMode] = useState<ParticipantImportMode>("skip");
   const [importStatus, setImportStatus] = useState("");
+  const [importPreviewFilter, setImportPreviewFilter] = useState<ParticipantImportPreviewFilter>("all");
   const [lastImportRollback, setLastImportRollback] = useState<ParticipantImportRollbackSnapshot | undefined>();
   const [linkStatus, setLinkStatus] = useState("");
   const [pendingTokenRotationId, setPendingTokenRotationId] = useState("");
@@ -150,6 +156,14 @@ export default function AdminParticipantsPage() {
       mode: importMode
     });
   }, [activeCohort, importCsv, importMode, participants]);
+  const importDiagnostics = useMemo(
+    () => (importPlan ? buildParticipantImportDiagnostics(importPlan) : null),
+    [importPlan]
+  );
+  const filteredImportPreviewRows = useMemo(
+    () => (importPlan ? filterParticipantImportRows(importPlan.rowPreviews, importPreviewFilter) : []),
+    [importPlan, importPreviewFilter]
+  );
 
   function updateParticipant<K extends keyof Participant>(
     participant: Participant,
@@ -512,6 +526,7 @@ export default function AdminParticipantsPage() {
               onChange={(event) => {
                 setImportCsv(event.target.value);
                 setImportStatus("");
+                setImportPreviewFilter("all");
               }}
               placeholder="Paste participant CSV here"
               value={importCsv}
@@ -531,6 +546,18 @@ export default function AdminParticipantsPage() {
                   <PreviewMetric label="Skipped" value={importPlan.skippedCount} />
                   <PreviewMetric label="Invalid" value={importPlan.invalidCount} />
                 </div>
+              </div>
+            ) : null}
+            {importDiagnostics ? (
+              <div className={`rounded-md border px-3 py-3 text-sm ${
+                importDiagnostics.status === "blocked"
+                  ? "border-rose-200 bg-rose-50 text-rose-900"
+                  : importDiagnostics.status === "review"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-900"
+              }`}>
+                <div className="font-semibold">{importDiagnostics.summary}</div>
+                <div className="mt-1">{importDiagnostics.detail}</div>
               </div>
             ) : null}
             <Button
@@ -560,9 +587,80 @@ export default function AdminParticipantsPage() {
             {importPlan.warnings.join(" ")}
           </div>
         ) : null}
+        {importPlan && importDiagnostics ? (
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-md border border-border bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">Import diagnostics</h3>
+                <Badge className={
+                  importDiagnostics.status === "blocked"
+                    ? "bg-rose-100 text-rose-800"
+                    : importDiagnostics.status === "review"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-emerald-100 text-emerald-800"
+                }>
+                  {importDiagnostics.status}
+                </Badge>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <PreviewMetric label="Ready rows" value={importDiagnostics.readyRowCount} />
+                <PreviewMetric label="Review rows" value={importDiagnostics.warningRowCount} />
+                <PreviewMetric label="Duplicate matches" value={importDiagnostics.duplicateRowCount} />
+                <PreviewMetric label="Defaults used" value={importDiagnostics.defaultedFieldCount} />
+              </div>
+            </div>
+            <div className="rounded-md border border-border bg-white p-4">
+              <h3 className="font-semibold">Header scan</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {importPlan.headers.map((header) => (
+                  <Badge
+                    className={importPlan.unknownHeaders.includes(header) ? "bg-rose-100 text-rose-800" : "bg-muted text-muted-foreground"}
+                    key={header}
+                  >
+                    {header}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {importDiagnostics?.highlights.length ? (
+          <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm">
+            <div className="font-semibold">What to review</div>
+            <div className="mt-2 space-y-1 text-muted-foreground">
+              {importDiagnostics.highlights.map((highlight) => (
+                <div key={highlight}>{highlight}</div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {importPlan?.rowPreviews.length ? (
           <div className="overflow-hidden rounded-md border border-border">
-            <div className="bg-muted px-4 py-3 text-sm font-semibold">Row preview</div>
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-muted px-4 py-3">
+              <div className="text-sm font-semibold">Row preview</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ["all", `All (${importPlan.rowPreviews.length})`],
+                  ["ready", `Ready (${filterParticipantImportRows(importPlan.rowPreviews, "ready").length})`],
+                  ["warnings", `Review (${filterParticipantImportRows(importPlan.rowPreviews, "warnings").length})`],
+                  ["errors", `Errors (${filterParticipantImportRows(importPlan.rowPreviews, "errors").length})`],
+                  ["duplicates", `Duplicates (${filterParticipantImportRows(importPlan.rowPreviews, "duplicates").length})`]
+                ].map(([value, label]) => (
+                  <button
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
+                      importPreviewFilter === value
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border bg-white text-foreground"
+                    }`}
+                    key={value}
+                    onClick={() => setImportPreviewFilter(value as ParticipantImportPreviewFilter)}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="max-h-72 overflow-auto">
               <table className="w-full min-w-[760px] border-collapse text-sm">
                 <thead className="bg-white text-left">
@@ -573,7 +671,7 @@ export default function AdminParticipantsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {importPlan.rowPreviews.map((row) => (
+                  {filteredImportPreviewRows.map((row) => (
                     <tr key={row.rowNumber} className="border-t border-border align-top">
                       <td className="px-4 py-3">{row.rowNumber}</td>
                       <td className="px-4 py-3">
@@ -599,6 +697,13 @@ export default function AdminParticipantsPage() {
                       </td>
                     </tr>
                   ))}
+                  {filteredImportPreviewRows.length === 0 ? (
+                    <tr className="border-t border-border">
+                      <td className="px-4 py-6 text-sm text-muted-foreground" colSpan={4}>
+                        No preview rows match the current filter.
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>
