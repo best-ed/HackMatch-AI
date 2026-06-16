@@ -1,5 +1,15 @@
 import type { MatchingResult, Participant } from "@/lib/matching/types";
 
+export type TeamCsvScope = "live" | "saved";
+
+export type TeamCsvArtifact = {
+  assignedCount: number;
+  cohort: string;
+  csv: string;
+  filename: string;
+  scope: TeamCsvScope;
+};
+
 function csvEscape(value: string | number | boolean | undefined): string {
   const text = String(value ?? "");
   if (/[",\n]/.test(text)) {
@@ -79,6 +89,36 @@ export function teamsToCsv(
   }
 
   return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+export function buildTeamCsvArtifact({
+  cohort,
+  date = new Date(),
+  participants,
+  result,
+  scope = "live"
+}: {
+  cohort?: string;
+  date?: Date;
+  participants: Participant[];
+  result: MatchingResult;
+  scope?: TeamCsvScope;
+}): TeamCsvArtifact {
+  const resolvedCohort = cohort?.trim() || "General";
+  const assignedCount = result.teams.reduce((total, team) => total + team.participantIds.length, 0);
+
+  return {
+    assignedCount,
+    cohort: resolvedCohort,
+    csv: teamsToCsv(result, participants),
+    filename: hackMatchCsvFilename({
+      cohort: resolvedCohort,
+      date,
+      kind: "teams",
+      scope
+    }),
+    scope
+  };
 }
 
 export function participantsToCsv(participants: Participant[]): string {

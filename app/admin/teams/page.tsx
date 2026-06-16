@@ -24,7 +24,7 @@ import {
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import { buildTeamExportAudit, buildTeamExportGate } from "@/lib/export-audit";
-import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
+import { buildTeamCsvArtifact } from "@/lib/export";
 import { evaluateCohortFinalizationGate } from "@/lib/cohort-finalization";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
@@ -108,7 +108,17 @@ export default function AdminTeamsPage() {
     [activeParticipants, activeResult, activeRun?.settingsSnapshot.lockedTeams?.length, exportCohort, isViewingSavedRun, lockedTeams.length]
   );
   const exportGate = useMemo(() => buildTeamExportGate(exportAudit), [exportAudit]);
-  const csv = teamsToCsv(activeResult, activeParticipants);
+  const csvArtifact = useMemo(
+    () =>
+      buildTeamCsvArtifact({
+        cohort: exportCohort,
+        participants: activeParticipants,
+        result: activeResult,
+        scope: isViewingSavedRun ? "saved" : "live"
+      }),
+    [activeParticipants, activeResult, exportCohort, isViewingSavedRun]
+  );
+  const csv = csvArtifact.csv;
   const csvPreview = csv.split("\n").slice(0, 4).join("\n");
   const [explanations, setExplanations] = useState<TeamExplanation[]>(activeResult.explanations);
   const [explanationProvider, setExplanationProvider] = useState<"fallback" | "openai">("fallback");
@@ -237,17 +247,12 @@ export default function AdminTeamsPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const filename = hackMatchCsvFilename({
-      cohort: exportCohort,
-      kind: "teams",
-      scope: isViewingSavedRun ? "saved" : "live"
-    });
     link.href = url;
-    link.download = filename;
+    link.download = csvArtifact.filename;
     link.click();
     URL.revokeObjectURL(url);
     setExportConfirmationArmed(false);
-    setExportStatus(`Downloaded ${filename}.`);
+    setExportStatus(`Downloaded ${csvArtifact.filename}.`);
   }
 
   async function refreshExplanations() {
