@@ -36,6 +36,11 @@ import {
   summarizeSavedRunIntegrity,
   summarizeSavedRunIntegrityOverview
 } from "@/lib/saved-run-integrity";
+import {
+  filterSavedRuns,
+  summarizeSavedRunVisibilityCounts,
+  type SavedRunVisibilityFilter
+} from "@/lib/saved-run-visibility";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import {
@@ -132,6 +137,8 @@ export default function AdminTeamsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState("");
   const [restorePreviewId, setRestorePreviewId] = useState("");
   const [runActionStatus, setRunActionStatus] = useState("");
+  const [savedRunQuery, setSavedRunQuery] = useState("");
+  const [savedRunVisibility, setSavedRunVisibility] = useState<SavedRunVisibilityFilter>("all");
   const [exportStatus, setExportStatus] = useState("");
   const [exportConfirmationArmed, setExportConfirmationArmed] = useState(false);
   const [checklistSyncStatus, setChecklistSyncStatus] = useState("");
@@ -157,6 +164,26 @@ export default function AdminTeamsPage() {
   const savedRunIntegrityOverview = useMemo(
     () => summarizeSavedRunIntegrityOverview(savedRunIntegritySummaries),
     [savedRunIntegritySummaries]
+  );
+  const savedRunVisibilityCounts = useMemo(
+    () =>
+      summarizeSavedRunVisibilityCounts({
+        activeCohort,
+        integrityById: savedRunIntegrityById,
+        runs: savedMatchRuns
+      }),
+    [activeCohort, savedMatchRuns, savedRunIntegrityById]
+  );
+  const visibleSavedRuns = useMemo(
+    () =>
+      filterSavedRuns({
+        activeCohort,
+        filter: savedRunVisibility,
+        integrityById: savedRunIntegrityById,
+        query: savedRunQuery,
+        runs: savedMatchRuns
+      }),
+    [activeCohort, savedRunIntegrityById, savedRunQuery, savedMatchRuns, savedRunVisibility]
   );
   const finalizationGate = useMemo(
     () =>
@@ -521,13 +548,48 @@ export default function AdminTeamsPage() {
               Save a generated run to freeze teams, scores, warnings, explanations, and export output.
             </p>
           </div>
-          <Badge>{savedMatchRuns.length} saved</Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge>{savedMatchRuns.length} saved</Badge>
+            <Badge>{visibleSavedRuns.length} visible</Badge>
+          </div>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
           <ReviewMetric label="Verified" value={savedRunIntegrityOverview.verified} />
           <ReviewMetric label="Review" value={savedRunIntegrityOverview.review} />
           <ReviewMetric label="Stale" value={savedRunIntegrityOverview.stale} />
           <ReviewMetric label="Total runs" value={savedRunIntegrityOverview.total} />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+          <label className="space-y-2 text-sm font-medium">
+            <span>Search saved runs</span>
+            <input
+              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
+              onChange={(event) => setSavedRunQuery(event.target.value)}
+              placeholder="Run name, cohort, note, or integrity status"
+              value={savedRunQuery}
+            />
+          </label>
+          <div className="flex flex-wrap items-end gap-2">
+            {([
+              ["all", `All (${savedRunVisibilityCounts.all})`],
+              ["active-cohort", `Active cohort (${savedRunVisibilityCounts["active-cohort"]})`],
+              ["final", `Final (${savedRunVisibilityCounts.final})`],
+              ["attention", `Attention (${savedRunVisibilityCounts.attention})`]
+            ] as Array<[SavedRunVisibilityFilter, string]>).map(([value, label]) => (
+              <button
+                className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                  savedRunVisibility === value
+                    ? "border-primary bg-emerald-50 text-primary"
+                    : "border-border bg-white text-muted-foreground hover:text-foreground"
+                }`}
+                key={value}
+                onClick={() => setSavedRunVisibility(value)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         {runActionStatus ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
@@ -543,7 +605,7 @@ export default function AdminTeamsPage() {
             Live generated teams
           </button>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {savedMatchRuns.map((run) => (
+            {visibleSavedRuns.map((run) => (
               <AdminSavedRunCard
                 active={activeRunId === run.id}
                 activeCohort={activeCohort}
@@ -586,6 +648,25 @@ export default function AdminTeamsPage() {
                 description="Freeze the current generated teams before editing participants, changing settings, or sharing results."
                 icon={<Archive size={20} />}
                 title="No saved match runs yet"
+              />
+            ) : visibleSavedRuns.length === 0 ? (
+              <EmptyState
+                action={
+                  <button
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                    onClick={() => {
+                      setSavedRunQuery("");
+                      setSavedRunVisibility("all");
+                    }}
+                    type="button"
+                  >
+                    Clear run filters
+                  </button>
+                }
+                className="md:col-span-2 xl:col-span-3"
+                description="No saved runs match the current visibility filter or search query."
+                icon={<Archive size={20} />}
+                title="No saved runs in view"
               />
             ) : null}
           </div>
