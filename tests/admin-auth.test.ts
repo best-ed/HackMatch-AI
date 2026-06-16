@@ -46,18 +46,49 @@ describe("admin auth", () => {
     await expect(verifyAdminPasscode("wrong-code", env)).resolves.toBe(false);
   });
 
-  it("creates and verifies deterministic session tokens", async () => {
+  it("creates and verifies signed session tokens with expiry metadata", async () => {
     const env = {
       ADMIN_PASSCODE: "launch-code",
       ADMIN_SESSION_SECRET: "session-secret"
     };
     const token = await createAdminSessionToken({
       passcode: env.ADMIN_PASSCODE,
-      secret: env.ADMIN_SESSION_SECRET
+      secret: env.ADMIN_SESSION_SECRET,
+      issuedAt: new Date("2026-06-17T09:00:00.000Z")
     });
 
-    expect(token).toMatch(/^hm-admin-/);
+    expect(token).toMatch(/^hm-admin-v2\.\d+\.\d+\.[a-f0-9]{64}$/);
     await expect(verifyAdminSessionToken(token, env)).resolves.toBe(true);
     await expect(verifyAdminSessionToken(`${token}-tampered`, env)).resolves.toBe(false);
+  });
+
+  it("rejects expired session tokens on the server", async () => {
+    const env = {
+      ADMIN_PASSCODE: "launch-code",
+      ADMIN_SESSION_SECRET: "session-secret"
+    };
+    const token = await createAdminSessionToken({
+      passcode: env.ADMIN_PASSCODE,
+      secret: env.ADMIN_SESSION_SECRET,
+      issuedAt: new Date("2026-06-17T09:00:00.000Z"),
+      maxAgeSeconds: 10
+    });
+
+    await expect(
+      verifyAdminSessionToken(token, env, new Date("2026-06-17T09:00:09.000Z"))
+    ).resolves.toBe(true);
+    await expect(
+      verifyAdminSessionToken(token, env, new Date("2026-06-17T09:00:11.000Z"))
+    ).resolves.toBe(false);
+  });
+
+  it("rejects malformed legacy-looking tokens", async () => {
+    const env = {
+      ADMIN_PASSCODE: "launch-code",
+      ADMIN_SESSION_SECRET: "session-secret"
+    };
+
+    await expect(verifyAdminSessionToken("hm-admin-old-style-token", env)).resolves.toBe(false);
+    await expect(verifyAdminSessionToken("hm-admin-v2.bad.expires.signature", env)).resolves.toBe(false);
   });
 });

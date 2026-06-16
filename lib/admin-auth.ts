@@ -1,5 +1,6 @@
 export const adminSessionCookieName = "hackmatch_admin_session";
 export const adminLoginPath = "/admin/login";
+const adminSessionTokenPrefix = "hm-admin-v2";
 
 const sessionDurationSeconds = 60 * 60 * 8;
 
@@ -69,14 +70,20 @@ export function adminSessionMaxAgeSeconds() {
 
 export async function createAdminSessionToken({
   passcode,
-  secret = passcode
+  secret = passcode,
+  issuedAt = Date.now(),
+  maxAgeSeconds = adminSessionMaxAgeSeconds()
 }: {
   passcode: string;
   secret?: string;
+  issuedAt?: number | Date;
+  maxAgeSeconds?: number;
 }): Promise<string> {
-  const payload = `${passcode.trim()}::${secret.trim()}`;
+  const issuedAtMs = resolveTimestamp(issuedAt);
+  const expiresAtMs = issuedAtMs + maxAgeSeconds * 1000;
+  const payload = `${adminSessionTokenPrefix}::${issuedAtMs}::${expiresAtMs}::${passcode.trim()}::${secret.trim()}`;
   const digest = await sha256(payload);
-  return `hm-admin-${digest}`;
+  return `${adminSessionTokenPrefix}.${issuedAtMs}.${expiresAtMs}.${digest}`;
 }
 
 export async function verifyAdminPasscode(
@@ -90,16 +97,49 @@ export async function verifyAdminPasscode(
 
 export async function verifyAdminSessionToken(
   token: string | undefined,
-  env: AdminAuthEnv = process.env
+  env: AdminAuthEnv = process.env,
+  now: number | Date = Date.now()
 ): Promise<boolean> {
   const passcode = env.ADMIN_PASSCODE?.trim();
   if (!passcode) return true;
   if (!token) return false;
+
+  const parsed = parseAdminSessionToken(token);
+  if (!parsed) return false;
+
+  if (resolveTimestamp(now) > parsed.expiresAtMs) {
+    return false;
+  }
+
   const expected = await createAdminSessionToken({
     passcode,
-    secret: env.ADMIN_SESSION_SECRET?.trim() || passcode
+    secret: env.ADMIN_SESSION_SECRET?.trim() || passcode,
+    issuedAt: parsed.issuedAtMs,
+    maxAgeSeconds: Math.max(0, Math.floor((parsed.expiresAtMs - parsed.issuedAtMs) / 1000))
   });
   return timingSafeEqual(token, expected);
+}
+
+function parseAdminSessionToken(token: string) {
+  const [prefix, issuedAtRaw, expiresAtRaw, digest] = token.split(".");
+  if (prefix !== adminSessionTokenPrefix || !issuedAtRaw || !expiresAtRaw || !digest) {
+    return null;
+  }
+
+  const issuedAtMs = Number(issuedAtRaw);
+  const expiresAtMs = Number(expiresAtRaw);
+  if (!Number.isFinite(issuedAtMs) || !Number.isFinite(expiresAtMs)) {
+    return null;
+  }
+  if (issuedAtMs <= 0 || expiresAtMs <= issuedAtMs) {
+    return null;
+  }
+
+  return {
+    digest,
+    expiresAtMs,
+    issuedAtMs
+  };
 }
 
 function timingSafeEqual(left: string, right: string): boolean {
@@ -116,4 +156,8 @@ async function sha256(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function resolveTimestamp(value: number | Date) {
+  return value instanceof Date ? value.getTime() : value;
 }
