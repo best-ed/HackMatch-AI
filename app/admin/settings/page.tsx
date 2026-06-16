@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { AdminSettingsPresetCard } from "@/components/admin-settings-preset-card";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
@@ -163,9 +164,17 @@ export default function AdminSettingsPage() {
             Tune deterministic constraints and scoring weights with draft impact preview.
           </p>
         </div>
-        <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={resetDemoData}>
-          Reset demo data
-        </button>
+        <ConfirmActionButton
+          actionLabel="Reset demo data"
+          className="w-full sm:w-auto"
+          confirmationText="This resets local participants, settings, saved runs, archived cohorts, and checklist state to the demo baseline."
+          confirmLabel="Confirm reset"
+          onConfirm={() => {
+            resetDemoData();
+            setBackupStatus("Reset local workspace to the demo baseline.");
+          }}
+          tone="warning"
+        />
       </div>
       <AdminPersistenceStatus
         mode={persistenceMode}
@@ -220,14 +229,15 @@ export default function AdminSettingsPage() {
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            className="bg-amber-600 text-white hover:bg-amber-700"
+          <ConfirmActionButton
+            actionLabel="Restore previewed backup"
+            className="w-full sm:w-auto"
+            confirmationText="This will replace the current local workspace with the previewed backup snapshot."
+            confirmLabel="Confirm restore"
             disabled={!backupPreview?.ok}
-            onClick={restoreBackupPreview}
-            type="button"
-          >
-            Restore previewed backup
-          </Button>
+            onConfirm={restoreBackupPreview}
+            tone="warning"
+          />
           {backupJson ? (
             <button
               className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold"

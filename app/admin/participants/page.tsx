@@ -8,6 +8,7 @@ import {
   ParticipantLinkSecurityPanel,
   ParticipantPrivacyAuditPanel
 } from "@/components/admin-participant-audit-panels";
+import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
@@ -82,6 +83,7 @@ export default function AdminParticipantsPage() {
   const [bulkAction, setBulkAction] = useState<ParticipantBulkAction>("move-cohort");
   const [bulkCohort, setBulkCohort] = useState(activeCohort);
   const [bulkStatus, setBulkStatus] = useState("");
+  const [directoryActionStatus, setDirectoryActionStatus] = useState("");
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -312,9 +314,17 @@ export default function AdminParticipantsPage() {
           <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadParticipantsCsv("all")}>
             Export all CSV
           </button>
-          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={resetDemoData}>
-            Reset demo data
-          </button>
+          <ConfirmActionButton
+            actionLabel="Reset demo data"
+            className="w-full sm:w-auto"
+            confirmationText="This replaces local participants, settings, saved runs, and archived cohorts with the demo baseline."
+            confirmLabel="Confirm reset"
+            onConfirm={() => {
+              resetDemoData();
+              setDirectoryActionStatus("Reset local participant workspace to the demo baseline.");
+            }}
+            tone="warning"
+          />
         </div>
       </div>
       {exportStatus ? (
@@ -325,6 +335,11 @@ export default function AdminParticipantsPage() {
       {linkStatus ? (
         <div className="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800" role="status">
           {linkStatus}
+        </div>
+      ) : null}
+      {directoryActionStatus ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="status">
+          {directoryActionStatus}
         </div>
       ) : null}
       <AdminPersistenceStatus
@@ -836,9 +851,16 @@ export default function AdminParticipantsPage() {
                       <Eye size={15} />
                       Details
                     </button>
-                    <button className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => deleteParticipant(participant.id)}>
-                    Delete
-                    </button>
+                    <ConfirmActionButton
+                      actionLabel="Delete"
+                      className="w-full"
+                      confirmationText={`Delete ${participant.fullName || participant.email || participant.id} from the local directory.`}
+                      confirmLabel="Confirm delete"
+                      onConfirm={() => {
+                        deleteParticipant(participant.id);
+                        setDirectoryActionStatus(`Deleted ${participant.fullName || participant.email || participant.id} from the local directory.`);
+                      }}
+                    />
                   </div>
                 </td>
               </tr>

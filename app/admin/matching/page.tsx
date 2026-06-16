@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, Archive, CheckCircle2, Gauge, RotateCcw, Settings2, Users } from "lucide-react";
+import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
@@ -257,14 +258,18 @@ export default function AdminMatchingPage() {
               {cohorts.map((cohort) => (
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted px-3 py-2" key={cohort}>
                   <span className="text-sm font-medium">{cohort}</span>
-                  <button
-                    className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                  <ConfirmActionButton
+                    actionLabel="Archive"
+                    className="w-full sm:w-auto"
+                    confirmationText={`Archive ${cohort} from active setup lists while keeping its participants and saved runs.`}
+                    confirmLabel="Confirm archive"
                     disabled={cohort === "General"}
-                    onClick={() => archiveCohort(cohort)}
-                    type="button"
-                  >
-                    Archive
-                  </button>
+                    onConfirm={() => {
+                      archiveCohort(cohort);
+                      setSetupStatus(`Archived ${cohort}.`);
+                    }}
+                    tone="warning"
+                  />
                 </div>
               ))}
             </div>
@@ -279,13 +284,17 @@ export default function AdminMatchingPage() {
                 {archivedCohorts.map((cohort) => (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted px-3 py-2" key={cohort}>
                     <span className="text-sm font-medium">{cohort}</span>
-                    <button
-                      className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold"
-                      onClick={() => restoreCohort(cohort)}
-                      type="button"
-                    >
-                      Restore
-                    </button>
+                    <ConfirmActionButton
+                      actionLabel="Restore"
+                      className="w-full sm:w-auto"
+                      confirmationText={`Restore ${cohort} to active cohort setup lists.`}
+                      confirmLabel="Confirm restore"
+                      onConfirm={() => {
+                        restoreCohort(cohort);
+                        setSetupStatus(`Restored ${cohort}.`);
+                      }}
+                      tone="warning"
+                    />
                   </div>
                 ))}
               </div>
