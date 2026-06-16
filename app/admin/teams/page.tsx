@@ -22,6 +22,7 @@ import {
   type AdminAuditEntry
 } from "@/lib/admin-audit-history";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import { buildTeamExportAudit, buildTeamExportGate } from "@/lib/export-audit";
 import { hackMatchCsvFilename, teamsToCsv } from "@/lib/export";
 import { evaluateCohortFinalizationGate } from "@/lib/cohort-finalization";
@@ -413,9 +414,11 @@ export default function AdminTeamsPage() {
 
   async function copySavedRunSharePreview(run: SavedMatchRun) {
     const preview = buildSavedRunSharePreview(run);
-    await navigator.clipboard?.writeText(preview.text);
-    setRunActionStatus(`Copied share preview for ${run.name}.`);
-    recordAudit("shared-run", run.name, "Copied saved-run share preview.");
+    const result = await copyTextToClipboard(preview.text);
+    setRunActionStatus(clipboardStatusMessage(result, `Copied share preview for ${run.name}.`));
+    if (result.ok) {
+      recordAudit("shared-run", run.name, "Copied saved-run share preview.");
+    }
   }
 
   async function copyTeamSummary(
@@ -430,7 +433,8 @@ export default function AdminTeamsPage() {
       explanation ? `Suggested direction: ${explanation.suggestedProjectDirection}` : ""
     ].filter(Boolean).join("\n");
 
-    await navigator.clipboard?.writeText(summary);
+    const result = await copyTextToClipboard(summary);
+    setRunActionStatus(clipboardStatusMessage(result, `Copied summary for ${teamName}.`));
   }
 
   return (

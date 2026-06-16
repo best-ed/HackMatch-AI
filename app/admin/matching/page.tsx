@@ -7,6 +7,7 @@ import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import { compareCohortHealth, type CohortHealthRow } from "@/lib/cohort-health";
 import { useHackMatchData } from "@/lib/local-store";
 import { evaluateMatchingReadiness } from "@/lib/matching-readiness";
@@ -68,8 +69,8 @@ export default function AdminMatchingPage() {
 
   async function copyRegistrationLink() {
     if (typeof window === "undefined") return;
-    await navigator.clipboard?.writeText(registrationUrl);
-    setSetupStatus("Registration link copied.");
+    const result = await copyTextToClipboard(registrationUrl);
+    setSetupStatus(clipboardStatusMessage(result, "Registration link copied."));
   }
 
   return (

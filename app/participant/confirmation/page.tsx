@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card } from "@/components/ui";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import {
   readCurrentParticipantLookup,
   useHackMatchData,
@@ -14,6 +15,7 @@ import { generateTeams } from "@/lib/matching/algorithm";
 export default function ParticipantConfirmationPage() {
   const { participants, settings } = useHackMatchData();
   const [lookup, setLookup] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -52,7 +54,8 @@ export default function ParticipantConfirmationPage() {
   const isUnassigned = participant ? result.unassignedParticipants.includes(participant.id) : false;
 
   async function copyAccessLink() {
-    await navigator.clipboard?.writeText(absoluteTeamUrl);
+    const result = await copyTextToClipboard(absoluteTeamUrl);
+    setCopyStatus(clipboardStatusMessage(result, "Access link copied."));
   }
 
   return (
@@ -95,6 +98,11 @@ export default function ParticipantConfirmationPage() {
             </div>
             <div className="grid gap-2">
               <Button onClick={copyAccessLink} type="button">Copy access link</Button>
+              {copyStatus ? (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800" role="status">
+                  {copyStatus}
+                </div>
+              ) : null}
               <Link className="rounded-md border border-border bg-white px-4 py-2 text-center text-sm font-semibold" href={teamUrl}>
                 View my team
               </Link>

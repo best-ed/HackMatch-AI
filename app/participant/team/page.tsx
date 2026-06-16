@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Clipboard, EyeOff, LinkIcon, Mail, Phone, ShieldCheck, Users } from "lucide-react";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextInput } from "@/components/ui";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import {
   readCurrentParticipantLookup,
   useHackMatchData,
@@ -54,6 +55,7 @@ export default function ParticipantTeamPage() {
     ? result.unassignedParticipants.includes(participant.id)
     : false;
   const statusChecklist = buildParticipantStatusChecklist({ participant, team });
+  const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -79,7 +81,8 @@ export default function ParticipantTeamPage() {
       explanation?.suggestedProjectDirection ? `Project direction: ${explanation.suggestedProjectDirection}` : "",
       brief.nextSteps.length ? `Next steps: ${brief.nextSteps.join(" ")}` : ""
     ].filter(Boolean).join("\n");
-    await navigator.clipboard?.writeText(text);
+    const result = await copyTextToClipboard(text);
+    setCopyStatus(clipboardStatusMessage(result, "Team brief copied."));
   }
 
   return (
@@ -138,6 +141,11 @@ export default function ParticipantTeamPage() {
                 </button>
               </div>
             </div>
+            {copyStatus ? (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+                {copyStatus}
+              </div>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-3">
               <SummaryMetric icon={<Users size={16} />} label="Team size" value={members.length} />
               <SummaryMetric icon={<CheckCircle2 size={16} />} label="Shared interests" value={brief.sharedInterests.length || "Mixed"} />

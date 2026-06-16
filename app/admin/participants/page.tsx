@@ -12,6 +12,7 @@ import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import {
   accessTokenRotationMessage,
   buildAccessTokenRotationPreview
@@ -200,8 +201,8 @@ export default function AdminParticipantsPage() {
         const url = new URL(`/participant/team?access=${participant.accessToken}`, window.location.origin);
         return `${participant.fullName}: ${url.toString()}`;
       });
-    await navigator.clipboard?.writeText(links.join("\n"));
-    setLinkStatus(`Copied ${links.length} filtered access link${links.length === 1 ? "" : "s"}.`);
+    const result = await copyTextToClipboard(links.join("\n"));
+    setLinkStatus(clipboardStatusMessage(result, `Copied ${links.length} filtered access link${links.length === 1 ? "" : "s"}.`));
   }
 
   function regenerateAccessToken(participant: Participant) {
@@ -452,8 +453,9 @@ export default function AdminParticipantsPage() {
         <ParticipantDetailPanel
           onClose={() => setSelectedParticipantId("")}
           onCopyLink={() => {
-            copyAccessLink(selectedParticipant);
-            setLinkStatus(`Copied access link for ${selectedParticipant.fullName}.`);
+            void copyAccessLink(selectedParticipant).then((result) => {
+              setLinkStatus(result ? clipboardStatusMessage(result, `Copied access link for ${selectedParticipant.fullName}.`) : "No access link is available for this participant.");
+            });
           }}
           onUpdate={(key, value) => updateParticipant(selectedParticipant, key, value)}
           participant={selectedParticipant}
@@ -686,7 +688,11 @@ export default function AdminParticipantsPage() {
                   </a>
                   <button
                     className="w-full rounded-md border border-border px-3 py-2 text-sm font-semibold"
-                    onClick={() => copyAccessLink(participant)}
+                    onClick={() => {
+                      void copyAccessLink(participant).then((result) => {
+                        setLinkStatus(result ? clipboardStatusMessage(result, `Copied access link for ${participant.fullName}.`) : "No access link is available for this participant.");
+                      });
+                    }}
                     type="button"
                   >
                     Copy link
@@ -1000,10 +1006,10 @@ function importActionClass(action: "create" | "update" | "skip" | "error") {
   return "bg-rose-100 text-rose-800";
 }
 
-function copyAccessLink(participant: Participant) {
-  if (!participant.accessToken || typeof window === "undefined") return;
+async function copyAccessLink(participant: Participant) {
+  if (!participant.accessToken || typeof window === "undefined") return undefined;
   const url = new URL(`/participant/team?access=${participant.accessToken}`, window.location.origin);
-  void navigator.clipboard?.writeText(url.toString());
+  return copyTextToClipboard(url.toString());
 }
 
 function formatAccessToken(token: string) {
