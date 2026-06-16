@@ -84,6 +84,26 @@ export const matchingPresets: MatchingPreset[] = [
   }
 ];
 
+export function countMatchableParticipants(participants: Participant[]) {
+  return participants.filter((participant) => participant.consentToMatch).length;
+}
+
+export function cohortHasObviousBuilder(participants: Participant[]) {
+  return participants.some((participant) =>
+    /backend|frontend|full stack|fullstack|ai|data|engineer|developer/i.test(
+      [participant.primaryRole, ...participant.secondaryRoles].join(" ")
+    )
+  );
+}
+
+export function cohortHasObviousPresenter(participants: Participant[]) {
+  return participants.some((participant) =>
+    /presenter|product|marketing|designer|pitch/i.test(
+      [participant.primaryRole, ...participant.secondaryRoles, ...participant.nonTechnicalSkills].join(" ")
+    )
+  );
+}
+
 export function validateMatchingSettings(
   settings: MatchingSettings,
   participants: Participant[]
@@ -136,22 +156,14 @@ export function validateMatchingSettings(
   }
 
   if (settings.requireBuilder) {
-    const hasBuilder = matchableParticipants.some((participant) =>
-      /backend|frontend|full stack|fullstack|ai|data|engineer|developer/i.test(
-        [participant.primaryRole, ...participant.secondaryRoles].join(" ")
-      )
-    );
+    const hasBuilder = cohortHasObviousBuilder(matchableParticipants);
     if (!hasBuilder) {
       warnings.push("Require builder is enabled, but no obvious builder role is present.");
     }
   }
 
   if (settings.requirePresenter) {
-    const hasPresenter = matchableParticipants.some((participant) =>
-      /presenter|product|marketing|designer|pitch/i.test(
-        [participant.primaryRole, ...participant.secondaryRoles, ...participant.nonTechnicalSkills].join(" ")
-      )
-    );
+    const hasPresenter = cohortHasObviousPresenter(matchableParticipants);
     if (!hasPresenter) {
       warnings.push("Require presenter is enabled, but no obvious presenter/product role is present.");
     }

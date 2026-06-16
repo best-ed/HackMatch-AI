@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
@@ -21,7 +22,13 @@ import { explainMatchingSettings, type SettingsExplanation } from "@/lib/setting
 import { compareMatchingImpact, summarizeMatchingImpact } from "@/lib/settings-impact";
 import { matchingPresets, validateMatchingSettings } from "@/lib/settings-guardrails";
 import { buildSettingsPresetPreviews } from "@/lib/settings-preset-preview";
+import {
+  applySettingsValidationShortcut,
+  buildSettingsValidationShortcuts,
+  type SettingsValidationShortcut
+} from "@/lib/settings-validation-shortcuts";
 import type { TeamReviewChecklistStore } from "@/lib/team-review-checklist";
+import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
   const {
@@ -41,6 +48,7 @@ export default function AdminSettingsPage() {
   const [draftSettings, setDraftSettings] = useState<MatchingSettings>(settings);
   const [backupJson, setBackupJson] = useState("");
   const [backupStatus, setBackupStatus] = useState("");
+  const [draftActionStatus, setDraftActionStatus] = useState("");
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
   const hasDraftChanges = JSON.stringify(draftSettings) !== JSON.stringify(settings);
   const backupPreview = useMemo(
@@ -84,6 +92,15 @@ export default function AdminSettingsPage() {
       }),
     [cohortParticipants, settings]
   );
+  const draftValidationShortcuts = useMemo(
+    () =>
+      buildSettingsValidationShortcuts({
+        health: draftHealth,
+        participants: cohortParticipants,
+        settings: draftSettings
+      }),
+    [cohortParticipants, draftHealth, draftSettings]
+  );
   const draftStatusText = hasDraftChanges
     ? "Draft changes are ready to apply."
     : "Live settings and draft settings currently match.";
@@ -112,10 +129,12 @@ export default function AdminSettingsPage() {
 
   function applyDraftSettings() {
     setSettings(draftSettings);
+    setDraftActionStatus("Applied the current draft settings.");
   }
 
   function resetDraftSettings() {
     setDraftSettings(settings);
+    setDraftActionStatus("Reset the draft back to the live settings.");
   }
 
   function applyPresetToDraft(preset: MatchingSettings) {
@@ -123,6 +142,20 @@ export default function AdminSettingsPage() {
       ...preset,
       lockedTeams: current.lockedTeams
     }));
+    setDraftActionStatus("Applied a preset to the draft settings.");
+  }
+
+  function applyValidationShortcut(shortcut: SettingsValidationShortcut) {
+    if (shortcut.kind !== "patch") return;
+
+    setDraftSettings((current) =>
+      applySettingsValidationShortcut({
+        id: shortcut.id,
+        participants: cohortParticipants,
+        settings: current
+      })
+    );
+    setDraftActionStatus(`${shortcut.label} applied to the draft settings.`);
   }
 
   function downloadLocalBackup() {
@@ -390,6 +423,26 @@ export default function AdminSettingsPage() {
             ) : null}
           </div>
         ) : null}
+        {draftValidationShortcuts.length > 0 ? (
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="font-semibold text-sky-950">Validation shortcuts</h3>
+                <p className="mt-1 text-sm text-sky-900/80">
+                  Apply a safe draft-only fix or jump to the participant directory when the problem is outside settings.
+                </p>
+              </div>
+              <Badge className="bg-sky-100 text-sky-800">
+                {draftValidationShortcuts.length} quick fix{draftValidationShortcuts.length === 1 ? "" : "es"}
+              </Badge>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {draftValidationShortcuts.map((shortcut) => (
+                <SettingsShortcutRow key={shortcut.id} shortcut={shortcut} onApply={applyValidationShortcut} />
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <button
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
@@ -407,6 +460,7 @@ export default function AdminSettingsPage() {
             Reset draft
           </button>
         </div>
+        {draftActionStatus ? <p className="text-sm text-muted-foreground">{draftActionStatus}</p> : null}
         <p className="text-sm text-muted-foreground">{draftStatusText}</p>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">
@@ -507,9 +561,66 @@ function SettingsExplanationGroup({
   );
 }
 
+function SettingsShortcutRow({
+  shortcut,
+  onApply
+}: {
+  shortcut: SettingsValidationShortcut;
+  onApply: (shortcut: SettingsValidationShortcut) => void;
+}) {
+  const sectionLabel =
+    shortcut.section === "constraints"
+      ? "Constraints"
+      : shortcut.section === "weights"
+        ? "Weights"
+        : "Directory";
+
+  return (
+    <div className="rounded-md border border-sky-200 bg-white p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="font-medium text-foreground">{shortcut.label}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{shortcut.description}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className={shortcutToneClass(shortcut.tone)}>
+            {shortcut.tone}
+          </Badge>
+          <Badge>{sectionLabel}</Badge>
+        </div>
+      </div>
+      <div className="mt-3">
+        {shortcut.kind === "patch" ? (
+          <button
+            className="rounded-md border border-sky-200 bg-sky-100 px-3 py-2 text-sm font-semibold text-sky-900 transition hover:bg-sky-200"
+            onClick={() => onApply(shortcut)}
+            type="button"
+          >
+            Apply fix
+          </button>
+        ) : (
+          <Link
+            className={cn(
+              "inline-flex items-center justify-center rounded-md border border-sky-200 bg-white px-3 py-2 text-sm font-semibold text-sky-900 transition hover:bg-sky-100"
+            )}
+            href={shortcut.href ?? "/admin/participants"}
+          >
+            Open directory
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function healthBadgeClass(status: "healthy" | "warning" | "error") {
   if (status === "healthy") return "bg-emerald-100 text-emerald-800";
   if (status === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function shortcutToneClass(tone: "error" | "warning") {
+  if (tone === "warning") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
 
