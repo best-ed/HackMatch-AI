@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, GitCompareArrows, UsersRound } from "lucide-react";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
+import { AdminSavedRunCard } from "@/components/admin-saved-run-card";
 import {
   ExportAuditPanel,
   FinalizationGatePanel,
@@ -32,9 +33,7 @@ import { buildSavedRunRestorePreview } from "@/lib/saved-run-restore-preview";
 import { buildSavedRunSharePreview } from "@/lib/saved-run-share";
 import {
   summarizeSavedRunIntegrity,
-  summarizeSavedRunIntegrityOverview,
-  type SavedRunIntegritySummary,
-  type SavedRunIntegrityStatus
+  summarizeSavedRunIntegrityOverview
 } from "@/lib/saved-run-integrity";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
@@ -536,174 +535,32 @@ export default function AdminTeamsPage() {
           </button>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {savedMatchRuns.map((run) => (
-              <div
+              <AdminSavedRunCard
+                active={activeRunId === run.id}
+                activeCohort={activeCohort}
+                currentParticipants={participants}
+                currentSettings={settings}
+                deleteConfirmId={deleteConfirmId}
+                integrity={savedRunIntegrityById.get(run.id)}
                 key={run.id}
-                className={`rounded-md border p-3 ${activeRunId === run.id ? "border-primary bg-emerald-50" : "border-border bg-white"}`}
-              >
-                {(() => {
-                  const sharePreview = buildSavedRunSharePreview(run);
-                  const integrity = savedRunIntegrityById.get(run.id);
-                  return (
-                    <div className="mb-3 grid gap-3">
-                      <div className="rounded-md bg-muted p-3 text-xs">
-                        <div className="font-semibold">Share preview</div>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          {sharePreview.metrics.slice(0, 4).map((metric) => (
-                            <div key={metric.label}>
-                              <div className="font-bold">{metric.value}</div>
-                              <div className="text-muted-foreground">{metric.label}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      {integrity ? <SavedRunIntegrityPanel integrity={integrity} /> : null}
-                      {restorePreviewId === run.id ? (
-                        <SavedRunRestorePreviewPanel
-                          preview={buildSavedRunRestorePreview({
-                            activeCohort,
-                            currentParticipants: participants,
-                            currentSettings: settings,
-                            run
-                          })}
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })()}
-                <button
-                  className="block w-full text-left"
-                  onClick={() => setActiveRunId(run.id)}
-                  type="button"
-                >
-                  <div className="font-semibold">{run.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{formatDate(run.createdAt)}</div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge>{run.cohort ?? "General"}</Badge>
-                    <Badge>{run.result.teams.length} teams</Badge>
-                    <Badge>{run.assignedCount}/{run.participantCount} assigned</Badge>
-                    <Badge>Avg {run.averageScore}</Badge>
-                    <Badge>{run.result.warnings.length} warning(s)</Badge>
-                    <Badge>{run.settingsSnapshot.lockedTeams?.length ?? 0} lock(s)</Badge>
-                    <Badge>Size {run.settingsSnapshot.desiredTeamSize}</Badge>
-                    {savedRunIntegrityById.get(run.id) ? (
-                      <Badge className={integrityBadgeClass(savedRunIntegrityById.get(run.id)?.status ?? "review")}>
-                        {savedRunIntegrityById.get(run.id)?.status}
-                      </Badge>
-                    ) : null}
-                    {run.isFinal ? <Badge className="bg-emerald-100 text-emerald-800">Final</Badge> : null}
-                  </div>
-                </button>
-                <div className="mt-3 grid gap-2">
-                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                    <input
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs outline-none ring-primary/20 focus:ring-4"
-                      onChange={(event) => setRenameDrafts((current) => ({ ...current, [run.id]: event.target.value }))}
-                      value={renameDrafts[run.id] ?? run.name}
-                    />
-                    <button
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                      onClick={() => renameRun(run)}
-                      type="button"
-                    >
-                      Rename
-                    </button>
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="space-y-1 text-xs font-semibold">
-                      <span>Organizer notes</span>
-                      <textarea
-                        className="min-h-20 w-full rounded-md border border-border bg-white px-3 py-2 text-xs outline-none ring-primary/20 focus:ring-4"
-                        onChange={(event) => setNoteDrafts((current) => ({ ...current, [run.id]: event.target.value }))}
-                        placeholder="Final after mentor review, needs sponsor approval, or follow-up context"
-                        value={noteDrafts[run.id] ?? run.notes ?? ""}
-                      />
-                    </label>
-                    <button
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                      onClick={() => saveRunNotes(run)}
-                      type="button"
-                    >
-                      Save notes
-                    </button>
-                  </div>
-                  {run.notes ? (
-                    <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-                      {run.notes}
-                    </div>
-                  ) : null}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      className={`rounded-md border px-3 py-2 text-xs font-semibold ${
-                        run.isFinal ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-border bg-white"
-                      }`}
-                      onClick={() => toggleFinalRun(run)}
-                      type="button"
-                    >
-                      {run.isFinal ? "Clear final" : "Mark final"}
-                    </button>
-                    <button
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                      onClick={() => void copySavedRunSharePreview(run)}
-                      type="button"
-                    >
-                      Copy share preview
-                    </button>
-                    <button
-                      className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                      onClick={() => duplicateRun(run)}
-                      type="button"
-                    >
-                      Duplicate
-                    </button>
-                    <button
-                      className={`rounded-md border px-3 py-2 text-xs font-semibold ${
-                        restorePreviewId === run.id
-                          ? "border-amber-300 bg-amber-50 text-amber-900"
-                          : "border-border bg-white"
-                      }`}
-                      onClick={() => restoreRun(run)}
-                      type="button"
-                    >
-                      {restorePreviewId === run.id ? "Confirm restore" : "Preview restore"}
-                    </button>
-                    {restorePreviewId === run.id ? (
-                      <button
-                        className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                        onClick={() => cancelRestorePreview(run)}
-                        type="button"
-                      >
-                        Cancel restore
-                      </button>
-                    ) : null}
-                    {deleteConfirmId === run.id ? (
-                      <>
-                        <button
-                          className="rounded-md bg-rose-700 px-3 py-2 text-xs font-semibold text-white"
-                          onClick={() => removeRun(run)}
-                          type="button"
-                        >
-                          Confirm delete
-                        </button>
-                        <button
-                          className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold"
-                          onClick={() => setDeleteConfirmId("")}
-                          type="button"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        className="rounded-md border border-border bg-white px-3 py-2 text-xs font-semibold text-rose-700"
-                        onClick={() => setDeleteConfirmId(run.id)}
-                        type="button"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                noteDraft={noteDrafts[run.id] ?? run.notes ?? ""}
+                onCancelDelete={() => setDeleteConfirmId("")}
+                onCancelRestore={() => cancelRestorePreview(run)}
+                onConfirmDelete={() => removeRun(run)}
+                onCopySharePreview={() => void copySavedRunSharePreview(run)}
+                onDuplicate={() => duplicateRun(run)}
+                onMarkFinal={() => toggleFinalRun(run)}
+                onRename={() => renameRun(run)}
+                onRestore={() => restoreRun(run)}
+                onSaveNotes={() => saveRunNotes(run)}
+                onSelect={() => setActiveRunId(run.id)}
+                onSetDeleteConfirm={() => setDeleteConfirmId(run.id)}
+                onUpdateNoteDraft={(value) => setNoteDrafts((current) => ({ ...current, [run.id]: value }))}
+                onUpdateRenameDraft={(value) => setRenameDrafts((current) => ({ ...current, [run.id]: value }))}
+                renameDraft={renameDrafts[run.id] ?? run.name}
+                restorePreviewActive={restorePreviewId === run.id}
+                run={run}
+              />
             ))}
             {savedMatchRuns.length === 0 ? (
               <EmptyState
@@ -1114,56 +971,6 @@ function ReviewMetric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function SavedRunIntegrityPanel({ integrity }: { integrity: SavedRunIntegritySummary }) {
-  const leadCheck = integrity.checks.find((check) => check.status !== "verified") ?? integrity.checks[0];
-
-  return (
-    <div className="rounded-md border border-border bg-white p-3 text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-semibold">Integrity summary</div>
-        <Badge className={integrityBadgeClass(integrity.status)}>
-          {integrity.status}
-        </Badge>
-      </div>
-      <p className="mt-2 text-muted-foreground">{leadCheck.detail}</p>
-      <div className="mt-3 flex flex-wrap gap-1">
-        {integrity.checks.map((check) => (
-          <Badge key={check.label} className={integrityBadgeClass(check.status)}>
-            {check.label}
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SavedRunRestorePreviewPanel({
-  preview
-}: {
-  preview: ReturnType<typeof buildSavedRunRestorePreview>;
-}) {
-  return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
-      <div className="font-semibold">Restore impact preview</div>
-      <p className="mt-2 text-amber-900">{preview.summary}</p>
-      <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-        <ReviewMetric label="Current records" value={preview.currentParticipantCount} />
-        <ReviewMetric label="Restored records" value={preview.restoredParticipantCount} />
-        <ReviewMetric label="Teams" value={preview.teamCount} />
-        <ReviewMetric label="Warnings" value={preview.warningCount} />
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Badge className={preview.cohortWillChange ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
-          {preview.currentCohort} to {preview.restoredCohort}
-        </Badge>
-        <Badge className={preview.settingsWillChange ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
-          {preview.settingsWillChange ? "settings change" : "settings match"}
-        </Badge>
-      </div>
-    </div>
-  );
-}
-
 function BalanceSignalBar({ signal }: { signal: TeamBalanceSignal }) {
   const value = Math.max(0, Math.min(100, signal.value));
   return (
@@ -1218,12 +1025,6 @@ function checklistPatchDetail(patch: Partial<TeamReviewChecklistItem>) {
 
 function balanceSignalClass(status: TeamBalanceSignal["status"]) {
   if (status === "strong") return "bg-emerald-100 text-emerald-800";
-  if (status === "review") return "bg-amber-100 text-amber-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-function integrityBadgeClass(status: SavedRunIntegrityStatus) {
-  if (status === "verified") return "bg-emerald-100 text-emerald-800";
   if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
