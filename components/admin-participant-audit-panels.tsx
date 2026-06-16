@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Card } from "@/components/ui";
+import type { CohortTransferAudit } from "@/lib/cohort-transfer-audit";
 import type { ParticipantLinkAudit, ParticipantLinkAuditStatus } from "@/lib/participant-link-audit";
 import type { DuplicateParticipantGroup } from "@/lib/participant-duplicates";
 import type { ParticipantIntakeSummary, IntakeIssueSeverity } from "@/lib/participant-intake";
@@ -239,6 +240,92 @@ export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateP
           No likely duplicate participants detected.
         </div>
       )}
+    </Card>
+  );
+}
+
+export function ParticipantCohortTransferPanel({
+  activeCohort,
+  audit,
+  onUseTargetCohort
+}: {
+  activeCohort: string;
+  audit: CohortTransferAudit;
+  onUseTargetCohort: () => void;
+}) {
+  return (
+    <Card className="space-y-4 border-primary/20 bg-emerald-50/20">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Cohort transfer audit</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Review the last move into {audit.targetCohort} before generating teams or switching the active cohort.
+          </p>
+        </div>
+        <Badge className={audit.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+          {audit.status}
+        </Badge>
+      </div>
+      <div className="rounded-md border border-border bg-white p-4 text-sm text-muted-foreground">
+        <div className="font-semibold text-foreground">{audit.summary}</div>
+        {activeCohort !== audit.targetCohort ? (
+          <button
+            className="mt-3 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-primary"
+            onClick={onUseTargetCohort}
+            type="button"
+          >
+            Switch active cohort to {audit.targetCohort}
+          </button>
+        ) : null}
+      </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <PreviewMetric label="Moved" value={audit.movedCount} />
+        <PreviewMetric label="Source cohorts" value={audit.sourceCohortCount} />
+        <PreviewMetric label="Target total" value={audit.targetCohortTotal} />
+        <PreviewMetric label="Matchable in target" value={audit.targetMatchableCount} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="font-semibold">Source cohorts</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {audit.sourceBreakdown.map((item) => (
+              <Badge key={item.cohort}>{item.cohort} {item.count}</Badge>
+            ))}
+            {audit.sourceBreakdown.length === 0 ? (
+              <span className="text-sm text-muted-foreground">No source cohort changes detected.</span>
+            ) : null}
+          </div>
+          <div className="mt-4 font-semibold">Moved role mix</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {audit.movedRoles.map((item) => (
+              <Badge key={item.label}>{item.label} {item.count}</Badge>
+            ))}
+            {audit.movedRoles.length === 0 ? (
+              <span className="text-sm text-muted-foreground">No moved role data available.</span>
+            ) : null}
+          </div>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="font-semibold">Watch points</div>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            {audit.highlights.map((highlight) => (
+              <div key={highlight}>{highlight}</div>
+            ))}
+          </div>
+          <div className="mt-4 font-semibold">Recent moved participants</div>
+          <div className="mt-3 space-y-2 text-sm">
+            {audit.movedParticipants.map((participant) => (
+              <div className="flex justify-between gap-3 rounded-md bg-muted px-3 py-2" key={participant.id}>
+                <span>{participant.fullName}</span>
+                <span className="text-muted-foreground">{participant.fromCohort}</span>
+              </div>
+            ))}
+            {audit.movedParticipants.length === 0 ? (
+              <div className="text-muted-foreground">No moved participants recorded.</div>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </Card>
   );
 }

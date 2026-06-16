@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Eye, LinkIcon, SearchX, X } from "lucide-react";
 import {
+  ParticipantCohortTransferPanel,
   ParticipantDuplicateReviewPanel,
   ParticipantIntakeQualityPanel,
   ParticipantLinkSecurityPanel,
@@ -14,6 +15,7 @@ import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
 import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
+import { buildCohortTransferAudit, type CohortTransferAudit } from "@/lib/cohort-transfer-audit";
 import {
   accessTokenRotationMessage,
   buildAccessTokenRotationPreview
@@ -84,6 +86,7 @@ export default function AdminParticipantsPage() {
   const [bulkCohort, setBulkCohort] = useState(activeCohort);
   const [bulkStatus, setBulkStatus] = useState("");
   const [directoryActionStatus, setDirectoryActionStatus] = useState("");
+  const [lastCohortTransferAudit, setLastCohortTransferAudit] = useState<CohortTransferAudit | undefined>();
 
   const roles = useMemo(
     () => Array.from(new Set(participants.map((participant) => participant.primaryRole).filter(Boolean))).sort(),
@@ -253,6 +256,19 @@ export default function AdminParticipantsPage() {
     if (result.affectedCount === 0) {
       setBulkStatus("No participant records changed for the current filter.");
       return;
+    }
+
+    if (bulkAction === "move-cohort") {
+      setLastCohortTransferAudit(
+        buildCohortTransferAudit({
+          beforeParticipants: participants,
+          afterParticipants: result.participants,
+          participantIds: filteredIds,
+          targetCohort: bulkCohort
+        })
+      );
+    } else {
+      setLastCohortTransferAudit(undefined);
     }
 
     setParticipants(result.participants);
@@ -478,6 +494,13 @@ export default function AdminParticipantsPage() {
           </div>
         ) : null}
       </Card>
+      {lastCohortTransferAudit ? (
+        <ParticipantCohortTransferPanel
+          activeCohort={activeCohort}
+          audit={lastCohortTransferAudit}
+          onUseTargetCohort={() => setActiveCohort(lastCohortTransferAudit.targetCohort)}
+        />
+      ) : null}
       {selectedParticipant ? (
         <ParticipantDetailPanel
           onClose={() => setSelectedParticipantId("")}
