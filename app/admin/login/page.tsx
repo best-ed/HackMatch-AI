@@ -19,13 +19,21 @@ function AdminLoginForm() {
   const [enabled, setEnabled] = useState<boolean | undefined>();
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/admin/session")
-      .then((response) => response.json() as Promise<{ enabled: boolean }>)
+      .then((response) => response.json() as Promise<{ enabled: boolean; loginGuard?: { retryAfterSeconds: number } }>)
       .then((payload) => {
-        if (!cancelled) setEnabled(payload.enabled);
+        if (!cancelled) {
+          setEnabled(payload.enabled);
+          if ((payload.loginGuard?.retryAfterSeconds ?? 0) > 0) {
+            const retryAfterSeconds = payload.loginGuard?.retryAfterSeconds ?? 0;
+            setCooldownSeconds(retryAfterSeconds);
+            setStatus(`Too many attempts. Try again in ${formatCooldown(retryAfterSeconds)}.`);
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setEnabled(true);
@@ -34,6 +42,16 @@ function AdminLoginForm() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const timer = window.setTimeout(() => {
+      setCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   async function submitLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,11 +65,29 @@ function AdminLoginForm() {
     });
 
     if (!response.ok) {
-      setStatus("Invalid passcode. Try again.");
+      const payload = await response.json().catch(() => ({})) as {
+        error?: string;
+        remainingAttempts?: number;
+        retryAfterSeconds?: number;
+      };
+      const retryAfterSeconds = payload.retryAfterSeconds ?? 0;
+
+      if (retryAfterSeconds > 0) {
+        setCooldownSeconds(retryAfterSeconds);
+        setStatus(`Too many attempts. Try again in ${formatCooldown(retryAfterSeconds)}.`);
+      } else if (typeof payload.remainingAttempts === "number") {
+        setStatus(
+          `Invalid passcode. ${payload.remainingAttempts} attempt${payload.remainingAttempts === 1 ? "" : "s"} left before cooldown.`
+        );
+      } else {
+        setStatus("Invalid passcode. Try again.");
+      }
+
       setLoading(false);
       return;
     }
 
+    setCooldownSeconds(0);
     window.location.href = nextPath;
   }
 
@@ -98,12 +134,26 @@ function AdminLoginForm() {
               value={passcode}
             />
           </label>
-          <Button disabled={loading || !passcode.trim()} type="submit">
-            {loading ? "Checking..." : "Unlock admin"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button disabled={loading || !passcode.trim() || cooldownSeconds > 0} type="submit">
+              {loading ? "Checking..." : cooldownSeconds > 0 ? `Retry in ${formatCooldown(cooldownSeconds)}` : "Unlock admin"}
+            </Button>
+            {cooldownSeconds > 0 ? (
+              <Badge className="bg-amber-100 text-amber-800">
+                Cooldown {formatCooldown(cooldownSeconds)}
+              </Badge>
+            ) : null}
+          </div>
         </form>
         {status ? (
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800" role="status">
+          <div
+            className={`rounded-md px-4 py-3 text-sm font-medium ${
+              cooldownSeconds > 0
+                ? "border border-amber-200 bg-amber-50 text-amber-800"
+                : "border border-rose-200 bg-rose-50 text-rose-800"
+            }`}
+            role="status"
+          >
             {status}
           </div>
         ) : null}
@@ -127,4 +177,12 @@ function sanitizeNextPath(value: string | null) {
     return "/admin";
   }
   return value;
+}
+
+function formatCooldown(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`;
 }
