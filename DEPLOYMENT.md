@@ -13,6 +13,11 @@ npm run test
 npm run build
 ```
 
+Local build note:
+
+- For local verification on Windows, stop `npm run dev` before running `npm run build` in the same workspace.
+- Mixing the live dev server and production build against the same `.next` directory can leave localhost in a broken state even when source code is unchanged.
+
 The `/admin` dashboard also includes a deployment preflight card. It checks browser-visible readiness signals such as persistence mode, participant data, generated teams, and saved runs. Treat it as a launch helper, not a replacement for the commands above.
 
 Before handing the app to organizers, use `/admin` to confirm the Launch checklist:

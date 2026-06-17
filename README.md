@@ -97,6 +97,13 @@ For a production check:
 npm run build
 ```
 
+Local workflow note:
+
+- On Windows, avoid running `npm run build` against the same workspace while `npm run dev` is still serving that workspace.
+- The dev server and production build both write to `.next`, and overlapping runs can leave localhost returning `500` errors or surface misleading `PageNotFoundError` build failures.
+- Before a local production check, stop the dev server first, run `npm run build`, then start `npm run dev` again when you want to go back to browser testing.
+- If localhost starts returning `500` after a failed build or mixed run state, stop the dev server, clear or move the stale `.next` output, and restart `npm run dev`.
+
 After starting a production or local server, run the route smoke test:
 
 ```bash
