@@ -43,9 +43,18 @@ OPENAI_API_KEY=
 OPENAI_EXPLANATION_MODEL=gpt-5.2
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+ADMIN_PASSCODE=
+ADMIN_SESSION_SECRET=
 ```
 
 Use the Supabase anon public key, not the service role key.
+
+If you enable admin protection for a shared deployment:
+
+- Use an `ADMIN_PASSCODE` with at least 12 characters and a mix of uppercase, lowercase, and numbers.
+- Use an `ADMIN_SESSION_SECRET` with at least 24 characters.
+- Do not reuse the passcode as the session secret.
+- Redeploy or restart after changing either value.
 
 ## Optional Supabase Setup
 
@@ -79,6 +88,17 @@ Before treating Supabase as production-ready:
 6. Keep the service role key out of browser-visible `NEXT_PUBLIC_*` variables.
 
 The `/admin` Supabase RLS posture panel is a launch helper. It does not create Supabase policies automatically.
+
+## Admin Auth Checklist
+
+Before sharing a deployed admin URL:
+
+1. Open `/admin/login` and confirm the page no longer shows `Auth disabled`.
+2. Confirm the admin dashboard setup card reports a strong passcode and strong session secret instead of review states.
+3. Confirm invalid passcode attempts trigger cooldown feedback after repeated failures.
+4. Confirm `/admin` redirects unauthenticated access to `/admin/login`.
+5. Confirm the login flow returns authenticated admins to the intended `/admin/*` destination.
+6. Confirm `/api/admin/security-readiness` and `/api/explanations` are protected behind the same admin session.
 
 ## Final Run Handoff
 

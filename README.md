@@ -123,12 +123,24 @@ ADMIN_PASSCODE=choose_a_private_admin_passcode
 ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
 ```
 
+Recommended baseline:
+
+- Use an `ADMIN_PASSCODE` with at least 12 characters and a mix of uppercase, lowercase, and numbers.
+- Use an `ADMIN_SESSION_SECRET` with at least 24 characters.
+- Do not reuse the passcode as the session secret.
+- After changing either value, restart the dev or production server so middleware and server routes pick up the new config.
+
 ## Security Readiness
 
 HackMatch AI is still an MVP, but the app includes security guardrails that make the current local workflow safer and prepare the codebase for production auth later.
 
 - Admin routes can be protected with `ADMIN_PASSCODE` and `ADMIN_SESSION_SECRET`. If those values are absent, admin pages remain open for local demo testing.
+- Admin sessions expire server-side, not just in browser state, so stale cookies stop working even if the client does not clear them.
+- Admin login attempts are rate-limited with cooldown feedback so repeated passcode guesses are slowed down.
+- Authenticated admins are redirected away from `/admin/login`, while unauthenticated admins are routed through a sanitized `next` flow that preserves only safe `/admin/*` destinations.
+- Sensitive admin-facing APIs such as security readiness and explanation refresh now require the same admin session when passcode protection is enabled.
 - The admin dashboard includes actionable admin auth setup, a security readiness panel, and an organizer launch checklist that reports admin passcode setup, session secret setup, Supabase env readiness, optional OpenAI key readiness, and the smoke-test command.
+- Security readiness checks now flag weak admin passcodes, missing or reused session secrets, and launch-risky auth setup before deployment.
 - Participant team links use compact, collision-checked `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
 - Regenerating participant access tokens requires confirmation so organizers do not accidentally invalidate links participants already received.
 - Participant team handoff pages show a privacy summary so participants can see whether their contact details are shared, how many teammate contact records are visible, and which teammate records are hidden by consent.
@@ -235,6 +247,13 @@ Before treating a cohort as final, organizers should use the built-in safety loo
 The admin dashboard includes an action queue and recent activity timeline. The queue highlights the next best organizer actions from participant intake, settings health, assignment coverage, saved runs, and deployment status. The activity timeline summarizes recent participant changes and saved-run milestones for the active cohort.
 
 The admin dashboard also reports admin access protection status. If `ADMIN_PASSCODE` is not configured, admin pages stay open for local MVP testing. When it is configured, admin routes require the passcode and the dashboard offers a logout action. The setup card shows a safe checklist for admin passcode, session secret, and server restart state without exposing secret values.
+
+When admin auth is enabled, the setup behaves consistently across middleware, server routes, and the browser UI:
+
+- `/admin/login` becomes the entry point for unauthenticated organizer access.
+- `/admin/*` pages redirect to login with a sanitized `next` destination.
+- `/api/admin/security-readiness` and `/api/explanations` reject unauthenticated requests.
+- Invalid or expired admin session cookies are cleared automatically during protected admin access.
 
 ## Supabase Persistence
 
