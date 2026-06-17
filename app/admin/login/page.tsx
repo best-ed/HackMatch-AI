@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Badge, Button, Card, TextInput } from "@/components/ui";
+import { sanitizeAdminNextPath } from "@/lib/admin-auth-routing";
 
 export default function AdminLoginPage() {
   return (
@@ -14,7 +15,7 @@ export default function AdminLoginPage() {
 
 function AdminLoginForm() {
   const searchParams = useSearchParams();
-  const nextPath = sanitizeNextPath(searchParams.get("next"));
+  const nextPath = sanitizeAdminNextPath(searchParams.get("next"));
   const [passcode, setPasscode] = useState("");
   const [enabled, setEnabled] = useState<boolean | undefined>();
   const [status, setStatus] = useState("");
@@ -170,13 +171,6 @@ function LoginSkeleton() {
       </Card>
     </div>
   );
-}
-
-function sanitizeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/admin") || value.startsWith("/admin/login")) {
-    return "/admin";
-  }
-  return value;
 }
 
 function formatCooldown(seconds: number) {
