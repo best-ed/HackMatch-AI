@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
 
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = adminLoginPath;
+  loginUrl.search = "";
   loginUrl.searchParams.set("next", buildAdminLoginDestination(request.nextUrl));
   const response = NextResponse.redirect(loginUrl);
   if (token) {
