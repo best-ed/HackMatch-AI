@@ -10,6 +10,12 @@ type AdminAuthEnv = {
   ADMIN_SESSION_SECRET?: string;
 };
 
+export type AdminSecretQuality = {
+  detail: string;
+  label: string;
+  status: "ready" | "review";
+};
+
 export type AdminAuthSetupStep = {
   label: string;
   status: "ready" | "review";
@@ -38,26 +44,24 @@ export function isAdminAuthConfigured(env: AdminAuthEnv = process.env): boolean 
 
 export function summarizeAdminAuthSetup(env: AdminAuthEnv = process.env): AdminAuthSetupSummary {
   const enabled = isAdminAuthConfigured(env);
-  const sessionSecretConfigured = Boolean(env.ADMIN_SESSION_SECRET?.trim());
+  const passcodeQuality = evaluateAdminPasscodeQuality(env);
+  const sessionSecretQuality = evaluateAdminSessionSecretQuality(env);
+  const sessionSecretConfigured = sessionSecretQuality.configured;
   const steps: AdminAuthSetupStep[] = [
     {
       label: "Admin passcode",
-      status: enabled ? "ready" : "review",
-      detail: enabled
-        ? "ADMIN_PASSCODE is configured, so admin routes can require login."
-        : "Set ADMIN_PASSCODE in .env.local before sharing an admin URL."
+      status: passcodeQuality.status,
+      detail: passcodeQuality.detail
     },
     {
       label: "Session secret",
-      status: sessionSecretConfigured ? "ready" : "review",
-      detail: sessionSecretConfigured
-        ? "ADMIN_SESSION_SECRET is configured for session token signing."
-        : "Set ADMIN_SESSION_SECRET to a long private value instead of relying on the passcode fallback."
+      status: sessionSecretQuality.status,
+      detail: sessionSecretQuality.detail
     },
     {
       label: "Server restart",
-      status: enabled && sessionSecretConfigured ? "ready" : "review",
-      detail: enabled && sessionSecretConfigured
+      status: passcodeQuality.status === "ready" && sessionSecretQuality.status === "ready" ? "ready" : "review",
+      detail: passcodeQuality.status === "ready" && sessionSecretQuality.status === "ready"
         ? "Restart completed after env setup or the server is already reading the configured values."
         : "Restart the dev or production server after editing .env.local."
     }
@@ -193,6 +197,78 @@ export async function summarizeAdminSession(
     expiresAt: new Date(parsed.expiresAtMs).toISOString(),
     remainingSeconds,
     status: "active"
+  };
+}
+
+export function evaluateAdminPasscodeQuality(env: AdminAuthEnv = process.env): AdminSecretQuality {
+  const passcode = env.ADMIN_PASSCODE?.trim() ?? "";
+  if (!passcode) {
+    return {
+      detail: "Set ADMIN_PASSCODE in .env.local before sharing an admin URL.",
+      label: "missing",
+      status: "review"
+    };
+  }
+
+  if (passcode.length < 12) {
+    return {
+      detail: "ADMIN_PASSCODE is configured, but it should be at least 12 characters long.",
+      label: "weak",
+      status: "review"
+    };
+  }
+
+  if (!/[A-Z]/.test(passcode) || !/[a-z]/.test(passcode) || !/\d/.test(passcode)) {
+    return {
+      detail: "ADMIN_PASSCODE should mix uppercase, lowercase, and numeric characters.",
+      label: "weak",
+      status: "review"
+    };
+  }
+
+  return {
+    detail: "ADMIN_PASSCODE is configured with a stronger baseline for shared admin access.",
+    label: "strong",
+    status: "ready"
+  };
+}
+
+export function evaluateAdminSessionSecretQuality(env: AdminAuthEnv = process.env) {
+  const sessionSecret = env.ADMIN_SESSION_SECRET?.trim() ?? "";
+  const passcode = env.ADMIN_PASSCODE?.trim() ?? "";
+
+  if (!sessionSecret) {
+    return {
+      configured: false,
+      detail: "Set ADMIN_SESSION_SECRET to a long private value instead of relying on the passcode fallback.",
+      label: "missing",
+      status: "review" as const
+    };
+  }
+
+  if (sessionSecret === passcode && passcode) {
+    return {
+      configured: true,
+      detail: "ADMIN_SESSION_SECRET should not match ADMIN_PASSCODE.",
+      label: "reused",
+      status: "review" as const
+    };
+  }
+
+  if (sessionSecret.length < 24) {
+    return {
+      configured: true,
+      detail: "ADMIN_SESSION_SECRET is configured, but it should be at least 24 characters long.",
+      label: "weak",
+      status: "review" as const
+    };
+  }
+
+  return {
+    configured: true,
+    detail: "ADMIN_SESSION_SECRET is configured with a stronger signing baseline.",
+    label: "strong",
+    status: "ready" as const
   };
 }
 

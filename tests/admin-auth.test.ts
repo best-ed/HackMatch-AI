@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createAdminSessionToken,
+  evaluateAdminPasscodeQuality,
+  evaluateAdminSessionSecretQuality,
   isAdminAuthConfigured,
   summarizeAdminSession,
   summarizeAdminAuthSetup,
@@ -17,8 +19,8 @@ describe("admin auth", () => {
 
   it("summarizes setup steps without exposing secret values", () => {
     const summary = summarizeAdminAuthSetup({
-      ADMIN_PASSCODE: "launch-code",
-      ADMIN_SESSION_SECRET: "session-secret"
+      ADMIN_PASSCODE: "LaunchCode2026",
+      ADMIN_SESSION_SECRET: "LaunchCode2026-Session-Secret-Strong"
     });
 
     expect(summary.enabled).toBe(true);
@@ -31,7 +33,7 @@ describe("admin auth", () => {
 
   it("keeps setup in review when session secret is missing", () => {
     const summary = summarizeAdminAuthSetup({
-      ADMIN_PASSCODE: "launch-code"
+      ADMIN_PASSCODE: "LaunchCode2026"
     });
 
     expect(summary.enabled).toBe(true);
@@ -139,5 +141,32 @@ describe("admin auth", () => {
       authenticated: false,
       status: "expired"
     });
+  });
+
+  it("flags weak passcodes and stronger passcodes separately", () => {
+    expect(
+      evaluateAdminPasscodeQuality({ ADMIN_PASSCODE: "short" })
+    ).toMatchObject({ status: "review", label: "weak" });
+    expect(
+      evaluateAdminPasscodeQuality({ ADMIN_PASSCODE: "LaunchCode2026" })
+    ).toMatchObject({ status: "ready", label: "strong" });
+  });
+
+  it("flags missing, reused, and stronger session secrets separately", () => {
+    expect(
+      evaluateAdminSessionSecretQuality({ ADMIN_PASSCODE: "LaunchCode2026" })
+    ).toMatchObject({ status: "review", label: "missing" });
+    expect(
+      evaluateAdminSessionSecretQuality({
+        ADMIN_PASSCODE: "LaunchCode2026",
+        ADMIN_SESSION_SECRET: "LaunchCode2026"
+      })
+    ).toMatchObject({ status: "review", label: "reused" });
+    expect(
+      evaluateAdminSessionSecretQuality({
+        ADMIN_PASSCODE: "LaunchCode2026",
+        ADMIN_SESSION_SECRET: "LaunchCode2026-Session-Secret-Strong"
+      })
+    ).toMatchObject({ status: "ready", label: "strong" });
   });
 });

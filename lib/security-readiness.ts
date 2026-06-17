@@ -1,3 +1,8 @@
+import {
+  evaluateAdminPasscodeQuality,
+  evaluateAdminSessionSecretQuality
+} from "@/lib/admin-auth";
+
 export type SecurityReadinessStatus = "ready" | "review";
 
 export type SecurityReadinessCheck = {
@@ -16,6 +21,8 @@ export type SecurityReadiness = {
 export function evaluateSecurityReadiness({
   hasAdminPasscode,
   hasAdminSessionSecret,
+  adminPasscode,
+  adminSessionSecret,
   hasSupabaseUrl,
   hasSupabaseAnonKey,
   hasOpenAiKey,
@@ -23,25 +30,30 @@ export function evaluateSecurityReadiness({
 }: {
   hasAdminPasscode: boolean;
   hasAdminSessionSecret: boolean;
+  adminPasscode?: string;
+  adminSessionSecret?: string;
   hasSupabaseUrl: boolean;
   hasSupabaseAnonKey: boolean;
   hasOpenAiKey: boolean;
   hasSmokeScript: boolean;
 }): SecurityReadiness {
+  const passcodeQuality = evaluateAdminPasscodeQuality({
+    ADMIN_PASSCODE: hasAdminPasscode ? adminPasscode ?? "configured-passcode" : undefined
+  });
+  const secretQuality = evaluateAdminSessionSecretQuality({
+    ADMIN_PASSCODE: hasAdminPasscode ? adminPasscode ?? "configured-passcode" : undefined,
+    ADMIN_SESSION_SECRET: hasAdminSessionSecret ? adminSessionSecret ?? "configured-session-secret" : undefined
+  });
   const checks: SecurityReadinessCheck[] = [
     {
       label: "Admin passcode",
-      status: hasAdminPasscode ? "ready" : "review",
-      detail: hasAdminPasscode
-        ? "Admin routes can require a private passcode in this environment."
-        : "Set ADMIN_PASSCODE before sharing a deployed admin URL."
+      status: passcodeQuality.status,
+      detail: passcodeQuality.detail
     },
     {
       label: "Session secret",
-      status: hasAdminSessionSecret ? "ready" : "review",
-      detail: hasAdminSessionSecret
-        ? "Admin session cookies use a separate secret."
-        : "Set ADMIN_SESSION_SECRET so session cookies are not derived from the passcode."
+      status: secretQuality.status,
+      detail: secretQuality.detail
     },
     {
       label: "Remote persistence",
