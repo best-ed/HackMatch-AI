@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   adminLoginAttemptKey,
   clearAdminLoginGuard,
@@ -10,18 +10,20 @@ import {
   adminSessionMaxAgeSeconds,
   createAdminSessionToken,
   isAdminAuthConfigured,
+  summarizeAdminSession,
   summarizeAdminAuthSetup,
   verifyAdminPasscode
 } from "@/lib/admin-auth";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   return NextResponse.json({
     ...summarizeAdminAuthSetup(),
-    loginGuard: describeAdminLoginGuard(attemptKeyForRequest(request))
+    loginGuard: describeAdminLoginGuard(attemptKeyForRequest(request)),
+    session: await summarizeAdminSession(request.cookies.get(adminSessionCookieName)?.value)
   });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   if (!isAdminAuthConfigured()) {
     return NextResponse.json({ ok: true, enabled: false });
   }
@@ -100,7 +102,7 @@ export async function DELETE() {
   return response;
 }
 
-function attemptKeyForRequest(request: Request) {
+function attemptKeyForRequest(request: NextRequest) {
   return adminLoginAttemptKey({
     forwardedFor: request.headers.get("x-forwarded-for"),
     realIp: request.headers.get("x-real-ip"),

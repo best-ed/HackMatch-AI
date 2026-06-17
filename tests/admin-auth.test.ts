@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createAdminSessionToken,
   isAdminAuthConfigured,
+  summarizeAdminSession,
   summarizeAdminAuthSetup,
   verifyAdminPasscode,
   verifyAdminSessionToken
@@ -90,5 +91,53 @@ describe("admin auth", () => {
 
     await expect(verifyAdminSessionToken("hm-admin-old-style-token", env)).resolves.toBe(false);
     await expect(verifyAdminSessionToken("hm-admin-v2.bad.expires.signature", env)).resolves.toBe(false);
+  });
+
+  it("summarizes active sessions with expiry details", async () => {
+    const env = {
+      ADMIN_PASSCODE: "launch-code",
+      ADMIN_SESSION_SECRET: "session-secret"
+    };
+    const token = await createAdminSessionToken({
+      passcode: env.ADMIN_PASSCODE,
+      secret: env.ADMIN_SESSION_SECRET,
+      issuedAt: new Date("2026-06-17T09:00:00.000Z"),
+      maxAgeSeconds: 120
+    });
+
+    const summary = await summarizeAdminSession(
+      token,
+      env,
+      new Date("2026-06-17T09:01:00.000Z")
+    );
+
+    expect(summary.status).toBe("active");
+    expect(summary.authenticated).toBe(true);
+    expect(summary.remainingSeconds).toBe(60);
+    expect(summary.expiresAt).toBe("2026-06-17T09:02:00.000Z");
+  });
+
+  it("summarizes missing or expired sessions for protected environments", async () => {
+    const env = {
+      ADMIN_PASSCODE: "launch-code",
+      ADMIN_SESSION_SECRET: "session-secret"
+    };
+    const token = await createAdminSessionToken({
+      passcode: env.ADMIN_PASSCODE,
+      secret: env.ADMIN_SESSION_SECRET,
+      issuedAt: new Date("2026-06-17T09:00:00.000Z"),
+      maxAgeSeconds: 10
+    });
+
+    await expect(summarizeAdminSession(undefined, env)).resolves.toMatchObject({
+      authenticated: false,
+      status: "missing"
+    });
+    await expect(
+      summarizeAdminSession(token, env, new Date("2026-06-17T09:00:11.000Z"))
+    ).resolves.toMatchObject({
+      authenticated: false,
+      status: "expired"
+    });
   });
 });

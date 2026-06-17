@@ -2,16 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Badge, Button, Card } from "@/components/ui";
-import type { AdminAuthSetupSummary } from "@/lib/admin-auth";
+import type { AdminAuthSetupSummary, AdminSessionSummary } from "@/lib/admin-auth";
+
+type AdminAuthStatusPayload = AdminAuthSetupSummary & {
+  session?: AdminSessionSummary;
+};
 
 export function AdminAuthStatus() {
-  const [status, setStatus] = useState<AdminAuthSetupSummary | undefined>();
+  const [status, setStatus] = useState<AdminAuthStatusPayload | undefined>();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/admin/session")
-      .then((response) => response.json() as Promise<AdminAuthSetupSummary>)
+      .then((response) => response.json() as Promise<AdminAuthStatusPayload>)
       .then((payload) => {
         if (!cancelled) setStatus(payload);
       })
@@ -21,6 +25,11 @@ export function AdminAuthStatus() {
             enabled: true,
             sessionSecretConfigured: false,
             readyCount: 0,
+            session: {
+              authenticated: false,
+              detail: "Could not confirm current admin session state from the session endpoint.",
+              status: "invalid"
+            },
             totalCount: 1,
             steps: [
               {
@@ -48,6 +57,7 @@ export function AdminAuthStatus() {
   const readyCount = status?.readyCount ?? 0;
   const totalCount = status?.totalCount ?? 3;
   const isReady = Boolean(status && readyCount === totalCount);
+  const session = status?.session;
 
   return (
     <Card className="space-y-4">
@@ -67,6 +77,11 @@ export function AdminAuthStatus() {
           <Badge className={enabled ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
             {enabled ? "Protected" : "Setup needed"}
           </Badge>
+          {session ? (
+            <Badge className={sessionBadgeClass(session.status)}>
+              {sessionBadgeLabel(session.status)}
+            </Badge>
+          ) : null}
           {enabled ? (
             <Button className="border border-border bg-white text-foreground hover:bg-muted" onClick={logout} type="button">
               Log out
@@ -89,16 +104,37 @@ export function AdminAuthStatus() {
             </div>
           ))}
         </div>
-        <div className="rounded-md border border-border bg-white p-3 text-sm">
-          <div className="font-medium">Where to set the admin password</div>
-          <p className="mt-1 text-muted-foreground">
-            Add <code className="rounded bg-muted px-1 py-0.5">ADMIN_PASSCODE</code> and{" "}
-            <code className="rounded bg-muted px-1 py-0.5">ADMIN_SESSION_SECRET</code> to{" "}
-            <code className="rounded bg-muted px-1 py-0.5">.env.local</code>, then restart the server.
-          </p>
-          <div className="mt-3 rounded-md bg-muted p-3 font-mono text-xs text-foreground">
-            <div>ADMIN_PASSCODE=choose_a_private_passcode</div>
-            <div>ADMIN_SESSION_SECRET=choose_a_long_random_secret</div>
+        <div className="grid gap-3">
+          <div className="rounded-md border border-border bg-white p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-medium">Current session</div>
+              <Badge className={session ? sessionBadgeClass(session.status) : "bg-slate-100 text-slate-800"}>
+                {session ? sessionBadgeLabel(session.status) : "Checking"}
+              </Badge>
+            </div>
+            <p className="mt-2 text-muted-foreground">
+              {session?.detail ?? "Reading admin session health from the server."}
+            </p>
+            {session?.expiresAt ? (
+              <div className="mt-3 rounded-md bg-muted p-3 text-xs text-foreground">
+                <div>Expires at: {formatSessionExpiry(session.expiresAt)}</div>
+                {typeof session.remainingSeconds === "number" ? (
+                  <div>Time left: {formatRemaining(session.remainingSeconds)}</div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <div className="rounded-md border border-border bg-white p-3 text-sm">
+            <div className="font-medium">Where to set the admin password</div>
+            <p className="mt-1 text-muted-foreground">
+              Add <code className="rounded bg-muted px-1 py-0.5">ADMIN_PASSCODE</code> and{" "}
+              <code className="rounded bg-muted px-1 py-0.5">ADMIN_SESSION_SECRET</code> to{" "}
+              <code className="rounded bg-muted px-1 py-0.5">.env.local</code>, then restart the server.
+            </p>
+            <div className="mt-3 rounded-md bg-muted p-3 font-mono text-xs text-foreground">
+              <div>ADMIN_PASSCODE=choose_a_private_passcode</div>
+              <div>ADMIN_SESSION_SECRET=choose_a_long_random_secret</div>
+            </div>
           </div>
         </div>
       </div>
@@ -119,3 +155,46 @@ const fallbackSteps: AdminAuthSetupSummary["steps"] = [
     detail: "Reading sanitized admin auth setup from the server."
   }
 ];
+
+function sessionBadgeLabel(status: AdminSessionSummary["status"]) {
+  switch (status) {
+    case "active":
+      return "Session active";
+    case "not-required":
+      return "No session needed";
+    case "missing":
+      return "No session";
+    case "expired":
+      return "Expired";
+    case "invalid":
+      return "Invalid";
+  }
+}
+
+function sessionBadgeClass(status: AdminSessionSummary["status"]) {
+  switch (status) {
+    case "active":
+      return "bg-emerald-100 text-emerald-800";
+    case "not-required":
+      return "bg-sky-100 text-sky-800";
+    case "missing":
+      return "bg-slate-100 text-slate-800";
+    case "expired":
+      return "bg-amber-100 text-amber-800";
+    case "invalid":
+      return "bg-rose-100 text-rose-800";
+  }
+}
+
+function formatRemaining(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`;
+}
+
+function formatSessionExpiry(value: string) {
+  const date = new Date(value);
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}

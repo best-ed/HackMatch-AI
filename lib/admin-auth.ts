@@ -24,6 +24,14 @@ export type AdminAuthSetupSummary = {
   steps: AdminAuthSetupStep[];
 };
 
+export type AdminSessionSummary = {
+  authenticated: boolean;
+  detail: string;
+  expiresAt?: string;
+  remainingSeconds?: number;
+  status: "not-required" | "active" | "missing" | "expired" | "invalid";
+};
+
 export function isAdminAuthConfigured(env: AdminAuthEnv = process.env): boolean {
   return Boolean(env.ADMIN_PASSCODE?.trim());
 }
@@ -120,6 +128,74 @@ export async function verifyAdminSessionToken(
   return timingSafeEqual(token, expected);
 }
 
+export async function summarizeAdminSession(
+  token: string | undefined,
+  env: AdminAuthEnv = process.env,
+  now: number | Date = Date.now()
+): Promise<AdminSessionSummary> {
+  const passcode = env.ADMIN_PASSCODE?.trim();
+  if (!passcode) {
+    return {
+      authenticated: true,
+      detail: "Admin auth is disabled in this environment, so no session cookie is required.",
+      status: "not-required"
+    };
+  }
+
+  if (!token) {
+    return {
+      authenticated: false,
+      detail: "No admin session cookie is present. Sign in to access protected organizer routes.",
+      status: "missing"
+    };
+  }
+
+  const parsed = parseAdminSessionToken(token);
+  if (!parsed) {
+    return {
+      authenticated: false,
+      detail: "The admin session cookie format is invalid. Sign in again to refresh it.",
+      status: "invalid"
+    };
+  }
+
+  const currentTime = resolveTimestamp(now);
+  if (currentTime > parsed.expiresAtMs) {
+    return {
+      authenticated: false,
+      detail: "The admin session cookie has expired. Sign in again to restore protected access.",
+      expiresAt: new Date(parsed.expiresAtMs).toISOString(),
+      remainingSeconds: 0,
+      status: "expired"
+    };
+  }
+
+  const expected = await createAdminSessionToken({
+    passcode,
+    secret: env.ADMIN_SESSION_SECRET?.trim() || passcode,
+    issuedAt: parsed.issuedAtMs,
+    maxAgeSeconds: Math.max(0, Math.floor((parsed.expiresAtMs - parsed.issuedAtMs) / 1000))
+  });
+
+  if (!timingSafeEqual(token, expected)) {
+    return {
+      authenticated: false,
+      detail: "The admin session cookie failed signature verification. Sign in again to replace it.",
+      expiresAt: new Date(parsed.expiresAtMs).toISOString(),
+      status: "invalid"
+    };
+  }
+
+  const remainingSeconds = Math.max(0, Math.ceil((parsed.expiresAtMs - currentTime) / 1000));
+  return {
+    authenticated: true,
+    detail: `Admin session is active for about ${formatAdminSessionDuration(remainingSeconds)}.`,
+    expiresAt: new Date(parsed.expiresAtMs).toISOString(),
+    remainingSeconds,
+    status: "active"
+  };
+}
+
 function parseAdminSessionToken(token: string) {
   const [prefix, issuedAtRaw, expiresAtRaw, digest] = token.split(".");
   if (prefix !== adminSessionTokenPrefix || !issuedAtRaw || !expiresAtRaw || !digest) {
@@ -160,4 +236,18 @@ async function sha256(value: string): Promise<string> {
 
 function resolveTimestamp(value: number | Date) {
   return value instanceof Date ? value.getTime() : value;
+}
+
+function formatAdminSessionDuration(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  if (minutes < 60) {
+    return remainder > 0 ? `${minutes}m ${remainder}s` : `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const leftoverMinutes = minutes % 60;
+  return leftoverMinutes > 0 ? `${hours}h ${leftoverMinutes}m` : `${hours}h`;
 }
