@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApiSession } from "@/lib/admin-api-guard";
 import { evaluateSecurityReadiness } from "@/lib/security-readiness";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const unauthorized = await requireAdminApiSession(request);
+  if (unauthorized) return unauthorized;
+
   return NextResponse.json(
     evaluateSecurityReadiness({
       hasAdminPasscode: Boolean(process.env.ADMIN_PASSCODE?.trim()),
