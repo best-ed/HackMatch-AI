@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/build-safe.mjs",
+    "recover:local": "node scripts/recover-local.mjs",
     "lint": "next lint",
     "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",
