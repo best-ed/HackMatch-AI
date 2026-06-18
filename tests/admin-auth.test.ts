@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAdminAuthGuidance,
   createAdminSessionToken,
   evaluateAdminPasscodeQuality,
   evaluateAdminSessionSecretQuality,
@@ -42,6 +43,46 @@ describe("admin auth", () => {
     expect(summary.steps.map((step) => step.status)).toEqual(["ready", "review", "review"]);
   });
 
+  it("builds actionable guidance for disabled and partially configured admin auth", () => {
+    expect(
+      buildAdminAuthGuidance({
+        enabled: false,
+        sessionSecretConfigured: false,
+        readyCount: 0,
+        totalCount: 3
+      })
+    ).toMatchObject({
+      mode: "disabled",
+      badgeLabel: "Auth disabled"
+    });
+
+    expect(
+      buildAdminAuthGuidance({
+        enabled: true,
+        sessionSecretConfigured: false,
+        readyCount: 1,
+        totalCount: 3
+      })
+    ).toMatchObject({
+      mode: "review",
+      badgeLabel: "Setup review"
+    });
+  });
+
+  it("builds ready guidance once admin auth setup is complete", () => {
+    expect(
+      buildAdminAuthGuidance({
+        enabled: true,
+        sessionSecretConfigured: true,
+        readyCount: 3,
+        totalCount: 3
+      })
+    ).toMatchObject({
+      mode: "ready",
+      badgeLabel: "Protection ready"
+    });
+  });
+
   it("verifies the configured passcode without accepting close values", async () => {
     const env = { ADMIN_PASSCODE: "launch-code" };
 
@@ -61,7 +102,9 @@ describe("admin auth", () => {
     });
 
     expect(token).toMatch(/^hm-admin-v2\.\d+\.\d+\.[a-f0-9]{64}$/);
-    await expect(verifyAdminSessionToken(token, env)).resolves.toBe(true);
+    await expect(
+      verifyAdminSessionToken(token, env, new Date("2026-06-17T09:00:01.000Z"))
+    ).resolves.toBe(true);
     await expect(verifyAdminSessionToken(`${token}-tampered`, env)).resolves.toBe(false);
   });
 

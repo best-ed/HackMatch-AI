@@ -30,6 +30,15 @@ export type AdminAuthSetupSummary = {
   steps: AdminAuthSetupStep[];
 };
 
+export type AdminAuthGuidance = {
+  mode: "disabled" | "review" | "ready";
+  badgeLabel: string;
+  title: string;
+  detail: string;
+  steps: string[];
+  envTemplate: string[];
+};
+
 export type AdminSessionSummary = {
   authenticated: boolean;
   detail: string;
@@ -73,6 +82,62 @@ export function summarizeAdminAuthSetup(env: AdminAuthEnv = process.env): AdminA
     readyCount: steps.filter((step) => step.status === "ready").length,
     totalCount: steps.length,
     steps
+  };
+}
+
+export function buildAdminAuthGuidance(summary: Pick<AdminAuthSetupSummary, "enabled" | "readyCount" | "totalCount" | "sessionSecretConfigured">): AdminAuthGuidance {
+  if (!summary.enabled) {
+    return {
+      mode: "disabled",
+      badgeLabel: "Auth disabled",
+      title: "Admin passcode protection is off in this environment.",
+      detail: "The MVP stays open for local demo testing until you add admin auth env vars. Turn protection on before sharing a deployed admin URL.",
+      steps: [
+        "Set ADMIN_PASSCODE to a private organizer passcode with at least 12 characters.",
+        "Set ADMIN_SESSION_SECRET to a different private value with at least 24 characters.",
+        "Restart the dev or production server, then reopen /admin/login to confirm protection is active."
+      ],
+      envTemplate: [
+        "ADMIN_PASSCODE=choose_a_private_admin_passcode",
+        "ADMIN_SESSION_SECRET=choose_a_long_random_session_secret"
+      ]
+    };
+  }
+
+  if (summary.readyCount < summary.totalCount) {
+    return {
+      mode: "review",
+      badgeLabel: "Setup review",
+      title: "Admin protection is on, but the setup still needs one more pass.",
+      detail: summary.sessionSecretConfigured
+        ? `Auth is enabled, but only ${summary.readyCount}/${summary.totalCount} setup checks are ready.`
+        : "Auth is enabled, but the session secret is still missing or relying on the passcode fallback.",
+      steps: [
+        "Keep ADMIN_PASSCODE configured for organizer login.",
+        "Set a separate ADMIN_SESSION_SECRET so the session cookie is signed with its own secret.",
+        "Restart the server after updating env values so login and middleware read the latest configuration."
+      ],
+      envTemplate: [
+        "ADMIN_PASSCODE=your_existing_or_updated_passcode",
+        "ADMIN_SESSION_SECRET=add_a_separate_long_random_session_secret"
+      ]
+    };
+  }
+
+  return {
+    mode: "ready",
+    badgeLabel: "Protection ready",
+    title: "Admin protection is configured and ready for organizer sign-in.",
+    detail: "Use the admin passcode below to unlock protected organizer routes. Keep env values outside source control and restart the server any time you change them.",
+    steps: [
+      "Share only the admin URL, never the passcode in the same message.",
+      "If the passcode or secret changes, restart the server before testing login again.",
+      "Use a real auth provider later for production launches; this passcode gate is the MVP boundary."
+    ],
+    envTemplate: [
+      "ADMIN_PASSCODE=already_configured",
+      "ADMIN_SESSION_SECRET=already_configured"
+    ]
   };
 }
 
