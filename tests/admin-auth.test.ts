@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAdminAuthGuidance,
+  buildAdminAuthSurfaceSummary,
   createAdminSessionToken,
   evaluateAdminPasscodeQuality,
   evaluateAdminSessionSecretQuality,
@@ -80,6 +81,51 @@ describe("admin auth", () => {
     ).toMatchObject({
       mode: "ready",
       badgeLabel: "Protection ready"
+    });
+  });
+
+  it("builds compact auth mode summaries for admin surfaces", () => {
+    expect(
+      buildAdminAuthSurfaceSummary({
+        enabled: false,
+        readyCount: 0,
+        totalCount: 3
+      })
+    ).toMatchObject({
+      mode: "demo",
+      modeLabel: "Demo mode"
+    });
+
+    expect(
+      buildAdminAuthSurfaceSummary({
+        enabled: true,
+        readyCount: 2,
+        totalCount: 3,
+        session: {
+          authenticated: true,
+          detail: "Admin session is active for about 7h 40m.",
+          status: "active"
+        }
+      })
+    ).toMatchObject({
+      mode: "review",
+      modeLabel: "Setup review"
+    });
+
+    expect(
+      buildAdminAuthSurfaceSummary({
+        enabled: true,
+        readyCount: 3,
+        totalCount: 3,
+        session: {
+          authenticated: false,
+          detail: "The admin session cookie has expired. Sign in again to restore protected access.",
+          status: "expired"
+        }
+      })
+    ).toMatchObject({
+      mode: "review",
+      modeLabel: "Sign-in needed"
     });
   });
 

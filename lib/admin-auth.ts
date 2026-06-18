@@ -39,6 +39,14 @@ export type AdminAuthGuidance = {
   envTemplate: string[];
 };
 
+export type AdminAuthSurfaceSummary = {
+  mode: "demo" | "review" | "protected";
+  modeLabel: string;
+  detail: string;
+  actionLabel: string;
+  actionHref: string;
+};
+
 export type AdminSessionSummary = {
   authenticated: boolean;
   detail: string;
@@ -138,6 +146,53 @@ export function buildAdminAuthGuidance(summary: Pick<AdminAuthSetupSummary, "ena
       "ADMIN_PASSCODE=already_configured",
       "ADMIN_SESSION_SECRET=already_configured"
     ]
+  };
+}
+
+export function buildAdminAuthSurfaceSummary({
+  enabled,
+  readyCount,
+  totalCount,
+  session
+}: Pick<AdminAuthSetupSummary, "enabled" | "readyCount" | "totalCount"> & {
+  session?: Pick<AdminSessionSummary, "authenticated" | "detail" | "status">;
+}): AdminAuthSurfaceSummary {
+  if (!enabled) {
+    return {
+      mode: "demo",
+      modeLabel: "Demo mode",
+      detail: "Admin routes are open in this environment for local MVP testing. Configure protection before sharing deployed organizer links.",
+      actionHref: "/admin/login",
+      actionLabel: "Review access setup"
+    };
+  }
+
+  if (session && !session.authenticated && session.status !== "not-required") {
+    return {
+      mode: "review",
+      modeLabel: "Sign-in needed",
+      detail: session.detail,
+      actionHref: "/admin/login",
+      actionLabel: "Open admin login"
+    };
+  }
+
+  if (readyCount < totalCount) {
+    return {
+      mode: "review",
+      modeLabel: "Setup review",
+      detail: `Admin protection is on, but only ${readyCount}/${totalCount} setup checks are ready. Finish the setup before launch.`,
+      actionHref: "/admin/login",
+      actionLabel: "Review access setup"
+    };
+  }
+
+  return {
+    mode: "protected",
+    modeLabel: "Protected",
+    detail: session?.detail ?? "Admin passcode protection is enabled and the current setup checks are ready.",
+    actionHref: "/admin/login",
+    actionLabel: "View access status"
   };
 }
 
