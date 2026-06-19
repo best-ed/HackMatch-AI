@@ -15,8 +15,19 @@ npm run build
 
 Local build note:
 
-- For local verification on Windows, stop `npm run dev` before running `npm run build` in the same workspace.
-- Mixing the live dev server and production build against the same `.next` directory can leave localhost in a broken state even when source code is unchanged.
+- `npm run build` now guards against active HackMatch dev servers on `localhost:3000` and `localhost:3001` so local production checks do not silently corrupt `.next`.
+- For local verification on Windows, still stop `npm run dev` before running `npm run build` in the same workspace.
+- If a mixed run leaves localhost returning `500`, run:
+
+```bash
+npm run recover:local
+```
+
+- If you intentionally need recovery while a HackMatch server is still live, use:
+
+```bash
+HACKMATCH_RECOVERY_FORCE=1 npm run recover:local
+```
 
 The `/admin` dashboard also includes a deployment preflight card. It checks browser-visible readiness signals such as persistence mode, participant data, generated teams, and saved runs. Treat it as a launch helper, not a replacement for the commands above.
 
@@ -141,6 +152,10 @@ After deployment:
 6. Open `/admin/teams`, save a run, mark it final, and download CSV.
 7. Open `/participant/team?access=...` and confirm the participant handoff renders.
 8. Open `/admin` and confirm persistence, Supabase readiness, launch checklist, and deployment preflight states match the intended launch mode.
+
+## Legacy Route Note
+
+The old public `/api/teams.csv` endpoint is retired. Team CSV exports now belong to `/admin/teams`, where export audit, warning review, and saved-run context are visible before download.
 
 ## Previous MVP Smoke Test
 

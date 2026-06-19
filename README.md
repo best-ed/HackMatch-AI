@@ -99,10 +99,20 @@ npm run build
 
 Local workflow note:
 
-- On Windows, avoid running `npm run build` against the same workspace while `npm run dev` is still serving that workspace.
-- The dev server and production build both write to `.next`, and overlapping runs can leave localhost returning `500` errors or surface misleading `PageNotFoundError` build failures.
+- `npm run build` now uses a local build guard. If HackMatch is already serving from this workspace on `localhost:3000` or `localhost:3001`, the build stops instead of letting `.next` get corrupted.
+- The dev server and production build both write to `.next`, so overlapping runs can still break localhost if you bypass the guard intentionally.
 - Before a local production check, stop the dev server first, run `npm run build`, then start `npm run dev` again when you want to go back to browser testing.
-- If localhost starts returning `500` after a failed build or mixed run state, stop the dev server, clear or move the stale `.next` output, and restart `npm run dev`.
+- If localhost starts returning `500` after a failed build or mixed run state, run the local recovery command:
+
+```bash
+npm run recover:local
+```
+
+- If you intentionally need to recover while a HackMatch server is still live, use:
+
+```bash
+HACKMATCH_RECOVERY_FORCE=1 npm run recover:local
+```
 
 After starting a production or local server, run the route smoke test:
 
@@ -308,7 +318,6 @@ The core regression coverage is also organized into focused suites so future fai
 - `/admin/matching`
 - `/admin/teams`
 - `/admin/settings`
-- `/api/teams.csv`
 
 ## Assumptions
 
