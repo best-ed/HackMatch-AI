@@ -16,8 +16,8 @@ import {
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import {
-  appendAdminAuditEntry,
-  createAdminAuditEntry,
+  persistAdminAuditEntry,
+  readAdminAuditHistory,
   type AdminAuditAction,
   type AdminAuditEntry
 } from "@/lib/admin-audit-history";
@@ -59,8 +59,6 @@ import {
 } from "@/lib/supabase-store";
 
 const teamReviewChecklistStorageKey = "hackmatch.teamReviewChecklist.v1";
-const adminAuditHistoryStorageKey = "hackmatch.adminAuditHistory.v1";
-
 export default function AdminTeamsPage() {
   const {
     cohortParticipants,
@@ -245,17 +243,15 @@ export default function AdminTeamsPage() {
 
   useEffect(() => {
     try {
-      setAuditHistory(JSON.parse(window.localStorage.getItem(adminAuditHistoryStorageKey) ?? "[]") as AdminAuditEntry[]);
+      setAuditHistory(readAdminAuditHistory());
     } catch {
       setAuditHistory([]);
     }
   }, []);
 
   function recordAudit(action: AdminAuditAction, label: string, detail: string) {
-    const entry = createAdminAuditEntry({ action, label, detail });
-    const next = appendAdminAuditEntry(auditHistory, entry);
+    const next = persistAdminAuditEntry({ action, label, detail });
     setAuditHistory(next);
-    window.localStorage.setItem(adminAuditHistoryStorageKey, JSON.stringify(next));
   }
 
   function downloadCsv() {

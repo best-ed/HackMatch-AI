@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { buildAdminAuthGuidance, type AdminAuthSetupSummary } from "@/lib/admin-auth";
+import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card, TextInput } from "@/components/ui";
 import { sanitizeAdminNextPath } from "@/lib/admin-auth-routing";
 
@@ -63,6 +64,15 @@ function AdminLoginForm() {
   );
   const destinationLabel = describeAdminDestination(nextPath);
 
+  function continueInDemoMode() {
+    persistAdminAuditEntry({
+      action: "auth-demo-access",
+      label: "Admin demo access",
+      detail: `Opened ${destinationLabel} while admin passcode protection is disabled in this environment.`
+    });
+    window.location.href = nextPath;
+  }
+
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
 
@@ -94,6 +104,13 @@ function AdminLoginForm() {
 
       if (retryAfterSeconds > 0) {
         setCooldownSeconds(retryAfterSeconds);
+        if (cooldownSeconds <= 0) {
+          persistAdminAuditEntry({
+            action: "auth-cooldown",
+            label: "Admin login cooldown",
+            detail: `Too many passcode attempts triggered a ${formatCooldown(retryAfterSeconds)} cooldown.`
+          });
+        }
         setStatus(`Too many attempts. Try again in ${formatCooldown(retryAfterSeconds)}.`);
       } else if (typeof payload.remainingAttempts === "number") {
         setStatus(
@@ -108,6 +125,11 @@ function AdminLoginForm() {
     }
 
     setCooldownSeconds(0);
+    persistAdminAuditEntry({
+      action: "auth-login",
+      label: "Admin sign-in",
+      detail: `Unlocked admin access and continued to ${destinationLabel}.`
+    });
     window.location.href = nextPath;
   }
 
@@ -128,9 +150,13 @@ function AdminLoginForm() {
             destinationLabel={destinationLabel}
             summary={setupSummary}
           />
-          <a className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href={nextPath}>
+          <button
+            className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            onClick={continueInDemoMode}
+            type="button"
+          >
             Continue in local demo mode
-          </a>
+          </button>
         </Card>
       </div>
     );

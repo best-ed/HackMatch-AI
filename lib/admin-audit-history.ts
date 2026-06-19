@@ -8,7 +8,11 @@ export type AdminAuditAction =
   | "deleted-run"
   | "shared-run"
   | "locked-team"
-  | "checklist";
+  | "checklist"
+  | "auth-demo-access"
+  | "auth-login"
+  | "auth-logout"
+  | "auth-cooldown";
 
 export type AdminAuditEntry = {
   id: string;
@@ -17,6 +21,8 @@ export type AdminAuditEntry = {
   detail: string;
   createdAt: string;
 };
+
+export const adminAuditHistoryStorageKey = "hackmatch.adminAuditHistory.v1";
 
 export function createAdminAuditEntry({
   action,
@@ -50,6 +56,40 @@ export function appendAdminAuditEntry(
       return left.id.localeCompare(right.id);
     })
     .slice(0, limit);
+}
+
+export function readAdminAuditHistory(): AdminAuditEntry[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(adminAuditHistoryStorageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed as AdminAuditEntry[] : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeAdminAuditHistory(history: AdminAuditEntry[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(adminAuditHistoryStorageKey, JSON.stringify(history));
+}
+
+export function persistAdminAuditEntry(
+  input: {
+    action: AdminAuditAction;
+    label: string;
+    detail: string;
+    createdAt?: string;
+  },
+  limit = 20
+): AdminAuditEntry[] {
+  const current = readAdminAuditHistory();
+  const entry = createAdminAuditEntry(input);
+  const next = appendAdminAuditEntry(current, entry, limit);
+  writeAdminAuditHistory(next);
+  return next;
 }
 
 function slugify(value: string) {

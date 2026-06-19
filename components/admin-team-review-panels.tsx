@@ -148,7 +148,7 @@ export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[]
         <div>
           <h2 className="font-semibold">Operations history</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Browser-local audit trail for saved-run actions, locks, shares, restores, and checklist review.
+            Browser-local audit trail for admin access events, saved-run actions, locks, shares, restores, and checklist review.
           </p>
         </div>
         <Badge>{history.length} event{history.length === 1 ? "" : "s"}</Badge>
@@ -172,7 +172,7 @@ export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[]
         </div>
       ) : (
         <EmptyState
-          description="Save, rename, mark final, restore, lock, share, or review teams to build an organizer history in this browser."
+          description="Sign in, sign out, save, rename, mark final, restore, lock, share, or review teams to build an organizer history in this browser."
           icon={<Archive size={20} />}
           title="No operations recorded yet"
         />
@@ -253,13 +253,24 @@ function reviewRiskClass(severity: "high" | "medium" | "low") {
 }
 
 function auditActionLabel(action: AdminAuditAction) {
-  return action.replace(/-/g, " ");
+  switch (action) {
+    case "auth-demo-access":
+      return "demo access";
+    case "auth-login":
+      return "auth login";
+    case "auth-logout":
+      return "auth logout";
+    case "auth-cooldown":
+      return "auth cooldown";
+    default:
+      return action.replace(/-/g, " ");
+  }
 }
 
 function auditActionClass(action: AdminAuditAction) {
-  if (action === "deleted-run") return "bg-rose-100 text-rose-800";
-  if (action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
-  if (action === "locked-team") return "bg-sky-100 text-sky-800";
+  if (action === "auth-demo-access" || action === "auth-logout" || action === "locked-team") return "bg-sky-100 text-sky-800";
+  if (action === "auth-cooldown" || action === "deleted-run") return "bg-rose-100 text-rose-800";
+  if (action === "auth-login" || action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
   return "bg-slate-100 text-slate-800";
 }
 

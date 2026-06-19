@@ -1,8 +1,9 @@
+import type { AdminAuditEntry } from "@/lib/admin-audit-history";
 import type { Participant, SavedMatchRun } from "@/lib/matching/types";
 
 export type ParticipantActivityItem = {
   id: string;
-  kind: "participant_created" | "participant_updated" | "saved_run";
+  kind: "participant_created" | "participant_updated" | "saved_run" | "admin_auth";
   title: string;
   detail: string;
   timestamp: string;
@@ -12,11 +13,13 @@ export type ParticipantActivityItem = {
 export function buildParticipantActivityTimeline({
   participants,
   savedRuns,
+  auditHistory = [],
   cohort,
   limit = 6
 }: {
   participants: Participant[];
   savedRuns: SavedMatchRun[];
+  auditHistory?: AdminAuditEntry[];
   cohort: string;
   limit?: number;
 }): ParticipantActivityItem[] {
@@ -51,7 +54,18 @@ export function buildParticipantActivityTimeline({
       href: "/admin/teams"
     }));
 
-  return [...participantItems, ...runItems]
+  const authItems = auditHistory
+    .filter((entry) => authAuditActions.has(entry.action))
+    .map((entry) => ({
+      id: `admin-audit-${entry.id}`,
+      kind: "admin_auth" as const,
+      title: entry.label,
+      detail: entry.detail,
+      timestamp: entry.createdAt,
+      href: "/admin/login"
+    }));
+
+  return [...participantItems, ...runItems, ...authItems]
     .filter((item) => Boolean(item.timestamp))
     .sort((left, right) => {
       const timeSort = new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime();
@@ -60,3 +74,10 @@ export function buildParticipantActivityTimeline({
     })
     .slice(0, limit);
 }
+
+const authAuditActions = new Set<AdminAuditEntry["action"]>([
+  "auth-demo-access",
+  "auth-login",
+  "auth-logout",
+  "auth-cooldown"
+]);

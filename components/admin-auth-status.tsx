@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card } from "@/components/ui";
 import type { AdminAuthSetupSummary, AdminSessionSummary } from "@/lib/admin-auth";
 
@@ -49,6 +50,11 @@ export function AdminAuthStatus() {
   }, []);
 
   async function logout() {
+    persistAdminAuditEntry({
+      action: "auth-logout",
+      label: "Admin signed out",
+      detail: "Ended the current organizer session from the admin workspace."
+    });
     await fetch("/api/admin/session", { method: "DELETE" });
     window.location.href = "/admin/login";
   }

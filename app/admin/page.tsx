@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarDays, Clock3, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminAuthStatus } from "@/components/admin-auth-status";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
@@ -10,6 +11,7 @@ import { AdminSecurityReadiness } from "@/components/admin-security-readiness";
 import { AdminSupabaseSyncSummary } from "@/components/admin-supabase-sync-summary";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { buildAdminActionQueue, type AdminActionQueueItem } from "@/lib/admin-action-queue";
+import { readAdminAuditHistory, type AdminAuditEntry } from "@/lib/admin-audit-history";
 import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { buildTeamExportAudit } from "@/lib/export-audit";
@@ -38,6 +40,12 @@ export default function AdminPage() {
     persistenceMode,
     persistenceWarning
   } = useHackMatchData();
+  const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
+
+  useEffect(() => {
+    setAuditHistory(readAdminAuditHistory());
+  }, []);
+
   const result = generateTeams(cohortParticipants, settings);
   const assigned = result.teams.reduce((sum, team) => sum + team.participantIds.length, 0);
   const matchable = cohortParticipants.filter((participant) => participant.consentToMatch);
@@ -111,6 +119,7 @@ export default function AdminPage() {
   const activityTimeline = buildParticipantActivityTimeline({
     participants,
     savedRuns: savedMatchRuns,
+    auditHistory,
     cohort: activeCohort,
     limit: 6
   });

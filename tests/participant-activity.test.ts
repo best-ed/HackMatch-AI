@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createAdminAuditEntry } from "@/lib/admin-audit-history";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import type { MatchingResult, SavedMatchRun } from "@/lib/matching/types";
 import { buildParticipantActivityTimeline } from "@/lib/participant-activity";
@@ -78,5 +79,39 @@ describe("participant activity timeline", () => {
     expect(timeline.map((item) => item.id)).toContain("saved-run-run-june");
     expect(timeline.map((item) => item.id)).not.toContain("participant-created-p-july");
     expect(timeline.map((item) => item.id)).not.toContain("saved-run-run-july");
+  });
+
+  it("surfaces admin auth audit events alongside organizer activity", () => {
+    const timeline = buildParticipantActivityTimeline({
+      participants: [
+        {
+          ...demoParticipants[0],
+          id: "p-june",
+          fullName: "June Builder",
+          cohort: "June",
+          createdAt: "2026-06-09T08:00:00.000Z",
+          updatedAt: "2026-06-09T08:00:00.000Z"
+        }
+      ],
+      savedRuns: [],
+      auditHistory: [
+        createAdminAuditEntry({
+          action: "auth-login",
+          label: "Admin sign-in",
+          detail: "Unlocked admin access and continued to team review.",
+          createdAt: "2026-06-09T10:30:00.000Z"
+        })
+      ],
+      cohort: "June"
+    });
+
+    expect(timeline.map((item) => item.id)).toEqual([
+      "admin-audit-20260609103000000-auth-login-admin-sign-in",
+      "participant-created-p-june"
+    ]);
+    expect(timeline[0]).toMatchObject({
+      kind: "admin_auth",
+      href: "/admin/login"
+    });
   });
 });

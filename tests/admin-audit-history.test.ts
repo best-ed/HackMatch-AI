@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { appendAdminAuditEntry, createAdminAuditEntry } from "@/lib/admin-audit-history";
+import { describe, expect, it, vi } from "vitest";
+import {
+  appendAdminAuditEntry,
+  createAdminAuditEntry,
+  persistAdminAuditEntry,
+  readAdminAuditHistory
+} from "@/lib/admin-audit-history";
 
 describe("admin audit history", () => {
   it("creates stable audit entries from action labels", () => {
@@ -36,5 +41,28 @@ describe("admin audit history", () => {
     const history = appendAdminAuditEntry([older], newer, 1);
 
     expect(history).toEqual([newer]);
+  });
+
+  it("persists browser-local audit entries for cross-page history", () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem(key: string) {
+          return storage.get(key) ?? null;
+        },
+        setItem(key: string, value: string) {
+          storage.set(key, value);
+        }
+      }
+    });
+
+    const history = persistAdminAuditEntry({
+      action: "auth-login",
+      label: "Admin sign-in",
+      detail: "Unlocked admin access."
+    });
+
+    expect(history[0]?.action).toBe("auth-login");
+    expect(readAdminAuditHistory()[0]?.label).toBe("Admin sign-in");
   });
 });
