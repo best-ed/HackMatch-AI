@@ -115,6 +115,7 @@ Before sharing a deployed admin URL:
 4. Confirm `/admin` redirects unauthenticated access to `/admin/login`.
 5. Confirm the login flow returns authenticated admins to the intended `/admin/*` destination.
 6. Confirm `/api/admin/security-readiness` and `/api/explanations` are protected behind the same admin session.
+7. Confirm `/admin` and nested admin pages show session-expiry warning copy before a session is nearly exhausted.
 
 ## Final Run Handoff
 
@@ -137,8 +138,10 @@ For launch rehearsal:
 
 1. Use `/admin/participants` CSV import preview before applying bulk participant changes.
 2. Use the import rollback preview immediately if an import produces bad data.
-3. Use `/admin/teams` Operations history to inspect local saved-run, lock, restore, share, and checklist actions.
-4. Use saved-run restore only when you intentionally want to bring an older participant/settings snapshot back into the live baseline.
+3. Use `/admin/settings` backup sensitivity and restore preview before downloading or restoring browser-local JSON snapshots.
+4. Use `/admin/teams` Operations history to inspect local saved-run, lock, restore, share, and checklist actions.
+5. Use the `/admin` recent-activity timeline to confirm backup/export security actions were recorded as expected.
+6. Use saved-run restore only when you intentionally want to bring an older participant/settings snapshot back into the live baseline.
 
 ## Production Smoke Test
 
