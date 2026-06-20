@@ -9,6 +9,7 @@ import {
   type AdminAuthSetupSummary,
   type AdminSessionSummary
 } from "@/lib/admin-auth";
+import { buildAdminSessionWarning } from "@/lib/admin-session-warning";
 
 type AdminRouteAuthPayload = AdminAuthSetupSummary & {
   session?: AdminSessionSummary;
@@ -57,6 +58,7 @@ export function AdminRouteAuthBanner() {
     totalCount: status?.totalCount ?? 3,
     session: status?.session
   });
+  const sessionWarning = buildAdminSessionWarning(status?.session);
 
   return (
     <Card className="border-primary/15 bg-white/90 p-4">
@@ -78,6 +80,12 @@ export function AdminRouteAuthBanner() {
           <p className="mt-2 text-sm text-muted-foreground">
             {surface.detail}
           </p>
+          {sessionWarning ? (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <div className="font-semibold">{sessionWarning.label}</div>
+              <p className="mt-1 text-amber-900/80">{sessionWarning.detail}</p>
+            </div>
+          ) : null}
         </div>
         <Link
           className="inline-flex shrink-0 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"

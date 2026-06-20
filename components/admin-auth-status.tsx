@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card } from "@/components/ui";
 import type { AdminAuthSetupSummary, AdminSessionSummary } from "@/lib/admin-auth";
+import { buildAdminSessionWarning } from "@/lib/admin-session-warning";
 
 type AdminAuthStatusPayload = AdminAuthSetupSummary & {
   session?: AdminSessionSummary;
@@ -64,6 +65,7 @@ export function AdminAuthStatus() {
   const totalCount = status?.totalCount ?? 3;
   const isReady = Boolean(status && readyCount === totalCount);
   const session = status?.session;
+  const sessionWarning = buildAdminSessionWarning(session);
 
   return (
     <Card className="space-y-4">
@@ -86,6 +88,11 @@ export function AdminAuthStatus() {
           {session ? (
             <Badge className={sessionBadgeClass(session.status)}>
               {sessionBadgeLabel(session.status)}
+            </Badge>
+          ) : null}
+          {sessionWarning ? (
+            <Badge className="bg-amber-100 text-amber-800">
+              {sessionWarning.label}
             </Badge>
           ) : null}
           {enabled ? (
@@ -127,6 +134,12 @@ export function AdminAuthStatus() {
                 {typeof session.remainingSeconds === "number" ? (
                   <div>Time left: {formatRemaining(session.remainingSeconds)}</div>
                 ) : null}
+              </div>
+            ) : null}
+            {sessionWarning ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div className="font-semibold">{sessionWarning.label}</div>
+                <p className="mt-1 text-amber-900/80">{sessionWarning.detail}</p>
               </div>
             ) : null}
           </div>
