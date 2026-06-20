@@ -38,6 +38,7 @@ import {
   type ParticipantImportPreviewFilter
 } from "@/lib/participant-import-diagnostics";
 import { buildParticipantLinkAudit } from "@/lib/participant-link-audit";
+import { summarizeParticipantLinkHandoff } from "@/lib/participant-link-handoff";
 import {
   createImportRollbackSnapshot,
   summarizeImportRollback,
@@ -103,6 +104,10 @@ export default function AdminParticipantsPage() {
     [cohortParticipants, generatedResult]
   );
   const linkAudit = useMemo(() => buildParticipantLinkAudit(participants), [participants]);
+  const allLinkHandoff = useMemo(
+    () => summarizeParticipantLinkHandoff({ audit: linkAudit, scopeLabel: "the full participant directory" }),
+    [linkAudit]
+  );
   const linkRiskParticipantIds = useMemo(() => new Set(linkAudit.riskParticipantIds), [linkAudit.riskParticipantIds]);
   const duplicateGroups = useMemo(() => findParticipantDuplicates(participants), [participants]);
   const duplicateParticipantIds = useMemo(() => duplicateParticipantIdsFromGroups(duplicateGroups), [duplicateGroups]);
@@ -150,6 +155,11 @@ export default function AdminParticipantsPage() {
       return matchesQuery && matchesRole && matchesExperience && matchesConsent && matchesReadiness && matchesLinkRisk;
     });
   }, [consentFilter, duplicateParticipantIds, experienceFilter, linkRiskOnly, linkRiskParticipantIds, participants, query, readinessFilter, roleFilter]);
+  const filteredLinkAudit = useMemo(() => buildParticipantLinkAudit(filteredParticipants), [filteredParticipants]);
+  const filteredLinkHandoff = useMemo(
+    () => summarizeParticipantLinkHandoff({ audit: filteredLinkAudit, scopeLabel: "the current filtered view" }),
+    [filteredLinkAudit]
+  );
   const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId);
   const matchableCount = participants.filter((participant) => participant.consentToMatch).length;
   const advancedCount = participants.filter((participant) => participant.experienceLevel === "advanced").length;
@@ -532,21 +542,50 @@ export default function AdminParticipantsPage() {
           validation={validateParticipantRegistration(selectedParticipant, participants)}
         />
       ) : null}
-        <Card className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Access link management</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Copy or export participant team links for the current filtered view.
-            </p>
+        <Card className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Access link management</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Copy or export participant team links for the current filtered view.
+              </p>
+            </div>
+            <Badge className={linkAuditStatusClass(filteredLinkHandoff.status)}>
+              {filteredLinkHandoff.status}
+            </Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <LinkHandoffCard
+              detail={filteredLinkHandoff.detail}
+              status={filteredLinkHandoff.status}
+              title={`Filtered view - ${filteredLinkHandoff.title}`}
+            />
+            <LinkHandoffCard
+              detail={allLinkHandoff.detail}
+              status={allLinkHandoff.status}
+              title={`All participants - ${allLinkHandoff.title}`}
+            />
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => void copyFilteredAccessLinks()}>
+            <button
+              className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={filteredLinkAudit.exportableLinks === 0}
+              onClick={() => void copyFilteredAccessLinks()}
+            >
               Copy filtered links
             </button>
-            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("filtered")}>
+            <button
+              className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={filteredParticipants.length === 0}
+              onClick={() => downloadAccessLinksCsv("filtered")}
+            >
               Export filtered links
             </button>
-            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("all")}>
+            <button
+              className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={participants.length === 0}
+              onClick={() => downloadAccessLinksCsv("all")}
+            >
               Export all links
             </button>
           </div>
@@ -1145,6 +1184,26 @@ function ListPanel({
   );
 }
 
+function LinkHandoffCard({
+  title,
+  detail,
+  status
+}: {
+  title: string;
+  detail: string;
+  status: "ready" | "review" | "blocked";
+}) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-medium">{title}</div>
+        <Badge className={linkAuditStatusClass(status)}>{status}</Badge>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
+
 function downloadCsvBlob(csv: string, filename: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -1171,6 +1230,12 @@ function importActionClass(action: "create" | "update" | "skip" | "error") {
   if (action === "create") return "bg-emerald-100 text-emerald-800";
   if (action === "update") return "bg-sky-100 text-sky-800";
   if (action === "skip") return "bg-slate-100 text-slate-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function linkAuditStatusClass(status: "ready" | "review" | "blocked") {
+  if (status === "ready") return "bg-emerald-100 text-emerald-800";
+  if (status === "review") return "bg-amber-100 text-amber-800";
   return "bg-rose-100 text-rose-800";
 }
 
