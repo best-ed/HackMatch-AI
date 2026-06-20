@@ -15,7 +15,12 @@ export async function POST(request: NextRequest) {
   if (!Array.isArray(body.participants) || !body.settings) {
     return Response.json(
       { error: "participants and settings are required" },
-      { status: 400 }
+      {
+        status: 400,
+        headers: {
+          "cache-control": "no-store"
+        }
+      }
     );
   }
 
@@ -24,5 +29,9 @@ export async function POST(request: NextRequest) {
     body.settings
   );
 
-  return Response.json(explanationResult);
+  return Response.json(explanationResult, {
+    headers: {
+      "cache-control": "no-store"
+    }
+  });
 }

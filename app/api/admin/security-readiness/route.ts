@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
       hasSupabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()),
       hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY?.trim()),
       hasSmokeScript: true
-    })
+    }),
+    {
+      headers: {
+        "cache-control": "no-store"
+      }
+    }
   );
 }

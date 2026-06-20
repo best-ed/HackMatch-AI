@@ -16,16 +16,30 @@ import {
 } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
-  return NextResponse.json({
-    ...summarizeAdminAuthSetup(),
-    loginGuard: describeAdminLoginGuard(attemptKeyForRequest(request)),
-    session: await summarizeAdminSession(request.cookies.get(adminSessionCookieName)?.value)
-  });
+  return NextResponse.json(
+    {
+      ...summarizeAdminAuthSetup(),
+      loginGuard: describeAdminLoginGuard(attemptKeyForRequest(request)),
+      session: await summarizeAdminSession(request.cookies.get(adminSessionCookieName)?.value)
+    },
+    {
+      headers: {
+        "cache-control": "no-store"
+      }
+    }
+  );
 }
 
 export async function POST(request: NextRequest) {
   if (!isAdminAuthConfigured()) {
-    return NextResponse.json({ ok: true, enabled: false });
+    return NextResponse.json(
+      { ok: true, enabled: false },
+      {
+        headers: {
+          "cache-control": "no-store"
+        }
+      }
+    );
   }
 
   const attemptKey = attemptKeyForRequest(request);
@@ -80,6 +94,7 @@ export async function POST(request: NextRequest) {
     secret: process.env.ADMIN_SESSION_SECRET?.trim() || configuredPasscode
   });
   const response = NextResponse.json({ ok: true, enabled: true });
+  response.headers.set("cache-control", "no-store");
   response.cookies.set(adminSessionCookieName, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -92,6 +107,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
+  response.headers.set("cache-control", "no-store");
   response.cookies.set(adminSessionCookieName, "", {
     httpOnly: true,
     sameSite: "lax",
