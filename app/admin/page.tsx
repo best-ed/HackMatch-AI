@@ -21,6 +21,7 @@ import { generateTeams } from "@/lib/matching/algorithm";
 import { buildParticipantActivityTimeline, type ParticipantActivityItem } from "@/lib/participant-activity";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { getFinalSavedRun } from "@/lib/saved-run-final";
+import { type AdminRuntimeSignals } from "@/lib/admin-runtime-signals";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
@@ -41,9 +42,26 @@ export default function AdminPage() {
     persistenceWarning
   } = useHackMatchData();
   const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
+  const [runtimeSignals, setRuntimeSignals] = useState<AdminRuntimeSignals | undefined>();
 
   useEffect(() => {
     setAuditHistory(readAdminAuditHistory());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/admin/runtime-signals")
+      .then((response) => response.json() as Promise<AdminRuntimeSignals>)
+      .then((payload) => {
+        if (!cancelled) setRuntimeSignals(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setRuntimeSignals(undefined);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const result = generateTeams(cohortParticipants, settings);
@@ -75,7 +93,7 @@ export default function AdminPage() {
   });
   const supabaseSchemaReadiness = evaluateSupabaseSchemaReadiness();
   const supabaseRlsReadiness = evaluateSupabaseRlsReadiness({
-    hasAdminPasscode: Boolean(process.env.ADMIN_PASSCODE?.trim()),
+    hasAdminPasscode: runtimeSignals?.hasAdminPasscode ?? false,
     hasSupabaseEnv: supabaseReadiness.status === "ready",
     usesAnonClient: true
   });
@@ -99,12 +117,13 @@ export default function AdminPage() {
     hasFinalRun: Boolean(finalRun),
     hasSavedRun: Boolean(latestRun),
     hasRemoteSavedRunSupport: supabaseSchemaReadiness.items.some((item) => item.label === "Saved match runs" && item.status === "ready"),
-    hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+    hasOpenAiKey: runtimeSignals?.hasOpenAiKey ?? false,
     activeCohort,
     matchableCount: matchable.length,
     assignedCount: assigned,
     settingsStatus: settingsHealth.status,
-    exportStatus: exportAudit.status
+    exportStatus: exportAudit.status,
+    adminProtectionConfigured: runtimeSignals?.adminProtectionConfigured
   });
   const actionQueue = buildAdminActionQueue({
     intake: intakeSummary,
