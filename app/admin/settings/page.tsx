@@ -14,6 +14,7 @@ import {
   parseHackMatchBackupJson,
   teamReviewChecklistStorageKey
 } from "@/lib/local-backup";
+import { buildLocalBackupRiskAudit, type LocalBackupRiskAudit } from "@/lib/local-backup-risk";
 import { useHackMatchData } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { MatchingSettings } from "@/lib/matching/types";
@@ -54,6 +55,20 @@ export default function AdminSettingsPage() {
   const backupPreview = useMemo(
     () => (backupJson.trim() ? parseHackMatchBackupJson(backupJson) : undefined),
     [backupJson]
+  );
+  const liveBackupRisk = useMemo(
+    () => buildLocalBackupRiskAudit({ participants, savedRuns: savedMatchRuns }),
+    [participants, savedMatchRuns]
+  );
+  const previewBackupRisk = useMemo(
+    () =>
+      backupPreview?.ok
+        ? buildLocalBackupRiskAudit({
+          participants: backupPreview.backup.participants,
+          savedRuns: backupPreview.backup.savedMatchRuns
+        })
+        : undefined,
+    [backupPreview]
   );
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
@@ -231,6 +246,10 @@ export default function AdminSettingsPage() {
           <HealthMetric label="Archived cohorts" value={archivedCohorts.length} />
           <HealthMetric label="Review checks" value={Object.keys(teamReviewChecklist).length} />
         </div>
+        <BackupRiskAuditPanel
+          audit={liveBackupRisk}
+          title="Live backup sensitivity"
+        />
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={downloadLocalBackup}>
             Download backup JSON
@@ -255,6 +274,15 @@ export default function AdminSettingsPage() {
               <HealthMetric label="Archived" value={backupPreview.summary.archivedCohorts} />
               <HealthMetric label="Reviewed teams" value={backupPreview.summary.reviewedTeams} />
             </div>
+            {previewBackupRisk ? (
+              <div className="mt-4">
+                <BackupRiskAuditPanel
+                  audit={previewBackupRisk}
+                  muted
+                  title="Previewed backup sensitivity"
+                />
+              </div>
+            ) : null}
           </div>
         ) : backupPreview ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -531,6 +559,43 @@ function HealthMetric({ label, value }: { label: string; value: string | number 
     <div className="rounded-md border border-border bg-white p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
+function BackupRiskAuditPanel({
+  audit,
+  title,
+  muted = false
+}: {
+  audit: LocalBackupRiskAudit;
+  title: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className={cn("rounded-md border p-4", muted ? "border-emerald-200 bg-white/80" : "border-border bg-white")}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{audit.detail}</p>
+        </div>
+        <Badge className={audit.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+          {audit.title}
+        </Badge>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {audit.items.map((item) => (
+          <div className="rounded-md border border-border bg-muted/35 p-3 text-sm" key={item.label}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-medium">{item.label}</div>
+              <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                {item.status}
+              </Badge>
+            </div>
+            <p className="mt-2 text-muted-foreground">{item.detail}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
