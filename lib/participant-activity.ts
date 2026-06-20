@@ -3,7 +3,7 @@ import type { Participant, SavedMatchRun } from "@/lib/matching/types";
 
 export type ParticipantActivityItem = {
   id: string;
-  kind: "participant_created" | "participant_updated" | "saved_run" | "admin_auth";
+  kind: "participant_created" | "participant_updated" | "saved_run" | "admin_auth" | "admin_operation";
   title: string;
   detail: string;
   timestamp: string;
@@ -65,7 +65,18 @@ export function buildParticipantActivityTimeline({
       href: "/admin/login"
     }));
 
-  return [...participantItems, ...runItems, ...authItems]
+  const operationItems = auditHistory
+    .filter((entry) => operationAuditActions.has(entry.action))
+    .map((entry) => ({
+      id: `admin-op-${entry.id}`,
+      kind: "admin_operation" as const,
+      title: entry.label,
+      detail: entry.detail,
+      timestamp: entry.createdAt,
+      href: adminOperationHref(entry.action)
+    }));
+
+  return [...participantItems, ...runItems, ...authItems, ...operationItems]
     .filter((item) => Boolean(item.timestamp))
     .sort((left, right) => {
       const timeSort = new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime();
@@ -81,3 +92,28 @@ const authAuditActions = new Set<AdminAuditEntry["action"]>([
   "auth-logout",
   "auth-cooldown"
 ]);
+
+const operationAuditActions = new Set<AdminAuditEntry["action"]>([
+  "backup-export",
+  "backup-restore",
+  "export-participants",
+  "export-access-links",
+  "copied-access-links",
+  "export-teams",
+  "shared-run",
+  "restored-run"
+]);
+
+function adminOperationHref(action: AdminAuditEntry["action"]) {
+  switch (action) {
+    case "backup-export":
+    case "backup-restore":
+      return "/admin/settings";
+    case "export-participants":
+    case "export-access-links":
+    case "copied-access-links":
+      return "/admin/participants";
+    default:
+      return "/admin/teams";
+  }
+}

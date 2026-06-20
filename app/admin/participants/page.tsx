@@ -14,6 +14,7 @@ import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminPersistenceStatus } from "@/components/admin-persistence-status";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, EmptyState, TextArea, TextInput } from "@/components/ui";
+import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import { buildCohortTransferAudit, type CohortTransferAudit } from "@/lib/cohort-transfer-audit";
 import {
@@ -193,6 +194,11 @@ export default function AdminParticipantsPage() {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setExportStatus(`Exported ${exportParticipants.length} participant${exportParticipants.length === 1 ? "" : "s"} to ${filename}.`);
+    persistAdminAuditEntry({
+      action: "export-participants",
+      label: "Participant CSV exported",
+      detail: `Exported ${exportParticipants.length} participant record(s) from the ${scope} participant view for ${activeCohort}.`
+    });
   }
 
   function downloadAccessLinksCsv(scope: "all" | "filtered") {
@@ -204,6 +210,11 @@ export default function AdminParticipantsPage() {
       hackMatchCsvFilename({ cohort: activeCohort, kind: "access-links", scope })
     );
     setLinkStatus(`Exported ${exportParticipants.length} access link${exportParticipants.length === 1 ? "" : "s"}.`);
+    persistAdminAuditEntry({
+      action: "export-access-links",
+      label: "Access link CSV exported",
+      detail: `Exported ${exportParticipants.length} participant access link(s) from the ${scope} participant view for ${activeCohort}.`
+    });
   }
 
   function downloadImportTemplate() {
@@ -222,6 +233,13 @@ export default function AdminParticipantsPage() {
       });
     const result = await copyTextToClipboard(links.join("\n"));
     setLinkStatus(clipboardStatusMessage(result, `Copied ${links.length} filtered access link${links.length === 1 ? "" : "s"}.`));
+    if (result.ok) {
+      persistAdminAuditEntry({
+        action: "copied-access-links",
+        label: "Filtered access links copied",
+        detail: `Copied ${links.length} filtered participant access link(s) for ${activeCohort}.`
+      });
+    }
   }
 
   function regenerateAccessToken(participant: Participant) {
@@ -514,28 +532,28 @@ export default function AdminParticipantsPage() {
           validation={validateParticipantRegistration(selectedParticipant, participants)}
         />
       ) : null}
-      <Card className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold">Access link management</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Copy or export participant team links for the current filtered view.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => void copyFilteredAccessLinks()}>
-            Copy filtered links
-          </button>
-          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("filtered")}>
-            Export filtered links
-          </button>
-          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("all")}>
-            Export all links
-          </button>
-        </div>
-      </Card>
-      <Card className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <Card className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <h2 className="font-semibold">Access link management</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Copy or export participant team links for the current filtered view.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => void copyFilteredAccessLinks()}>
+              Copy filtered links
+            </button>
+            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("filtered")}>
+              Export filtered links
+            </button>
+            <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-semibold" onClick={() => downloadAccessLinksCsv("all")}>
+              Export all links
+            </button>
+          </div>
+        </Card>
+        <Card className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
             <h2 className="font-semibold">Import participants CSV</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Upload an exported HackMatch CSV or paste matching columns to preview before saving.

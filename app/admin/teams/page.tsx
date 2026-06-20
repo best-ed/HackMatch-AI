@@ -276,6 +276,11 @@ export default function AdminTeamsPage() {
     URL.revokeObjectURL(url);
     setExportConfirmationArmed(false);
     setExportStatus(`Downloaded ${csvArtifact.filename}.`);
+    recordAudit(
+      "export-teams",
+      csvArtifact.filename,
+      `Downloaded ${isViewingSavedRun ? "saved-run" : "live"} team export for ${exportCohort}.`
+    );
   }
 
   async function refreshExplanations() {

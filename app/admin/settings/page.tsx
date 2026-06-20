@@ -8,6 +8,7 @@ import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { AdminSettingsPresetCard } from "@/components/admin-settings-preset-card";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
+import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import {
   createHackMatchBackup,
   hackMatchBackupFilename,
@@ -190,6 +191,11 @@ export default function AdminSettingsPage() {
     link.click();
     window.URL.revokeObjectURL(url);
     setBackupStatus(`Backup downloaded with ${backup.participants.length} participants and ${backup.savedMatchRuns.length} saved run(s).`);
+    persistAdminAuditEntry({
+      action: "backup-export",
+      label: "Local backup downloaded",
+      detail: `Downloaded backup JSON for ${backup.activeCohort} with ${backup.participants.length} participants and ${backup.savedMatchRuns.length} saved run(s).`
+    });
   }
 
   function restoreBackupPreview() {
@@ -199,6 +205,11 @@ export default function AdminSettingsPage() {
     setBackupStatus(
       `Restored ${backupPreview.summary.participants} participants, ${backupPreview.summary.savedRuns} saved run(s), and active cohort ${backupPreview.summary.activeCohort}.`
     );
+    persistAdminAuditEntry({
+      action: "backup-restore",
+      label: "Local backup restored",
+      detail: `Restored backup JSON for ${backupPreview.summary.activeCohort} with ${backupPreview.summary.participants} participants and ${backupPreview.summary.savedRuns} saved run(s).`
+    });
     setBackupJson("");
   }
 

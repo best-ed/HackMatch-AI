@@ -114,4 +114,39 @@ describe("participant activity timeline", () => {
       href: "/admin/login"
     });
   });
+
+  it("surfaces sensitive organizer operations in the timeline", () => {
+    const timeline = buildParticipantActivityTimeline({
+      participants: [],
+      savedRuns: [],
+      auditHistory: [
+        createAdminAuditEntry({
+          action: "backup-export",
+          label: "Local backup downloaded",
+          detail: "Downloaded backup JSON for June Hackathon with 30 participants.",
+          createdAt: "2026-06-09T11:00:00.000Z"
+        }),
+        createAdminAuditEntry({
+          action: "export-teams",
+          label: "june-hackathon-teams.csv",
+          detail: "Downloaded saved-run team export for June Hackathon.",
+          createdAt: "2026-06-09T10:45:00.000Z"
+        })
+      ],
+      cohort: "June"
+    });
+
+    expect(timeline.map((item) => item.id)).toEqual([
+      "admin-op-20260609110000000-backup-export-local-backup-downloaded",
+      "admin-op-20260609104500000-export-teams-june-hackathon-teams-csv"
+    ]);
+    expect(timeline[0]).toMatchObject({
+      kind: "admin_operation",
+      href: "/admin/settings"
+    });
+    expect(timeline[1]).toMatchObject({
+      kind: "admin_operation",
+      href: "/admin/teams"
+    });
+  });
 });
