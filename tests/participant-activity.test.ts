@@ -96,6 +96,12 @@ describe("participant activity timeline", () => {
       savedRuns: [],
       auditHistory: [
         createAdminAuditEntry({
+          action: "auth-refresh",
+          label: "Admin session refreshed",
+          detail: "Extended the current organizer session before continuing admin work.",
+          createdAt: "2026-06-09T10:45:00.000Z"
+        }),
+        createAdminAuditEntry({
           action: "auth-login",
           label: "Admin sign-in",
           detail: "Unlocked admin access and continued to team review.",
@@ -106,6 +112,7 @@ describe("participant activity timeline", () => {
     });
 
     expect(timeline.map((item) => item.id)).toEqual([
+      "admin-audit-20260609104500000-auth-refresh-admin-session-refreshed",
       "admin-audit-20260609103000000-auth-login-admin-sign-in",
       "participant-created-p-june"
     ]);

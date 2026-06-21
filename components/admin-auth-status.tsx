@@ -14,37 +14,35 @@ type AdminAuthStatusPayload = AdminAuthSetupSummary & {
 export function AdminAuthStatus() {
   const [status, setStatus] = useState<AdminAuthStatusPayload | undefined>();
   const [message, setMessage] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/admin/session")
-      .then((response) => response.json() as Promise<AdminAuthStatusPayload>)
-      .then((payload) => {
-        if (!cancelled) setStatus(payload);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStatus({
-            enabled: true,
-            sessionSecretConfigured: false,
-            readyCount: 0,
-            session: {
-              authenticated: false,
-              detail: "Could not confirm current admin session state from the session endpoint.",
-              status: "invalid"
-            },
-            totalCount: 1,
-            steps: [
-              {
-                label: "Admin session endpoint",
-                status: "review",
-                detail: "Could not confirm admin auth setup from the session endpoint."
-              }
-            ]
-          });
-          setMessage("Could not confirm admin auth status from the session endpoint.");
-        }
-      });
+    void loadStatus((payload) => {
+      if (!cancelled) setStatus(payload);
+    }, () => {
+      if (!cancelled) {
+        setStatus({
+          enabled: true,
+          sessionSecretConfigured: false,
+          readyCount: 0,
+          session: {
+            authenticated: false,
+            detail: "Could not confirm current admin session state from the session endpoint.",
+            status: "invalid"
+          },
+          totalCount: 1,
+          steps: [
+            {
+              label: "Admin session endpoint",
+              status: "review",
+              detail: "Could not confirm admin auth setup from the session endpoint."
+            }
+          ]
+        });
+        setMessage("Could not confirm admin auth status from the session endpoint.");
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -61,12 +59,43 @@ export function AdminAuthStatus() {
     window.location.href = "/admin/login";
   }
 
+  async function refreshSession() {
+    setRefreshing(true);
+    setMessage("");
+
+    const response = await fetch("/api/admin/session", {
+      method: "PATCH"
+    });
+    const payload = await response.json().catch(() => ({})) as {
+      ok?: boolean;
+      detail?: string;
+      session?: AdminSessionSummary;
+    };
+
+    if (!response.ok) {
+      setMessage(payload.detail ?? "Could not refresh the current admin session.");
+      setRefreshing(false);
+      return;
+    }
+
+    persistAdminAuditEntry({
+      action: "auth-refresh",
+      label: "Admin session refreshed",
+      detail: "Extended the current organizer session before continuing admin work."
+    });
+
+    await loadStatus(setStatus);
+    setMessage(payload.session?.detail ?? "Admin session refreshed.");
+    setRefreshing(false);
+  }
+
   const enabled = Boolean(status?.enabled);
   const readyCount = status?.readyCount ?? 0;
   const totalCount = status?.totalCount ?? 3;
   const isReady = Boolean(status && readyCount === totalCount);
   const session = status?.session;
   const sessionWarning = buildAdminSessionWarning(session);
+  const canRefresh = enabled && session?.status === "active";
 
   return (
     <Card className="space-y-4">
@@ -95,6 +124,16 @@ export function AdminAuthStatus() {
             <Badge className="bg-amber-100 text-amber-800">
               {sessionWarning.label}
             </Badge>
+          ) : null}
+          {canRefresh ? (
+            <Button
+              className="border border-border bg-white text-foreground hover:bg-muted"
+              disabled={refreshing}
+              onClick={() => void refreshSession()}
+              type="button"
+            >
+              {refreshing ? "Refreshing..." : "Refresh session"}
+            </Button>
           ) : null}
           {enabled ? (
             <Button className="border border-border bg-white text-foreground hover:bg-muted" onClick={logout} type="button">
@@ -143,6 +182,11 @@ export function AdminAuthStatus() {
                 <p className="mt-1 text-amber-900/80">{sessionWarning.detail}</p>
               </div>
             ) : null}
+            {canRefresh ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Use refresh before long review or export flows to renew the current organizer session without signing out.
+              </p>
+            ) : null}
           </div>
           <AdminEnvSetupCard
             copyLabel="Copy auth env"
@@ -163,6 +207,18 @@ export function AdminAuthStatus() {
       ) : null}
     </Card>
   );
+}
+
+async function loadStatus(
+  onSuccess: (payload: AdminAuthStatusPayload) => void,
+  onError?: () => void
+) {
+  try {
+    const payload = await fetch("/api/admin/session").then((response) => response.json() as Promise<AdminAuthStatusPayload>);
+    onSuccess(payload);
+  } catch {
+    onError?.();
+  }
 }
 
 const fallbackSteps: AdminAuthSetupSummary["steps"] = [

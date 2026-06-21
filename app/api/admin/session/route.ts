@@ -108,6 +108,67 @@ export async function DELETE() {
   return response;
 }
 
+export async function PATCH(request: NextRequest) {
+  if (!isAdminAuthConfigured()) {
+    return NextResponse.json(
+      { ok: true, enabled: false, refreshed: false },
+      {
+        headers: {
+          "cache-control": "no-store"
+        }
+      }
+    );
+  }
+
+  const currentToken = request.cookies.get(adminSessionCookieName)?.value;
+  const currentSession = await summarizeAdminSession(currentToken);
+
+  if (!currentSession.authenticated) {
+    const response = NextResponse.json(
+      {
+        ok: false,
+        error: "Admin authentication required.",
+        detail: currentSession.detail,
+        sessionStatus: currentSession.status
+      },
+      {
+        status: 401,
+        headers: {
+          "cache-control": "no-store"
+        }
+      }
+    );
+
+    if (currentSession.status === "expired" || currentSession.status === "invalid") {
+      response.cookies.set(adminSessionCookieName, "", adminSessionCookieClearOptions());
+    }
+
+    return response;
+  }
+
+  const configuredPasscode = process.env.ADMIN_PASSCODE?.trim() ?? "";
+  const token = await createAdminSessionToken({
+    passcode: configuredPasscode,
+    secret: process.env.ADMIN_SESSION_SECRET?.trim() || configuredPasscode
+  });
+  const refreshedSession = await summarizeAdminSession(token);
+  const response = NextResponse.json(
+    {
+      ok: true,
+      enabled: true,
+      refreshed: true,
+      session: refreshedSession
+    },
+    {
+      headers: {
+        "cache-control": "no-store"
+      }
+    }
+  );
+  response.cookies.set(adminSessionCookieName, token, adminSessionCookieOptions(adminSessionMaxAgeSeconds()));
+  return response;
+}
+
 function attemptKeyForRequest(request: NextRequest) {
   return adminLoginAttemptKey({
     forwardedFor: request.headers.get("x-forwarded-for"),

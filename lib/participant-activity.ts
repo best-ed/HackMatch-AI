@@ -89,6 +89,7 @@ export function buildParticipantActivityTimeline({
 const authAuditActions = new Set<AdminAuditEntry["action"]>([
   "auth-demo-access",
   "auth-login",
+  "auth-refresh",
   "auth-logout",
   "auth-cooldown"
 ]);

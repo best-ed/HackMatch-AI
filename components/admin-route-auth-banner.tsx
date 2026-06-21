@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge, Card } from "@/components/ui";
+import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
+import { Badge, Button, Card } from "@/components/ui";
 import {
   buildAdminAuthSurfaceSummary,
   type AdminAuthSetupSummary,
@@ -18,6 +19,8 @@ type AdminRouteAuthPayload = AdminAuthSetupSummary & {
 export function AdminRouteAuthBanner() {
   const pathname = usePathname();
   const [status, setStatus] = useState<AdminRouteAuthPayload | undefined>();
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +62,39 @@ export function AdminRouteAuthBanner() {
     session: status?.session
   });
   const sessionWarning = buildAdminSessionWarning(status?.session);
+  const canRefresh = Boolean(status?.enabled) && status?.session?.status === "active";
+
+  async function refreshSession() {
+    setRefreshing(true);
+    setMessage("");
+
+    const response = await fetch("/api/admin/session", {
+      method: "PATCH"
+    });
+    const payload = await response.json().catch(() => ({})) as {
+      ok?: boolean;
+      detail?: string;
+      session?: AdminSessionSummary;
+    };
+
+    if (!response.ok) {
+      setMessage(payload.detail ?? "Could not refresh the current admin session.");
+      setRefreshing(false);
+      return;
+    }
+
+    persistAdminAuditEntry({
+      action: "auth-refresh",
+      label: "Admin session refreshed",
+      detail: "Extended the current organizer session before continuing admin work."
+    });
+    setStatus((current) => current ? {
+      ...current,
+      session: payload.session ?? current.session
+    } : current);
+    setMessage(payload.session?.detail ?? "Admin session refreshed.");
+    setRefreshing(false);
+  }
 
   return (
     <Card className="border-primary/15 bg-white/90 p-4">
@@ -87,13 +123,26 @@ export function AdminRouteAuthBanner() {
             </div>
           ) : null}
         </div>
-        <Link
-          className="inline-flex shrink-0 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-          href={surface.actionHref}
-        >
-          {surface.actionLabel}
-        </Link>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {canRefresh ? (
+            <Button
+              className="border border-border bg-white text-foreground hover:bg-muted"
+              disabled={refreshing}
+              onClick={() => void refreshSession()}
+              type="button"
+            >
+              {refreshing ? "Refreshing..." : "Refresh session"}
+            </Button>
+          ) : null}
+          <Link
+            className="inline-flex rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
+            href={surface.actionHref}
+          >
+            {surface.actionLabel}
+          </Link>
+        </div>
       </div>
+      {message ? <p className="mt-3 text-sm font-medium text-amber-700">{message}</p> : null}
     </Card>
   );
 }

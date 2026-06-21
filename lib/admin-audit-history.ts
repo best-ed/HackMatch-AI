@@ -17,6 +17,7 @@ export type AdminAuditAction =
   | "checklist"
   | "auth-demo-access"
   | "auth-login"
+  | "auth-refresh"
   | "auth-logout"
   | "auth-cooldown";
 
