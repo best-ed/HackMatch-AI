@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildAdminAuthGuidance,
   buildAdminAuthSurfaceSummary,
+  adminSessionCookieClearOptions,
+  adminSessionCookieOptions,
   createAdminSessionToken,
   evaluateAdminPasscodeQuality,
   evaluateAdminSessionSecretQuality,
@@ -257,5 +259,23 @@ describe("admin auth", () => {
         ADMIN_SESSION_SECRET: "LaunchCode2026-Session-Secret-Strong"
       })
     ).toMatchObject({ status: "ready", label: "strong" });
+  });
+
+  it("uses consistent hardened cookie defaults for admin sessions", () => {
+    expect(adminSessionCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 8,
+      path: "/",
+      priority: "high"
+    });
+
+    expect(adminSessionCookieClearOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 0,
+      path: "/",
+      priority: "high"
+    });
   });
 });

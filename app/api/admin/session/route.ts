@@ -7,6 +7,8 @@ import {
 } from "@/lib/admin-login-guard";
 import {
   adminSessionCookieName,
+  adminSessionCookieClearOptions,
+  adminSessionCookieOptions,
   adminSessionMaxAgeSeconds,
   createAdminSessionToken,
   isAdminAuthConfigured,
@@ -95,26 +97,14 @@ export async function POST(request: NextRequest) {
   });
   const response = NextResponse.json({ ok: true, enabled: true });
   response.headers.set("cache-control", "no-store");
-  response.cookies.set(adminSessionCookieName, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: adminSessionMaxAgeSeconds(),
-    path: "/"
-  });
+  response.cookies.set(adminSessionCookieName, token, adminSessionCookieOptions(adminSessionMaxAgeSeconds()));
   return response;
 }
 
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.headers.set("cache-control", "no-store");
-  response.cookies.set(adminSessionCookieName, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 0,
-    path: "/"
-  });
+  response.cookies.set(adminSessionCookieName, "", adminSessionCookieClearOptions());
   return response;
 }
 

@@ -200,6 +200,26 @@ export function adminSessionMaxAgeSeconds() {
   return sessionDurationSeconds;
 }
 
+export function adminSessionCookieOptions(
+  maxAgeSeconds = adminSessionMaxAgeSeconds()
+) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: maxAgeSeconds,
+    path: "/",
+    priority: "high" as const
+  };
+}
+
+export function adminSessionCookieClearOptions() {
+  return {
+    ...adminSessionCookieOptions(0),
+    maxAge: 0
+  };
+}
+
 export async function createAdminSessionToken({
   passcode,
   secret = passcode,

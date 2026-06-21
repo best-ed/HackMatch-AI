@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   adminLoginPath,
   adminSessionCookieName,
+  adminSessionCookieClearOptions,
   isAdminAuthConfigured,
   verifyAdminSessionToken
 } from "@/lib/admin-auth";
@@ -43,13 +44,7 @@ export async function middleware(request: NextRequest) {
   if (isLoginRoute) {
     const response = NextResponse.next();
     if (token) {
-      response.cookies.set(adminSessionCookieName, "", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 0,
-        path: "/"
-      });
+      response.cookies.set(adminSessionCookieName, "", adminSessionCookieClearOptions());
     }
     return response;
   }
@@ -60,13 +55,7 @@ export async function middleware(request: NextRequest) {
   loginUrl.searchParams.set("next", buildAdminLoginDestination(request.nextUrl));
   const response = NextResponse.redirect(loginUrl);
   if (token) {
-    response.cookies.set(adminSessionCookieName, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 0,
-      path: "/"
-    });
+    response.cookies.set(adminSessionCookieName, "", adminSessionCookieClearOptions());
   }
   return response;
 }

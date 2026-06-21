@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   adminSessionCookieName,
+  adminSessionCookieClearOptions,
   isAdminAuthConfigured,
   summarizeAdminSession
 } from "@/lib/admin-auth";
@@ -34,13 +35,7 @@ export async function requireAdminApiSession(request: NextRequest) {
   );
 
   if (session.status === "expired" || session.status === "invalid") {
-    response.cookies.set(adminSessionCookieName, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 0,
-      path: "/"
-    });
+    response.cookies.set(adminSessionCookieName, "", adminSessionCookieClearOptions());
   }
 
   return response;
