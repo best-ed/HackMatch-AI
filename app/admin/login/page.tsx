@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
 import { buildAdminAuthGuidance, type AdminAuthSetupSummary } from "@/lib/admin-auth";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card, TextInput } from "@/components/ui";
@@ -164,7 +165,7 @@ function AdminLoginForm() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Card className="space-y-5">
+        <Card className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Admin login</h1>
@@ -247,6 +248,9 @@ function AdminLoginForm() {
           </div>
         ) : null}
       </Card>
+      <div className="mt-6">
+        <AdminAccessDiagnostics disableRuntimeFetch />
+      </div>
     </div>
   );
 }

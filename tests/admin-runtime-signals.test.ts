@@ -11,7 +11,11 @@ describe("admin runtime signals", () => {
 
     expect(signals).toEqual({
       hasAdminPasscode: true,
+      hasAdminSessionSecret: true,
       adminProtectionConfigured: true,
+      authMode: "ready",
+      authReadyCount: 3,
+      authTotalCount: 3,
       hasOpenAiKey: true
     });
   });
@@ -22,7 +26,11 @@ describe("admin runtime signals", () => {
     });
 
     expect(signals.hasAdminPasscode).toBe(true);
+    expect(signals.hasAdminSessionSecret).toBe(false);
     expect(signals.adminProtectionConfigured).toBe(false);
+    expect(signals.authMode).toBe("review");
+    expect(signals.authReadyCount).toBe(1);
+    expect(signals.authTotalCount).toBe(3);
     expect(signals.hasOpenAiKey).toBe(false);
   });
 });
