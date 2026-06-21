@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Button, Card } from "@/components/ui";
+import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
 import type { SecurityReadiness } from "@/lib/security-readiness";
+import { buildSecurityReadinessExportArtifact } from "@/lib/security-readiness-export";
 
 export function AdminSecurityReadiness() {
   const [readiness, setReadiness] = useState<SecurityReadiness | undefined>();
+  const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +52,24 @@ export function AdminSecurityReadiness() {
           {readiness ? `${readiness.readyCount}/${readiness.totalCount} ready` : "Loading"}
         </Badge>
       </div>
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={!readiness} onClick={() => void copySummary()} type="button">
+          Copy summary
+        </Button>
+        <Button
+          className="border border-border bg-white text-foreground hover:bg-muted"
+          disabled={!readiness}
+          onClick={downloadSummary}
+          type="button"
+        >
+          Download report
+        </Button>
+      </div>
+      {statusMessage ? (
+        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          {statusMessage}
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {(readiness?.checks ?? skeletonChecks).map((check) => (
           <div className="rounded-md border border-border bg-white p-4" key={check.label}>
@@ -64,6 +85,28 @@ export function AdminSecurityReadiness() {
       </div>
     </Card>
   );
+
+  async function copySummary() {
+    if (!readiness) return;
+
+    const artifact = buildSecurityReadinessExportArtifact({ readiness });
+    const result = await copyTextToClipboard(artifact.text);
+    setStatusMessage(clipboardStatusMessage(result, "Copied the sanitized security readiness summary."));
+  }
+
+  function downloadSummary() {
+    if (!readiness) return;
+
+    const artifact = buildSecurityReadinessExportArtifact({ readiness });
+    const blob = new Blob([artifact.text], { type: "text/plain;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = artifact.filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    setStatusMessage(`Downloaded ${artifact.filename}.`);
+  }
 }
 
 const skeletonChecks: SecurityReadiness["checks"] = [
