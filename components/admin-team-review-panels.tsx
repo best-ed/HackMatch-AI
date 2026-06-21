@@ -1,8 +1,15 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Archive } from "lucide-react";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import type { AdminAuditEntry, AdminAuditAction } from "@/lib/admin-audit-history";
+import {
+  describeAdminAuditFilter,
+  filterAdminAuditHistory,
+  isSensitiveAuditAction,
+  type AdminAuditFilter
+} from "@/lib/admin-audit-filters";
 import type { CohortFinalizationGate, CohortFinalizationStatus } from "@/lib/cohort-finalization";
 import type { TeamExportAudit } from "@/lib/export-audit";
 import type { TeamReviewSummary } from "@/lib/team-review";
@@ -142,6 +149,10 @@ export function ReviewBriefPanel({ summary }: { summary: TeamReviewSummary }) {
 }
 
 export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[] }) {
+  const [filter, setFilter] = useState<AdminAuditFilter>("all");
+  const filteredHistory = useMemo(() => filterAdminAuditHistory(history, filter), [filter, history]);
+  const filterSummary = describeAdminAuditFilter(filter);
+
   return (
     <Card className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -151,11 +162,31 @@ export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[]
             Browser-local audit trail for admin access events, saved-run actions, locks, shares, restores, and checklist review.
           </p>
         </div>
-        <Badge>{history.length} event{history.length === 1 ? "" : "s"}</Badge>
+        <Badge>{filteredHistory.length} event{filteredHistory.length === 1 ? "" : "s"}</Badge>
       </div>
       {history.length ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {(["all", "sensitive", "auth", "data"] as const).map((value) => (
+              <button
+                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                  filter === value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-white text-foreground hover:bg-muted"
+                }`}
+                key={value}
+                onClick={() => setFilter(value)}
+                type="button"
+              >
+                {describeAdminAuditFilter(value).label}
+              </button>
+            ))}
+          </div>
+          <div className="rounded-md border border-border bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
+            {filterSummary.detail}
+          </div>
         <div className="grid gap-2">
-          {history.slice(0, 8).map((entry) => (
+          {filteredHistory.slice(0, 8).map((entry) => (
             <div className="rounded-md border border-border bg-white p-3" key={entry.id}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -163,6 +194,9 @@ export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[]
                   <p className="mt-1 text-sm text-muted-foreground">{entry.detail}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {isSensitiveAuditAction(entry.action) ? (
+                    <Badge className="bg-amber-100 text-amber-800">sensitive</Badge>
+                  ) : null}
                   <Badge className={auditActionClass(entry.action)}>{auditActionLabel(entry.action)}</Badge>
                   <span className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</span>
                 </div>
@@ -170,6 +204,7 @@ export function OperationsHistoryPanel({ history }: { history: AdminAuditEntry[]
             </div>
           ))}
         </div>
+        </>
       ) : (
         <EmptyState
           description="Sign in, sign out, save, rename, mark final, restore, lock, share, or review teams to build an organizer history in this browser."
@@ -258,6 +293,8 @@ function auditActionLabel(action: AdminAuditAction) {
       return "demo access";
     case "auth-login":
       return "auth login";
+    case "auth-refresh":
+      return "auth refresh";
     case "auth-logout":
       return "auth logout";
     case "auth-cooldown":
@@ -270,7 +307,7 @@ function auditActionLabel(action: AdminAuditAction) {
 function auditActionClass(action: AdminAuditAction) {
   if (action === "auth-demo-access" || action === "auth-logout" || action === "locked-team") return "bg-sky-100 text-sky-800";
   if (action === "auth-cooldown" || action === "deleted-run") return "bg-rose-100 text-rose-800";
-  if (action === "auth-login" || action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
+  if (action === "auth-login" || action === "auth-refresh" || action === "final-run" || action === "saved-run") return "bg-emerald-100 text-emerald-800";
   return "bg-slate-100 text-slate-800";
 }
 
