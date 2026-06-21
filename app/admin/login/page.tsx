@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
+import { AdminEnvSetupCard } from "@/components/admin-env-setup-card";
 import { buildAdminAuthGuidance, type AdminAuthSetupSummary } from "@/lib/admin-auth";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card, TextInput } from "@/components/ui";
@@ -204,12 +205,11 @@ function AdminLoginForm() {
                 You&apos;ll continue to {destinationLabel}.
               </p>
             </div>
-            <div className="rounded-md border border-border bg-white p-3">
-              <div className="text-sm font-semibold">Env shape</div>
-              <pre className="mt-2 overflow-x-auto rounded-md bg-slate-950 px-3 py-2 text-xs text-slate-100">
-                <code>{setupGuidance.envTemplate.join("\n")}</code>
-              </pre>
-            </div>
+            <AdminEnvSetupCard
+              copyLabel="Copy env block"
+              detail="Copy these keys into `.env.local`, then restart the server."
+              envLines={setupGuidance.envTemplate}
+            />
           </div>
         </div>
         <form className="space-y-4" onSubmit={submitLogin}>
@@ -297,15 +297,11 @@ function SetupGuidancePanel({
         ) : null}
       </div>
       <div className="space-y-3 rounded-md border border-border bg-white p-4">
-        <div>
-          <div className="font-semibold">Env shape</div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add these keys to `.env.local`, then restart the server.
-          </p>
-        </div>
-        <pre className="overflow-x-auto rounded-md bg-slate-950 px-3 py-2 text-xs text-slate-100">
-          <code>{guidance.envTemplate.join("\n")}</code>
-        </pre>
+        <AdminEnvSetupCard
+          copyLabel="Copy setup block"
+          detail="Add these keys to `.env.local`, then restart the server."
+          envLines={guidance.envTemplate}
+        />
         <div className="rounded-md border border-border bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
           Current destination after setup: {destinationLabel} (`{nextPath}`)
         </div>

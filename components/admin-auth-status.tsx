@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminEnvSetupCard } from "@/components/admin-env-setup-card";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card } from "@/components/ui";
 import type { AdminAuthSetupSummary, AdminSessionSummary } from "@/lib/admin-auth";
@@ -143,18 +144,15 @@ export function AdminAuthStatus() {
               </div>
             ) : null}
           </div>
-          <div className="rounded-md border border-border bg-white p-3 text-sm">
-            <div className="font-medium">Where to set the admin password</div>
-            <p className="mt-1 text-muted-foreground">
-              Add <code className="rounded bg-muted px-1 py-0.5">ADMIN_PASSCODE</code> and{" "}
-              <code className="rounded bg-muted px-1 py-0.5">ADMIN_SESSION_SECRET</code> to{" "}
-              <code className="rounded bg-muted px-1 py-0.5">.env.local</code>, then restart the server.
-            </p>
-            <div className="mt-3 rounded-md bg-muted p-3 font-mono text-xs text-foreground">
-              <div>ADMIN_PASSCODE=choose_a_private_passcode</div>
-              <div>ADMIN_SESSION_SECRET=choose_a_long_random_secret</div>
-            </div>
-          </div>
+          <AdminEnvSetupCard
+            copyLabel="Copy auth env"
+            detail="Copy these keys into `.env.local`, then restart the server."
+            envLines={[
+              "ADMIN_PASSCODE=choose_a_private_passcode",
+              "ADMIN_SESSION_SECRET=choose_a_long_random_secret"
+            ]}
+            title="Where to set the admin password"
+          />
         </div>
       </div>
       {message ? <p className="text-sm font-medium text-amber-700">{message}</p> : null}
