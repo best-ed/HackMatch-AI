@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
+import { AdminAuthSmokeChecklist } from "@/components/admin-auth-smoke-checklist";
 import { AdminEnvSetupCard } from "@/components/admin-env-setup-card";
 import { buildAdminAuthGuidance, type AdminAuthSetupSummary } from "@/lib/admin-auth";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
@@ -250,6 +251,9 @@ function AdminLoginForm() {
       </Card>
       <div className="mt-6">
         <AdminAccessDiagnostics disableRuntimeFetch />
+      </div>
+      <div className="mt-6">
+        <AdminAuthSmokeChecklist disableRuntimeFetch nextPath={nextPath} />
       </div>
     </div>
   );

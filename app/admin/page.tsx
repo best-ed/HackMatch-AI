@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarDays, Clock3, Download, Link2, Settings2, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
+import { AdminAuthSmokeChecklist } from "@/components/admin-auth-smoke-checklist";
 import { AdminAuthStatus } from "@/components/admin-auth-status";
 import { AdminDataLoadNotice } from "@/components/admin-data-load-notice";
 import { AdminLocalStorageDiagnostics } from "@/components/admin-local-storage-diagnostics";
@@ -189,6 +190,7 @@ export default function AdminPage() {
         <Badge>{activeCohort} active</Badge>
       </div>
       <AdminAccessDiagnostics initialRuntimeSignals={runtimeSignals} />
+      <AdminAuthSmokeChecklist initialRuntimeSignals={runtimeSignals} />
       <AdminAuthStatus />
       <AdminSecurityReadiness />
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
