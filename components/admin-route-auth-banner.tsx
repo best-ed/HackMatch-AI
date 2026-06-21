@@ -6,14 +6,16 @@ import { useEffect, useState } from "react";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
 import { Badge, Button, Card } from "@/components/ui";
 import {
-  buildAdminAuthSurfaceSummary,
   type AdminAuthSetupSummary,
   type AdminSessionSummary
 } from "@/lib/admin-auth";
 import { buildAdminSessionWarning } from "@/lib/admin-session-warning";
+import { buildAdminSecurityPosture } from "@/lib/admin-security-posture";
+import type { AdminLoginGuardState } from "@/lib/admin-login-guard";
 
 type AdminRouteAuthPayload = AdminAuthSetupSummary & {
   session?: AdminSessionSummary;
+  loginGuard?: AdminLoginGuardState;
 };
 
 export function AdminRouteAuthBanner() {
@@ -51,15 +53,16 @@ export function AdminRouteAuthBanner() {
     };
   }, []);
 
-  if (pathname === "/admin" || pathname === "/admin/login") {
+  if (pathname === "/admin/login") {
     return null;
   }
 
-  const surface = buildAdminAuthSurfaceSummary({
+  const posture = buildAdminSecurityPosture({
     enabled: Boolean(status?.enabled),
     readyCount: status?.readyCount ?? 0,
     totalCount: status?.totalCount ?? 3,
-    session: status?.session
+    session: status?.session,
+    loginGuard: status?.loginGuard
   });
   const sessionWarning = buildAdminSessionWarning(status?.session);
   const canRefresh = Boolean(status?.enabled) && status?.session?.status === "active";
@@ -101,21 +104,22 @@ export function AdminRouteAuthBanner() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="font-semibold">Admin access mode</div>
-            <Badge className={modeBadgeClass(surface.mode)}>
-              {surface.modeLabel}
-            </Badge>
-            {status ? (
-              <Badge className="bg-slate-100 text-slate-800">
-                {status.readyCount}/{status.totalCount} setup checks ready
+            <div className="font-semibold">{posture.title}</div>
+            {posture.chips.map((chip) => (
+              <Badge className={chipClassName(chip.tone)} key={chip.label}>
+                {chip.label}
               </Badge>
-            ) : (
-              <Badge className="bg-slate-100 text-slate-800">Checking</Badge>
-            )}
+            ))}
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            {surface.detail}
+            {posture.detail}
           </p>
+          {posture.notice ? (
+            <div className={`mt-3 rounded-md border px-3 py-2 text-sm ${noticeClassName(posture.notice.tone)}`}>
+              <div className="font-semibold">{posture.notice.label}</div>
+              <p className="mt-1">{posture.notice.detail}</p>
+            </div>
+          ) : null}
           {sessionWarning ? (
             <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <div className="font-semibold">{sessionWarning.label}</div>
@@ -136,9 +140,9 @@ export function AdminRouteAuthBanner() {
           ) : null}
           <Link
             className="inline-flex rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-            href={surface.actionHref}
+            href="/admin/login"
           >
-            {surface.actionLabel}
+            {status?.enabled ? "Open admin access" : "Review access setup"}
           </Link>
         </div>
       </div>
@@ -147,13 +151,26 @@ export function AdminRouteAuthBanner() {
   );
 }
 
-function modeBadgeClass(mode: ReturnType<typeof buildAdminAuthSurfaceSummary>["mode"]) {
-  switch (mode) {
-    case "protected":
+function chipClassName(tone: "ready" | "review" | "blocked" | "info") {
+  switch (tone) {
+    case "ready":
       return "bg-emerald-100 text-emerald-800";
     case "review":
       return "bg-amber-100 text-amber-800";
-    case "demo":
+    case "blocked":
+      return "bg-rose-100 text-rose-800";
+    case "info":
       return "bg-sky-100 text-sky-800";
+  }
+}
+
+function noticeClassName(tone: "ready" | "review" | "blocked") {
+  switch (tone) {
+    case "ready":
+      return "border-emerald-200 bg-emerald-50 text-emerald-900";
+    case "review":
+      return "border-amber-200 bg-amber-50 text-amber-900";
+    case "blocked":
+      return "border-rose-200 bg-rose-50 text-rose-900";
   }
 }
