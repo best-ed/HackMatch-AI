@@ -164,6 +164,7 @@ HackMatch AI is still an MVP, but the app includes security guardrails that make
 - Active organizer sessions can be refreshed in-place from admin pages before long review or export flows, which helps avoid preventable mid-workflow timeouts.
 - Admin pages now share a clearer protection posture banner that surfaces protection mode, live session state, setup readiness, and login cooldown state across the organizer workspace.
 - The security readiness card can now copy or download a sanitized text summary for launch review without exposing private values.
+- The admin login page now acts as a setup hub: it summarizes destination routing, setup readiness, env templates for local vs deployed setups, candidate secret-strength previews, rotation guidance, and troubleshooting hints in one place.
 - Participant team links use compact, collision-checked `hm-XXXXXX` access tokens instead of bulky IDs. Organizers can audit missing, duplicate, legacy, or risky participant links from the participant directory.
 - Regenerating participant access tokens requires confirmation so organizers do not accidentally invalidate links participants already received.
 - Participant team handoff pages show a privacy summary so participants can see whether their contact details are shared, how many teammate contact records are visible, and which teammate records are hidden by consent.
@@ -274,6 +275,8 @@ The Team review operations history also supports focused filtering for all event
 The admin dashboard also reports admin access protection status. If `ADMIN_PASSCODE` is not configured, admin pages stay open for local MVP testing. When it is configured, admin routes require the passcode and the dashboard offers a logout action. The setup card shows a safe checklist for admin passcode, session secret, and server restart state without exposing secret values.
 
 Organizer-facing admin surfaces now also include session refresh controls and a shared protection posture banner, so longer review flows expose session-expiry risk before they interrupt work.
+
+`/admin/login` is also designed as the operator setup surface now, not just a password form. Organizers can preview passcode/session-secret strength locally, compare local-vs-deployed env templates, review secret-rotation steps, and inspect likely causes when access fails or a cooldown is active.
 
 When admin auth is enabled, the setup behaves consistently across middleware, server routes, and the browser UI:
 
