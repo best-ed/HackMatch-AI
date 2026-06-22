@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Badge, Card } from "@/components/ui";
 import type { AdminAuthSetupSummary } from "@/lib/admin-auth";
 

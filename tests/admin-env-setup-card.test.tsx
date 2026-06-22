@@ -33,4 +33,39 @@ describe("admin env setup card", () => {
     });
     expect(screen.getByText("Copied env block.")).toBeTruthy();
   });
+
+  it("switches between env templates before copying", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+
+    render(
+      <AdminEnvSetupCard
+        envLines={["ADMIN_PASSCODE=local-only"]}
+        templates={[
+          {
+            id: "local",
+            label: "Local dev",
+            envLines: ["ADMIN_PASSCODE=local-only"]
+          },
+          {
+            id: "prod",
+            label: "Deployment",
+            envLines: ["ADMIN_PASSCODE=prod", "ADMIN_SESSION_SECRET=prod-secret"]
+          }
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Deployment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy env block" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        "ADMIN_PASSCODE=prod\nADMIN_SESSION_SECRET=prod-secret"
+      );
+    });
+  });
 });
