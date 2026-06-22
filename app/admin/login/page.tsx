@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
 import { AdminAuthSmokeChecklist } from "@/components/admin-auth-smoke-checklist";
 import { AdminEnvSetupCard } from "@/components/admin-env-setup-card";
+import { AdminLoginTroubleshooting } from "@/components/admin-login-troubleshooting";
 import { AdminSecretRotationGuide } from "@/components/admin-secret-rotation-guide";
 import { AdminSecretStrengthPreview } from "@/components/admin-secret-strength-preview";
 import { AdminSetupHub } from "@/components/admin-setup-hub";
@@ -277,6 +278,15 @@ function AdminLoginForm() {
       </div>
       <div className="mt-6">
         <AdminSecretRotationGuide />
+      </div>
+      <div className="mt-6">
+        <AdminLoginTroubleshooting
+          cooldownSeconds={cooldownSeconds}
+          enabled={enabled}
+          nextPath={nextPath}
+          status={status}
+          summary={setupSummary}
+        />
       </div>
       <div className="mt-6">
         <AdminAccessDiagnostics disableRuntimeFetch />
