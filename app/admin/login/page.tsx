@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AdminAccessDiagnostics } from "@/components/admin-access-diagnostics";
 import { AdminAuthSmokeChecklist } from "@/components/admin-auth-smoke-checklist";
 import { AdminEnvSetupCard } from "@/components/admin-env-setup-card";
+import { AdminSecretStrengthPreview } from "@/components/admin-secret-strength-preview";
 import { AdminSetupHub } from "@/components/admin-setup-hub";
 import { buildAdminAuthGuidance, type AdminAuthSetupSummary } from "@/lib/admin-auth";
 import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
@@ -252,6 +253,9 @@ function AdminLoginForm() {
       </Card>
       <div className="mt-6">
         <AdminSetupHub destinationLabel={destinationLabel} nextPath={nextPath} summary={setupSummary} />
+      </div>
+      <div className="mt-6">
+        <AdminSecretStrengthPreview />
       </div>
       <div className="mt-6">
         <AdminAccessDiagnostics disableRuntimeFetch />
