@@ -210,8 +210,25 @@ function AdminLoginForm() {
             </div>
             <AdminEnvSetupCard
               copyLabel="Copy env block"
-              detail="Copy these keys into `.env.local`, then restart the server."
               envLines={setupGuidance.envTemplate}
+              templates={[
+                {
+                  id: "local",
+                  label: "Local dev",
+                  detail: "Copy these keys into `.env.local`, then restart the server.",
+                  envLines: setupGuidance.envTemplate
+                },
+                {
+                  id: "deployed",
+                  label: "Deployment",
+                  detail: "Use the same values in your host's environment settings before opening admin routes publicly.",
+                  envLines: [
+                    ...setupGuidance.envTemplate,
+                    "NEXT_PUBLIC_SUPABASE_URL=your_project_url",
+                    "NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key"
+                  ]
+                }
+              ]}
             />
           </div>
         </div>
@@ -311,8 +328,21 @@ function SetupGuidancePanel({
       <div className="space-y-3 rounded-md border border-border bg-white p-4">
         <AdminEnvSetupCard
           copyLabel="Copy setup block"
-          detail="Add these keys to `.env.local`, then restart the server."
           envLines={guidance.envTemplate}
+          templates={[
+            {
+              id: "local",
+              label: "Local dev",
+              detail: "Add these keys to `.env.local`, then restart the server.",
+              envLines: guidance.envTemplate
+            },
+            {
+              id: "deployed",
+              label: "Deployment",
+              detail: "Mirror these values in your deployment provider before exposing `/admin/*` publicly.",
+              envLines: guidance.envTemplate
+            }
+          ]}
         />
         <div className="rounded-md border border-border bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
           Current destination after setup: {destinationLabel} (`{nextPath}`)
