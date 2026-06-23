@@ -5,6 +5,7 @@ import type { CohortTransferAudit } from "@/lib/cohort-transfer-audit";
 import type { ParticipantLinkAudit, ParticipantLinkAuditStatus } from "@/lib/participant-link-audit";
 import type { DuplicateParticipantGroup } from "@/lib/participant-duplicates";
 import { buildParticipantDuplicateQueue } from "@/lib/participant-duplicate-queue";
+import { buildDuplicateResolutionPreview } from "@/lib/participant-duplicate-resolution";
 import type { ParticipantIntakeSummary, IntakeIssueSeverity } from "@/lib/participant-intake";
 import type { PrivacyAuditStatus, PrivacyAuditSummary } from "@/lib/privacy-audit";
 
@@ -227,8 +228,11 @@ export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateP
       ) : null}
       {groups.length ? (
         <div className="grid gap-3 md:grid-cols-2">
-          {queue.items.slice(0, 6).map((group) => (
-            <div className="rounded-md border border-border bg-white p-3" key={`${group.reason}-${group.label}`}>
+          {queue.items.slice(0, 6).map((group) => {
+            const resolution = buildDuplicateResolutionPreview(group);
+
+            return (
+              <div className="rounded-md border border-border bg-white p-3" key={`${group.reason}-${group.label}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-medium">{group.reason}</div>
                 <div className="flex flex-wrap gap-2">
@@ -238,6 +242,27 @@ export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateP
               </div>
               <div className="mt-2 text-sm text-muted-foreground">{group.label}</div>
               <div className="mt-2 text-sm text-muted-foreground">{group.reasonDetail}</div>
+              <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                <div className="font-semibold">Resolution preview</div>
+                <div className="mt-1">
+                  Keep <span className="font-semibold">{resolution.keepName}</span> ({resolution.keepId}) as the base
+                  record.
+                </div>
+                <div className="mt-1 text-emerald-800">
+                  {resolution.mergeFieldCount} merge field{resolution.mergeFieldCount === 1 ? "" : "s"} available,{" "}
+                  {resolution.riskFieldCount} watch point{resolution.riskFieldCount === 1 ? "" : "s"}.
+                </div>
+                {resolution.keepReasons.length ? (
+                  <div className="mt-2 text-emerald-800">
+                    Why this record: {resolution.keepReasons.join(", ")}.
+                  </div>
+                ) : null}
+                {resolution.riskFields.length ? (
+                  <div className="mt-2 text-amber-800">
+                    Review before deleting duplicates: {resolution.riskFields.join(", ")}.
+                  </div>
+                ) : null}
+              </div>
               <div className="mt-3 space-y-1 text-sm">
                 {group.participants.map((participant) => (
                   <div className="flex justify-between gap-3" key={participant.id}>
@@ -246,8 +271,9 @@ export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateP
                   </div>
                 ))}
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
