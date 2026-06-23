@@ -30,6 +30,10 @@ import {
   participantBulkActionLabel,
   type ParticipantBulkAction
 } from "@/lib/participant-bulk-actions";
+import {
+  averageParticipantCompleteness,
+  evaluateParticipantCompleteness
+} from "@/lib/participant-completeness";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
 import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import {
@@ -100,6 +104,7 @@ export default function AdminParticipantsPage() {
     () => generateTeams(cohortParticipants, settings),
     [cohortParticipants, settings]
   );
+  const averageCompleteness = useMemo(() => averageParticipantCompleteness(participants), [participants]);
   const privacyAudit = useMemo(
     () => buildPrivacyAudit({ participants: cohortParticipants, result: generatedResult }),
     [cohortParticipants, generatedResult]
@@ -416,6 +421,7 @@ export default function AdminParticipantsPage() {
         onSetLinkRiskOnly={setLinkRiskOnly}
       />
       <ParticipantIntakeQualityPanel
+        averageCompleteness={averageCompleteness}
         duplicateCount={duplicateParticipantIds.size}
         onSetReadinessFilter={setReadinessFilter}
         readinessFilter={readinessFilter}
@@ -536,6 +542,7 @@ export default function AdminParticipantsPage() {
       ) : null}
       {selectedParticipant ? (
         <ParticipantDetailPanel
+          completeness={evaluateParticipantCompleteness(selectedParticipant)}
           onClose={() => setSelectedParticipantId("")}
           onCopyLink={() => {
             void copyAccessLink(selectedParticipant).then((result) => {
@@ -1003,12 +1010,14 @@ export default function AdminParticipantsPage() {
 }
 
 function ParticipantDetailPanel({
+  completeness,
   participant,
   validation,
   onClose,
   onCopyLink,
   onUpdate
 }: {
+  completeness: ReturnType<typeof evaluateParticipantCompleteness>;
   participant: Participant;
   validation: { errors: string[]; warnings: string[] };
   onClose: () => void;
@@ -1031,6 +1040,9 @@ function ParticipantDetailPanel({
             </Badge>
             <Badge className={readiness === "Ready" ? "bg-emerald-100 text-emerald-800" : readiness === "Needs review" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"}>
               {readiness}
+            </Badge>
+            <Badge className={completeness.score >= 80 ? "bg-emerald-100 text-emerald-800" : completeness.score >= 60 ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"}>
+              Completeness {completeness.score}
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1081,6 +1093,16 @@ function ParticipantDetailPanel({
             {validation.errors.length === 0 && validation.warnings.length === 0 ? (
               <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                 Profile has enough signal for matching.
+              </div>
+            ) : null}
+            {completeness.missingCoreFields.length > 0 || completeness.missingSignalFields.length > 0 ? (
+              <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                {completeness.missingCoreFields.length > 0 ? (
+                  <div>Still missing core fields: {completeness.missingCoreFields.join(", ")}.</div>
+                ) : null}
+                {completeness.missingSignalFields.length > 0 ? (
+                  <div>Could strengthen signal with: {completeness.missingSignalFields.join(", ")}.</div>
+                ) : null}
               </div>
             ) : null}
           </div>

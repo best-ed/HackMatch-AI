@@ -131,11 +131,13 @@ export function ParticipantLinkSecurityPanel({
 }
 
 export function ParticipantIntakeQualityPanel({
+  averageCompleteness,
   duplicateCount,
   readinessFilter,
   summary,
   onSetReadinessFilter
 }: {
+  averageCompleteness: number;
   duplicateCount: number;
   readinessFilter: "all" | "incomplete" | "excluded" | "low-signal" | "duplicates";
   summary: ParticipantIntakeSummary;
@@ -158,7 +160,10 @@ export function ParticipantIntakeQualityPanel({
         <PreviewMetric label="Matchable" value={summary.matchableCount} />
         <PreviewMetric label="Excluded" value={summary.excludedCount} />
         <PreviewMetric label="Incomplete" value={summary.incompleteCount} />
-        <PreviewMetric label="Low signal" value={summary.lowSignalCount} />
+        <PreviewMetric label="Avg completeness" value={averageCompleteness} />
+      </div>
+      <div className="text-sm text-muted-foreground">
+        Low-signal profiles: <span className="font-semibold text-foreground">{summary.lowSignalCount}</span>
       </div>
       <div className="flex flex-wrap gap-2">
         <ReadinessFilterButton active={readinessFilter === "all"} label="All records" onClick={() => onSetReadinessFilter("all")} />
