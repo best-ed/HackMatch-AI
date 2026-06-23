@@ -7,6 +7,7 @@ import type { DuplicateParticipantGroup } from "@/lib/participant-duplicates";
 import { buildParticipantDuplicateQueue } from "@/lib/participant-duplicate-queue";
 import { buildDuplicateResolutionPreview } from "@/lib/participant-duplicate-resolution";
 import type { ParticipantIntakeSummary, IntakeIssueSeverity } from "@/lib/participant-intake";
+import type { ParticipantOperatorNudge } from "@/lib/participant-operator-nudges";
 import type { PrivacyAuditStatus, PrivacyAuditSummary } from "@/lib/privacy-audit";
 
 export function ParticipantPrivacyAuditPanel({
@@ -133,12 +134,14 @@ export function ParticipantLinkSecurityPanel({
 export function ParticipantIntakeQualityPanel({
   averageCompleteness,
   duplicateCount,
+  nudges,
   readinessFilter,
   summary,
   onSetReadinessFilter
 }: {
   averageCompleteness: number;
   duplicateCount: number;
+  nudges: ParticipantOperatorNudge[];
   readinessFilter: "all" | "incomplete" | "excluded" | "low-signal" | "duplicates";
   summary: ParticipantIntakeSummary;
   onSetReadinessFilter: (filter: "all" | "incomplete" | "excluded" | "low-signal" | "duplicates") => void;
@@ -164,6 +167,25 @@ export function ParticipantIntakeQualityPanel({
       </div>
       <div className="text-sm text-muted-foreground">
         Low-signal profiles: <span className="font-semibold text-foreground">{summary.lowSignalCount}</span>
+      </div>
+      <div className="grid gap-2">
+        {nudges.map((nudge) => (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-3" key={nudge.title}>
+            <div>
+              <div className="font-semibold">{nudge.title}</div>
+              <div className="mt-1 text-sm text-muted-foreground">{nudge.detail}</div>
+            </div>
+            {nudge.filter ? (
+              <button
+                className="rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold text-primary"
+                onClick={() => onSetReadinessFilter(nudge.filter!)}
+                type="button"
+              >
+                Open filter
+              </button>
+            ) : null}
+          </div>
+        ))}
       </div>
       <div className="flex flex-wrap gap-2">
         <ReadinessFilterButton active={readinessFilter === "all"} label="All records" onClick={() => onSetReadinessFilter("all")} />

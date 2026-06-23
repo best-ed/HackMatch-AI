@@ -55,6 +55,7 @@ import {
   participantMatchesReadinessFilter,
   type ParticipantReadinessFilter
 } from "@/lib/participant-readiness-filter";
+import { buildParticipantOperatorNudges } from "@/lib/participant-operator-nudges";
 import { buildPrivacyAudit } from "@/lib/privacy-audit";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
@@ -189,6 +190,15 @@ export default function AdminParticipantsPage() {
   const importCohortSummary = useMemo(
     () => (importPlan ? summarizeParticipantImportCohorts(importPlan.rowPreviews, activeCohort) : null),
     [activeCohort, importPlan]
+  );
+  const operatorNudges = useMemo(
+    () =>
+      buildParticipantOperatorNudges({
+        averageCompleteness,
+        duplicateCount: duplicateParticipantIds.size,
+        summary: intakeSummary
+      }),
+    [averageCompleteness, duplicateParticipantIds.size, intakeSummary]
   );
 
   function updateParticipant<K extends keyof Participant>(
@@ -423,6 +433,7 @@ export default function AdminParticipantsPage() {
       <ParticipantIntakeQualityPanel
         averageCompleteness={averageCompleteness}
         duplicateCount={duplicateParticipantIds.size}
+        nudges={operatorNudges}
         onSetReadinessFilter={setReadinessFilter}
         readinessFilter={readinessFilter}
         summary={intakeSummary}
