@@ -285,6 +285,11 @@ export default function AdminParticipantsPage() {
     saveParticipant({ ...participant, accessToken: nextToken });
     setPendingTokenRotationId("");
     setLinkStatus(accessTokenRotationMessage({ participant, oldToken, newToken: nextToken }));
+    persistAdminAuditEntry({
+      action: "participant-token-rotation",
+      label: "Participant access token rotated",
+      detail: `Rotated the participant access token for ${participant.fullName || participant.email || participant.id} in ${participant.cohort || "General"}.`
+    });
   }
 
   function cancelTokenRotation(participant: Participant) {
@@ -323,6 +328,11 @@ export default function AdminParticipantsPage() {
     setBulkStatus(
       `${participantBulkActionLabel(bulkAction)} updated ${result.affectedCount} filtered participant${result.affectedCount === 1 ? "" : "s"}.`
     );
+    persistAdminAuditEntry({
+      action: "participant-bulk-update",
+      label: "Participant bulk action applied",
+      detail: `${participantBulkActionLabel(bulkAction)} affected ${result.affectedCount} filtered participant record(s) in ${activeCohort}.`
+    });
   }
 
   function handleCsvFile(file?: File) {
@@ -351,6 +361,11 @@ export default function AdminParticipantsPage() {
         importPlan.updatedCount ? ` and updated ${importPlan.updatedCount}` : ""
       }${importPlan.skippedCount ? `; skipped ${importPlan.skippedCount} duplicate${importPlan.skippedCount === 1 ? "" : "s"}` : ""}.`
     );
+    persistAdminAuditEntry({
+      action: "participant-import",
+      label: "Participant CSV import applied",
+      detail: `Imported ${importPlan.createdCount} new, updated ${importPlan.updatedCount}, and skipped ${importPlan.skippedCount} duplicate participant record(s) for ${activeCohort}.`
+    });
     setImportCsv("");
   }
 
@@ -358,6 +373,11 @@ export default function AdminParticipantsPage() {
     if (!lastImportRollback) return;
     setParticipants(lastImportRollback.beforeParticipants);
     setImportStatus(`Rolled back last import from ${lastImportRollback.afterCount} to ${lastImportRollback.beforeParticipants.length} participant${lastImportRollback.beforeParticipants.length === 1 ? "" : "s"}.`);
+    persistAdminAuditEntry({
+      action: "participant-import-rollback",
+      label: "Participant import rolled back",
+      detail: `Rolled back the last participant import in ${activeCohort}, restoring ${lastImportRollback.beforeParticipants.length} participant record(s).`
+    });
     setLastImportRollback(undefined);
   }
 
@@ -996,6 +1016,11 @@ export default function AdminParticipantsPage() {
                       onConfirm={() => {
                         deleteParticipant(participant.id);
                         setDirectoryActionStatus(`Deleted ${participant.fullName || participant.email || participant.id} from the local directory.`);
+                        persistAdminAuditEntry({
+                          action: "participant-delete",
+                          label: "Participant deleted",
+                          detail: `Deleted ${participant.fullName || participant.email || participant.id} from the participant directory.`
+                        });
                       }}
                     />
                   </div>

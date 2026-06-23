@@ -100,6 +100,11 @@ const operationAuditActions = new Set<AdminAuditEntry["action"]>([
   "export-participants",
   "export-access-links",
   "copied-access-links",
+  "participant-import",
+  "participant-import-rollback",
+  "participant-bulk-update",
+  "participant-token-rotation",
+  "participant-delete",
   "export-teams",
   "shared-run",
   "restored-run"
@@ -113,6 +118,11 @@ function adminOperationHref(action: AdminAuditEntry["action"]) {
     case "export-participants":
     case "export-access-links":
     case "copied-access-links":
+    case "participant-import":
+    case "participant-import-rollback":
+    case "participant-bulk-update":
+    case "participant-token-rotation":
+    case "participant-delete":
       return "/admin/participants";
     default:
       return "/admin/teams";
