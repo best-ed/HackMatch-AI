@@ -13,6 +13,13 @@ export type ParticipantImportDiagnostics = {
   highlights: string[];
 };
 
+export type ParticipantImportCohortSummary = {
+  activeCohortCount: number;
+  otherCohortCount: number;
+  cohortCount: number;
+  topCohorts: Array<{ cohort: string; count: number }>;
+};
+
 export function buildParticipantImportDiagnostics(plan: ParticipantImportPlan): ParticipantImportDiagnostics {
   const readyRowCount = plan.rowPreviews.filter((row) => row.action === "create" || row.action === "update").length;
   const warningRowCount = plan.rowPreviews.filter((row) => row.warnings.length > 0 && row.errors.length === 0).length;
@@ -82,4 +89,31 @@ export function filterParticipantImportRows(
   if (filter === "warnings") return rows.filter((row) => row.warnings.length > 0 && row.errors.length === 0);
   if (filter === "errors") return rows.filter((row) => row.errors.length > 0);
   return rows.filter((row) => row.action === "skip" || row.action === "update");
+}
+
+export function summarizeParticipantImportCohorts(
+  rows: ParticipantImportRowPreview[],
+  activeCohort: string
+): ParticipantImportCohortSummary {
+  const actionableRows = rows.filter((row) => row.action !== "error");
+  const counts = new Map<string, number>();
+
+  actionableRows.forEach((row) => {
+    const cohort = row.targetCohort || "General";
+    counts.set(cohort, (counts.get(cohort) ?? 0) + 1);
+  });
+
+  const topCohorts = Array.from(counts.entries())
+    .map(([cohort, count]) => ({ cohort, count }))
+    .sort((left, right) => right.count - left.count || left.cohort.localeCompare(right.cohort))
+    .slice(0, 3);
+
+  const activeCohortCount = actionableRows.filter((row) => (row.targetCohort || "General") === activeCohort).length;
+
+  return {
+    activeCohortCount,
+    otherCohortCount: actionableRows.length - activeCohortCount,
+    cohortCount: counts.size,
+    topCohorts
+  };
 }

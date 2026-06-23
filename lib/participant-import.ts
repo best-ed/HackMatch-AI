@@ -28,6 +28,7 @@ export type ParticipantImportRowPreview = {
   rowNumber: number;
   fullName: string;
   email: string;
+  targetCohort: string;
   action: "create" | "update" | "skip" | "error";
   duplicateName?: string;
   errors: string[];
@@ -317,6 +318,7 @@ export function planParticipantCsvImport({
     }, {});
     const fullName = getRowValue(row, "full_name");
     const email = getRowValue(row, "email");
+    const targetCohort = getRowValue(row, "cohort") || activeCohort || "General";
     const rowErrors: string[] = [];
     const rowWarnings: string[] = [];
 
@@ -345,6 +347,7 @@ export function planParticipantCsvImport({
         rowNumber,
         fullName,
         email,
+        targetCohort,
         action: "error",
         errors: rowErrors,
         warnings: rowWarnings
@@ -356,6 +359,7 @@ export function planParticipantCsvImport({
       id: getRowValue(row, "participant_id") || createImportParticipantId(planned),
       accessToken: getRowValue(row, "access_token") || createImportAccessToken(`${email}-${rowNumber}`),
       cohort: getRowValue(row, "cohort") || activeCohort || "General",
+      
       fullName,
       email,
       phone: getRowValue(row, "phone"),
@@ -390,6 +394,7 @@ export function planParticipantCsvImport({
           rowNumber,
           fullName,
           email,
+          targetCohort,
           action: "skip",
           duplicateName: duplicate.fullName,
           errors: [],
@@ -414,6 +419,7 @@ export function planParticipantCsvImport({
         rowNumber,
         fullName,
         email,
+        targetCohort,
         action: "update",
         duplicateName: duplicate.fullName,
         errors: [],
@@ -428,6 +434,7 @@ export function planParticipantCsvImport({
       rowNumber,
       fullName,
       email,
+      targetCohort,
       action: "create",
       errors: [],
       warnings: rowWarnings

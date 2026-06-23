@@ -35,6 +35,7 @@ import { findParticipantDuplicates } from "@/lib/participant-duplicates";
 import {
   buildParticipantImportDiagnostics,
   filterParticipantImportRows,
+  summarizeParticipantImportCohorts,
   type ParticipantImportPreviewFilter
 } from "@/lib/participant-import-diagnostics";
 import { buildParticipantLinkAudit } from "@/lib/participant-link-audit";
@@ -179,6 +180,10 @@ export default function AdminParticipantsPage() {
   const filteredImportPreviewRows = useMemo(
     () => (importPlan ? filterParticipantImportRows(importPlan.rowPreviews, importPreviewFilter) : []),
     [importPlan, importPreviewFilter]
+  );
+  const importCohortSummary = useMemo(
+    () => (importPlan ? summarizeParticipantImportCohorts(importPlan.rowPreviews, activeCohort) : null),
+    [activeCohort, importPlan]
   );
 
   function updateParticipant<K extends keyof Participant>(
@@ -703,6 +708,21 @@ export default function AdminParticipantsPage() {
                 <PreviewMetric label="Duplicate matches" value={importDiagnostics.duplicateRowCount} />
                 <PreviewMetric label="Defaults used" value={importDiagnostics.defaultedFieldCount} />
               </div>
+              {importCohortSummary ? (
+                <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/60 p-3">
+                  <div className="font-semibold text-emerald-900">Cohort landing preview</div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <PreviewMetric label={`Stay in ${activeCohort}`} value={importCohortSummary.activeCohortCount} />
+                    <PreviewMetric label="Land elsewhere" value={importCohortSummary.otherCohortCount} />
+                    <PreviewMetric label="Cohorts touched" value={importCohortSummary.cohortCount} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {importCohortSummary.topCohorts.map((item) => (
+                      <Badge key={item.cohort}>{item.cohort} {item.count}</Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="rounded-md border border-border bg-white p-4">
               <h3 className="font-semibold">Header scan</h3>
