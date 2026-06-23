@@ -14,6 +14,14 @@ export type ParticipantImportPlan = {
   headers: string[];
   unknownHeaders: string[];
   missingRecommendedHeaders: string[];
+  headerScan: ParticipantImportHeaderScan[];
+};
+
+export type ParticipantImportHeaderScan = {
+  sourceHeader: string;
+  normalizedHeader: string;
+  status: "mapped" | "aliased" | "unknown";
+  suggestion?: string;
 };
 
 export type ParticipantImportRowPreview = {
@@ -140,6 +148,28 @@ function normalizeHeader(value: string): string {
   return columnAliases[normalized] ?? normalized;
 }
 
+function scanImportHeader(value: string): ParticipantImportHeaderScan {
+  const sourceHeader = value.trim();
+  const normalizedInput = sourceHeader.toLowerCase().replace(/[\s-]+/g, "_");
+  const normalizedHeader = columnAliases[normalizedInput] ?? normalizedInput;
+  const known = Boolean(normalizedHeader) && knownImportHeaders.includes(normalizedHeader);
+
+  if (known) {
+    return {
+      sourceHeader,
+      normalizedHeader,
+      status: normalizedInput === normalizedHeader ? "mapped" : "aliased"
+    };
+  }
+
+  return {
+    sourceHeader,
+    normalizedHeader,
+    status: "unknown",
+    suggestion: suggestImportHeader(normalizedHeader)
+  };
+}
+
 export function parseCsvRows(csv: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -264,11 +294,13 @@ export function planParticipantCsvImport({
       rowPreviews,
       headers: [],
       unknownHeaders: [],
-      missingRecommendedHeaders: recommendedImportHeaders
+      missingRecommendedHeaders: recommendedImportHeaders,
+      headerScan: []
     };
   }
 
-  const headers = rows[0].map(normalizeHeader);
+  const headerScan = rows[0].map(scanImportHeader);
+  const headers = headerScan.map((item) => item.normalizedHeader);
   const unknownHeaders = headers.filter((header) => header && !knownImportHeaders.includes(header));
   const missingRecommendedHeaders = recommendedImportHeaders.filter((header) => !headers.includes(header));
   const planned = [...existingParticipants];
@@ -417,6 +449,37 @@ export function planParticipantCsvImport({
     rowPreviews,
     headers,
     unknownHeaders,
-    missingRecommendedHeaders
+    missingRecommendedHeaders,
+    headerScan
   };
+}
+
+function suggestImportHeader(value: string) {
+  const valueTokens = tokenizeHeader(value);
+  let bestMatch = "";
+  let bestScore = 0;
+
+  knownImportHeaders.forEach((header) => {
+    const score = headerSimilarityScore(valueTokens, tokenizeHeader(header));
+    if (score > bestScore || (score === bestScore && score > 0 && header.localeCompare(bestMatch) < 0)) {
+      bestMatch = header;
+      bestScore = score;
+    }
+  });
+
+  return bestScore > 0 ? bestMatch : undefined;
+}
+
+function tokenizeHeader(value: string) {
+  return value
+    .split(/[_\s]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function headerSimilarityScore(left: string[], right: string[]) {
+  if (left.length === 0 || right.length === 0) return 0;
+  const overlap = left.filter((token) => right.includes(token)).length;
+  const prefixBonus = left[0] === right[0] ? 1 : 0;
+  return overlap + prefixBonus;
 }

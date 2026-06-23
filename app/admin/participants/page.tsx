@@ -706,14 +706,33 @@ export default function AdminParticipantsPage() {
             </div>
             <div className="rounded-md border border-border bg-white p-4">
               <h3 className="font-semibold">Header scan</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {importPlan.headers.map((header) => (
-                  <Badge
-                    className={importPlan.unknownHeaders.includes(header) ? "bg-rose-100 text-rose-800" : "bg-muted text-muted-foreground"}
-                    key={header}
-                  >
-                    {header}
-                  </Badge>
+              <div className="mt-3 space-y-2 text-sm">
+                {importPlan.headerScan.map((header) => (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2" key={`${header.sourceHeader}-${header.normalizedHeader}`}>
+                    <div>
+                      <div className="font-medium">{header.sourceHeader || "(blank header)"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {header.status === "mapped"
+                          ? `Using ${header.normalizedHeader}`
+                          : header.status === "aliased"
+                            ? `Mapped to ${header.normalizedHeader}`
+                            : header.suggestion
+                              ? `Unknown column. Try ${header.suggestion}`
+                              : "Unknown column. This field will be ignored."}
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        header.status === "unknown"
+                          ? "bg-rose-100 text-rose-800"
+                          : header.status === "aliased"
+                            ? "bg-sky-100 text-sky-800"
+                            : "bg-muted text-muted-foreground"
+                      }
+                    >
+                      {header.status}
+                    </Badge>
+                  </div>
                 ))}
               </div>
             </div>
