@@ -4,6 +4,7 @@ import { Badge, Card } from "@/components/ui";
 import type { CohortTransferAudit } from "@/lib/cohort-transfer-audit";
 import type { ParticipantLinkAudit, ParticipantLinkAuditStatus } from "@/lib/participant-link-audit";
 import type { DuplicateParticipantGroup } from "@/lib/participant-duplicates";
+import { buildParticipantDuplicateQueue } from "@/lib/participant-duplicate-queue";
 import type { ParticipantIntakeSummary, IntakeIssueSeverity } from "@/lib/participant-intake";
 import type { PrivacyAuditStatus, PrivacyAuditSummary } from "@/lib/privacy-audit";
 
@@ -202,6 +203,8 @@ export function ParticipantIntakeQualityPanel({
 }
 
 export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateParticipantGroup[] }) {
+  const queue = buildParticipantDuplicateQueue(groups);
+
   return (
     <Card className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -216,14 +219,25 @@ export function ParticipantDuplicateReviewPanel({ groups }: { groups: DuplicateP
         </Badge>
       </div>
       {groups.length ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <PreviewMetric label="High priority" value={queue.highCount} />
+          <PreviewMetric label="Medium priority" value={queue.mediumCount} />
+          <PreviewMetric label="Low priority" value={queue.lowCount} />
+        </div>
+      ) : null}
+      {groups.length ? (
         <div className="grid gap-3 md:grid-cols-2">
-          {groups.slice(0, 6).map((group) => (
+          {queue.items.slice(0, 6).map((group) => (
             <div className="rounded-md border border-border bg-white p-3" key={`${group.reason}-${group.label}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="font-medium">{group.reason}</div>
-                <Badge>{group.participants.length} records</Badge>
+                <div className="flex flex-wrap gap-2">
+                  <Badge className={duplicatePriorityClass(group.priority)}>{group.priority}</Badge>
+                  <Badge>{group.participants.length} records</Badge>
+                </div>
               </div>
               <div className="mt-2 text-sm text-muted-foreground">{group.label}</div>
+              <div className="mt-2 text-sm text-muted-foreground">{group.reasonDetail}</div>
               <div className="mt-3 space-y-1 text-sm">
                 {group.participants.map((participant) => (
                   <div className="flex justify-between gap-3" key={participant.id}>
@@ -366,6 +380,12 @@ function ReadinessFilterButton({
 function intakeIssueClass(severity: IntakeIssueSeverity) {
   if (severity === "blocker") return "bg-rose-100 text-rose-800";
   if (severity === "warning") return "bg-amber-100 text-amber-800";
+  return "bg-sky-100 text-sky-800";
+}
+
+function duplicatePriorityClass(priority: "high" | "medium" | "low") {
+  if (priority === "high") return "bg-rose-100 text-rose-800";
+  if (priority === "medium") return "bg-amber-100 text-amber-800";
   return "bg-sky-100 text-sky-800";
 }
 
