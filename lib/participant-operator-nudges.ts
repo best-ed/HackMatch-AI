@@ -34,18 +34,18 @@ export function buildParticipantOperatorNudges({
     });
   }
 
+  if (averageCompleteness < 70) {
+    nudges.push({
+      title: "Average completeness is still thin",
+      detail: `Directory completeness is ${averageCompleteness}, so generated teams may lean on sparse profiles more than you want.`
+    });
+  }
+
   if (summary.lowSignalCount > 0) {
     nudges.push({
       title: "Collect stronger matching signal",
       detail: `${summary.lowSignalCount} participant profile${summary.lowSignalCount === 1 ? "" : "s"} could use skills, interests, or teammate preferences for better deterministic fits.`,
       filter: "low-signal"
-    });
-  }
-
-  if (averageCompleteness < 70) {
-    nudges.push({
-      title: "Average completeness is still thin",
-      detail: `Directory completeness is ${averageCompleteness}, so generated teams may lean on sparse profiles more than you want.`
     });
   }
 
