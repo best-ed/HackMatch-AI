@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card } from "@/components/ui";
 import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
+import { buildParticipantConfirmationSummary } from "@/lib/participant-confirmation-summary";
 import {
   readCurrentParticipantLookup,
   useHackMatchData,
@@ -52,6 +53,13 @@ export default function ParticipantConfirmationPage() {
     ? result.teams.find((team) => team.participantIds.includes(participant.id))
     : undefined;
   const isUnassigned = participant ? result.unassignedParticipants.includes(participant.id) : false;
+  const confirmationSummary = participant
+    ? buildParticipantConfirmationSummary({
+        participant,
+        assignedTeam,
+        isUnassigned
+      })
+    : undefined;
 
   async function copyAccessLink() {
     const result = await copyTextToClipboard(absoluteTeamUrl);
@@ -111,6 +119,29 @@ export default function ParticipantConfirmationPage() {
               </Link>
             </div>
           </Card>
+          {confirmationSummary ? (
+            <Card className="space-y-4 lg:col-span-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Handoff snapshot</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{confirmationSummary.detail}</p>
+                </div>
+                <Badge className={confirmationSummary.status === "ready" ? "bg-emerald-100 text-emerald-800" : confirmationSummary.status === "review" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-800"}>
+                  {confirmationSummary.title}
+                </Badge>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {confirmationSummary.signals.map((signal) => (
+                  <Detail
+                    key={signal.label}
+                    label={signal.label}
+                    tone={signal.tone}
+                    value={signal.value}
+                  />
+                ))}
+              </div>
+            </Card>
+          ) : null}
           <Card className="space-y-4 lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -162,9 +193,23 @@ export default function ParticipantConfirmationPage() {
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({
+  label,
+  value,
+  tone = "waiting"
+}: {
+  label: string;
+  value: string;
+  tone?: "ready" | "review" | "waiting";
+}) {
   return (
-    <div className="rounded-md border border-border bg-white p-3">
+    <div className={`rounded-md border p-3 ${
+      tone === "ready"
+        ? "border-emerald-200 bg-emerald-50/60"
+        : tone === "review"
+          ? "border-amber-200 bg-amber-50/60"
+          : "border-border bg-white"
+    }`}>
       <div className="text-xs font-medium uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 font-semibold">{value}</div>
     </div>
