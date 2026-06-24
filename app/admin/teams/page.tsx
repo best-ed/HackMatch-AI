@@ -43,6 +43,7 @@ import {
   type SavedRunVisibilityFilter
 } from "@/lib/saved-run-visibility";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
+import { summarizeTeamHandoffCoverage } from "@/lib/team-handoff-coverage";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import {
   checklistCompletion,
@@ -877,6 +878,7 @@ export default function AdminTeamsPage() {
             .filter((participant): participant is Participant => Boolean(participant));
           const placementExplanations = buildTeamPlacementExplanations(members);
           const balanceSummary = summarizeTeamBalance(members, team.score);
+          const handoffCoverage = summarizeTeamHandoffCoverage(members);
           const risks = getTeamRisks(team.score?.totalScore ?? 0, explanation);
           const checklist = teamReviewChecklist[checklistKey(team.id)] ?? emptyTeamReviewChecklist;
           const completion = checklistCompletion(checklist);
@@ -957,6 +959,19 @@ export default function AdminTeamsPage() {
                 {balanceSummary.signals.map((signal) => (
                   <BalanceSignalBar key={signal.label} signal={signal} />
                 ))}
+              </div>
+              <div className={`rounded-md border px-4 py-3 text-sm ${
+                handoffCoverage.status === "ready"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                  : "border-amber-200 bg-amber-50 text-amber-900"
+              }`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="font-semibold">Contact coverage</div>
+                  <Badge className={handoffCoverage.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                    {handoffCoverage.visibleCount}/{members.length} visible
+                  </Badge>
+                </div>
+                <p className="mt-2">{handoffCoverage.summary}</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {members.map((participant) => (
