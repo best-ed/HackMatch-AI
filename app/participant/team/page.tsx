@@ -12,6 +12,7 @@ import {
 } from "@/lib/local-store";
 import { generateTeams } from "@/lib/matching/algorithm";
 import type { Participant } from "@/lib/matching/types";
+import { buildParticipantHandoffReadiness } from "@/lib/participant-handoff-readiness";
 import { buildParticipantStatusChecklist, type ParticipantStatusItem } from "@/lib/participant-status";
 import { buildParticipantTeamBrief, formatAvailability } from "@/lib/participant-team-view";
 
@@ -55,6 +56,12 @@ export default function ParticipantTeamPage() {
     ? result.unassignedParticipants.includes(participant.id)
     : false;
   const statusChecklist = buildParticipantStatusChecklist({ participant, team });
+  const handoffReadiness = buildParticipantHandoffReadiness({
+    brief,
+    participant,
+    statusChecklist,
+    team
+  });
   const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
@@ -185,6 +192,30 @@ export default function ParticipantTeamPage() {
             </div>
           </Card>
           <div className="space-y-6">
+            <Card className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Handoff readiness</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{handoffReadiness.detail}</p>
+                </div>
+                <Badge className={handoffReadiness.status === "ready" ? "bg-emerald-100 text-emerald-800" : handoffReadiness.status === "review" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"}>
+                  {handoffReadiness.title}
+                </Badge>
+              </div>
+              <div className="grid gap-2">
+                {handoffReadiness.checks.map((check) => (
+                  <div className="rounded-md border border-border bg-white p-3 text-sm" key={check.label}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-semibold">{check.label}</div>
+                      <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : check.status === "review" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"}>
+                        {check.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-muted-foreground">{check.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
             <Card className="space-y-4">
               <div>
                 <h2 className="font-semibold">Suggested next steps</h2>
