@@ -23,6 +23,7 @@ import {
 } from "@/lib/admin-audit-history";
 import type { ExplanationServiceResult } from "@/lib/ai/explanation-service";
 import { clipboardStatusMessage, copyTextToClipboard } from "@/lib/clipboard";
+import { buildCohortHandoffPacket } from "@/lib/cohort-handoff-packet";
 import { buildTeamExportAudit, buildTeamExportGate } from "@/lib/export-audit";
 import { buildTeamCsvArtifact } from "@/lib/export";
 import { evaluateCohortFinalizationGate } from "@/lib/cohort-finalization";
@@ -193,6 +194,16 @@ export default function AdminTeamsPage() {
         savedRuns: savedMatchRuns
       }),
     [activeCohort, cohortParticipants, result, savedMatchRuns, settings]
+  );
+  const cohortHandoffPacket = useMemo(
+    () =>
+      buildCohortHandoffPacket({
+        cohort: exportCohort,
+        participants: activeParticipants,
+        result: activeResult,
+        run: activeRun
+      }),
+    [activeParticipants, activeResult, activeRun, exportCohort]
   );
   const comparison = compareRun
     ? compareSavedRunToLive({
@@ -454,6 +465,11 @@ export default function AdminTeamsPage() {
     }
   }
 
+  async function copyCohortHandoffPacket() {
+    const result = await copyTextToClipboard(cohortHandoffPacket.text);
+    setRunActionStatus(clipboardStatusMessage(result, `Copied ${cohortHandoffPacket.title}.`));
+  }
+
   async function copyTeamSummary(
     teamName: string,
     members: Participant[],
@@ -541,6 +557,35 @@ export default function AdminTeamsPage() {
       <ReviewBriefPanel summary={reviewSummary} />
       <OperationsHistoryPanel history={auditHistory} />
       <ExportAuditPanel audit={exportAudit} />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Cohort handoff packet</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A copy-ready organizer summary for the current live view or saved run snapshot.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge className={cohortHandoffPacket.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+              {cohortHandoffPacket.status}
+            </Badge>
+            <button
+              className="rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold"
+              onClick={() => void copyCohortHandoffPacket()}
+              type="button"
+            >
+              Copy packet
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          {cohortHandoffPacket.bullets.map((bullet) => (
+            <div className="rounded-md border border-border bg-white px-3 py-3 text-sm text-muted-foreground" key={bullet}>
+              {bullet}
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
