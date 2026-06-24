@@ -59,14 +59,22 @@ export function AdminSavedRunCard({
     <div className={`rounded-md border p-3 ${active ? "border-primary bg-emerald-50" : "border-border bg-white"}`}>
       <div className="mb-3 grid gap-3">
         <div className="rounded-md bg-muted p-3 text-xs">
-          <div className="font-semibold">Share preview</div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="font-semibold">Share preview</div>
+            <Badge className={sharePreview.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+              {sharePreview.status}
+            </Badge>
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {sharePreview.metrics.slice(0, 4).map((metric) => (
+            {sharePreview.metrics.slice(1, 5).map((metric) => (
               <div key={metric.label}>
                 <div className="font-bold">{metric.value}</div>
                 <div className="text-muted-foreground">{metric.label}</div>
               </div>
             ))}
+          </div>
+          <div className="mt-2 text-muted-foreground">
+            {sharePreview.metrics.find((metric) => metric.label === "Contact sharing")?.value} contact records are shareable in this snapshot.
           </div>
         </div>
         {integrity ? <SavedRunIntegrityPanel integrity={integrity} /> : null}
