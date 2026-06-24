@@ -20,7 +20,10 @@ describe("saved run share preview", () => {
     });
 
     expect(preview.title).toContain("Final May run");
+    expect(preview.status).toBe("review");
     expect(preview.text).toContain("Average score: 91");
+    expect(preview.text).toContain("Shareable contacts:");
     expect(preview.metrics.some((metric) => metric.label === "Teams")).toBe(true);
+    expect(preview.metrics.some((metric) => metric.label === "Contact sharing")).toBe(true);
   });
 });
