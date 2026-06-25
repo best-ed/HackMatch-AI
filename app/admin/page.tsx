@@ -18,7 +18,9 @@ import { summarizeCohortOverview } from "@/lib/cohort-overview";
 import { evaluateDeploymentReadiness } from "@/lib/deployment-readiness";
 import { buildTeamExportAudit } from "@/lib/export-audit";
 import { buildLaunchChecklist, type LaunchChecklistItem } from "@/lib/launch-checklist";
+import { buildLocalOpsPlaybook } from "@/lib/local-ops-playbook";
 import { useHackMatchData } from "@/lib/local-store";
+import { readLocalStorageDiagnostics, type LocalStorageDiagnostics } from "@/lib/local-storage-diagnostics";
 import { generateTeams } from "@/lib/matching/algorithm";
 import { buildParticipantActivityTimeline, type ParticipantActivityItem } from "@/lib/participant-activity";
 import { evaluateParticipantIntake } from "@/lib/participant-intake";
@@ -45,9 +47,14 @@ export default function AdminPage() {
   } = useHackMatchData();
   const [auditHistory, setAuditHistory] = useState<AdminAuditEntry[]>([]);
   const [runtimeSignals, setRuntimeSignals] = useState<AdminRuntimeSignals | undefined>();
+  const [storageDiagnostics, setStorageDiagnostics] = useState<LocalStorageDiagnostics | undefined>();
 
   useEffect(() => {
     setAuditHistory(readAdminAuditHistory());
+  }, []);
+
+  useEffect(() => {
+    setStorageDiagnostics(readLocalStorageDiagnostics());
   }, []);
 
   useEffect(() => {
@@ -177,6 +184,10 @@ export default function AdminPage() {
           : `${result.warnings.length} warning(s) need review.`
     }
   ];
+  const localOpsPlaybook = buildLocalOpsPlaybook({
+    deploymentStatus: deploymentReadiness.status,
+    storageStatus: storageDiagnostics?.status ?? "review"
+  });
 
   return (
     <div className="space-y-6">
@@ -196,6 +207,26 @@ export default function AdminPage() {
       <AdminPersistenceStatus mode={persistenceMode} warning={persistenceWarning} />
       <AdminDataLoadNotice loaded={loaded} label="organizer overview" />
       <AdminLocalStorageDiagnostics />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Local operator playbook</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Suggested build, recovery, and smoke steps for this current workspace state.
+            </p>
+          </div>
+          <Badge>{localOpsPlaybook.length} step{localOpsPlaybook.length === 1 ? "" : "s"}</Badge>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {localOpsPlaybook.map((step) => (
+            <div className="rounded-md border border-border bg-white p-4" key={step.label}>
+              <div className="font-semibold">{step.label}</div>
+              <div className="mt-2 rounded-md bg-muted px-3 py-2 font-mono text-xs text-foreground">{step.command}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard href="/admin/participants" title="Directory" value={cohortParticipants.length} detail={`${matchable.length} matchable in ${activeCohort}`} icon={<Users size={20} />} />
         <MetricCard href="/admin/matching" title="Match setup" value={result.teams.length} detail={`${assigned}/${matchable.length} assigned live`} icon={<Settings2 size={20} />} />
