@@ -132,6 +132,7 @@ The smoke runner reads `smoke-routes.json`, which is also covered by tests so pu
 Deployment notes live in `DEPLOYMENT.md`.
 
 The admin dashboard includes a deployment preflight card for browser-visible launch readiness. It does not replace `npm run build`, but it helps organizers confirm persistence mode, participant data, generated teams, and saved-run readiness before a launch smoke test.
+The same overview now includes a local operator playbook that translates storage and deployment signals into concrete next steps, including backup, guarded build, recovery, and smoke-test commands.
 
 Admin passcode protection is optional for local demos. To protect `/admin/*`, add these values to `.env.local` and restart the server:
 
@@ -189,8 +190,9 @@ The editable data is stored in browser `localStorage`, so it survives refreshes
 on the same machine/browser. Use "Reset demo data" to return to the seed data.
 
 Admin pages show a short data-loading notice while browser-local data is loading and remote persistence is checked. The admin dashboard also includes local storage diagnostics for storage availability, HackMatch key count, stored data size, and the largest local data surface.
+Those diagnostics now include a storage pressure summary so organizers can tell the difference between healthy headroom, review-worthy growth, and blocked local persistence at a glance.
 
-The settings page includes local workspace backup and restore controls. A backup captures participants, matching settings, saved runs, active cohort, archived cohorts, and team review checklist state. Restores are previewed before replacing local browser data. The same card now includes live and previewed backup sensitivity summaries so organizers can see when contact fields, access tokens, consent-hidden records, or saved-run snapshots are part of the JSON handoff.
+The settings page includes local workspace backup and restore controls. A backup captures participants, matching settings, saved runs, active cohort, archived cohorts, and team review checklist state. Restores are previewed before replacing local browser data. The same card now includes live and previewed backup sensitivity summaries so organizers can see when contact fields, access tokens, consent-hidden records, or saved-run snapshots are part of the JSON handoff. It also surfaces recent backup and restore history from the admin audit log so operators can confirm what happened most recently before taking another local-state action.
 
 Organizers can export all participants or the current filtered participant view as CSV from `/admin/participants`. The same page can import participant CSVs, preview new/updated/skipped/invalid rows, inspect row-level warnings, skip or update duplicates, default missing cohort values to the active cohort, surface unknown or missing recommended columns before import, show smarter header mapping hints, preview which cohorts imported rows will land in, and roll back the most recent import in the current browser session.
 
