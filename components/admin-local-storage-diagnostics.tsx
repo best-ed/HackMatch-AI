@@ -9,6 +9,7 @@ import {
   type LocalStorageDiagnostics,
   type LocalStorageDiagnosticStatus
 } from "@/lib/local-storage-diagnostics";
+import { summarizeLocalStoragePressure } from "@/lib/local-storage-pressure";
 
 export function AdminLocalStorageDiagnostics() {
   const [diagnostics, setDiagnostics] = useState<LocalStorageDiagnostics | null>(null);
@@ -16,6 +17,7 @@ export function AdminLocalStorageDiagnostics() {
   useEffect(() => {
     setDiagnostics(readLocalStorageDiagnostics());
   }, []);
+  const pressure = diagnostics ? summarizeLocalStoragePressure(diagnostics) : null;
 
   return (
     <Card className="space-y-4">
@@ -40,6 +42,18 @@ export function AdminLocalStorageDiagnostics() {
         <DiagnosticMetric label="Stored data" value={diagnostics ? formatBytes(diagnostics.totalBytes) : "checking"} />
         <DiagnosticMetric label="Largest key" value={diagnostics?.largestKey ? formatBytes(diagnostics.largestKeyBytes) : "none"} />
       </div>
+      {pressure ? (
+        <div className={`rounded-md border px-4 py-3 text-sm ${
+          pressure.status === "healthy"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            : pressure.status === "review"
+              ? "border-amber-200 bg-amber-50 text-amber-900"
+              : "border-rose-200 bg-rose-50 text-rose-900"
+        }`}>
+          <div className="font-semibold">{pressure.title}</div>
+          <p className="mt-1">{pressure.detail}</p>
+        </div>
+      ) : null}
       <div className="grid gap-3 lg:grid-cols-2">
         {(diagnostics?.items ?? placeholderItems).map((item) => (
           <div className="rounded-md border border-border bg-white p-3" key={item.label}>
