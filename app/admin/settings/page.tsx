@@ -8,7 +8,8 @@ import { ConfirmActionButton } from "@/components/confirm-action-button";
 import { AdminSettingsPresetCard } from "@/components/admin-settings-preset-card";
 import { SectionTrail } from "@/components/section-trail";
 import { Badge, Button, Card, TextArea, TextInput } from "@/components/ui";
-import { persistAdminAuditEntry } from "@/lib/admin-audit-history";
+import { persistAdminAuditEntry, readAdminAuditHistory } from "@/lib/admin-audit-history";
+import { summarizeBackupOperations } from "@/lib/backup-operations-summary";
 import {
   createHackMatchBackup,
   hackMatchBackupFilename,
@@ -52,6 +53,7 @@ export default function AdminSettingsPage() {
   const [backupStatus, setBackupStatus] = useState("");
   const [draftActionStatus, setDraftActionStatus] = useState("");
   const [teamReviewChecklist, setTeamReviewChecklist] = useState<TeamReviewChecklistStore>({});
+  const [backupSummaryAt, setBackupSummaryAt] = useState(0);
   const hasDraftChanges = JSON.stringify(draftSettings) !== JSON.stringify(settings);
   const backupPreview = useMemo(
     () => (backupJson.trim() ? parseHackMatchBackupJson(backupJson) : undefined),
@@ -70,6 +72,10 @@ export default function AdminSettingsPage() {
         })
         : undefined,
     [backupPreview]
+  );
+  const backupOperations = useMemo(
+    () => summarizeBackupOperations(readAdminAuditHistory()),
+    [backupSummaryAt]
   );
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
@@ -127,6 +133,10 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     setTeamReviewChecklist(readTeamReviewChecklist());
+  }, []);
+
+  useEffect(() => {
+    setBackupSummaryAt(Date.now());
   }, []);
 
   function update<K extends keyof MatchingSettings>(key: K, value: MatchingSettings[K]) {
@@ -196,6 +206,7 @@ export default function AdminSettingsPage() {
       label: "Local backup downloaded",
       detail: `Downloaded backup JSON for ${backup.activeCohort} with ${backup.participants.length} participants and ${backup.savedMatchRuns.length} saved run(s).`
     });
+    setBackupSummaryAt(Date.now());
   }
 
   function restoreBackupPreview() {
@@ -210,6 +221,7 @@ export default function AdminSettingsPage() {
       label: "Local backup restored",
       detail: `Restored backup JSON for ${backupPreview.summary.activeCohort} with ${backupPreview.summary.participants} participants and ${backupPreview.summary.savedRuns} saved run(s).`
     });
+    setBackupSummaryAt(Date.now());
     setBackupJson("");
   }
 
@@ -257,6 +269,17 @@ export default function AdminSettingsPage() {
           <HealthMetric label="Archived cohorts" value={archivedCohorts.length} />
           <HealthMetric label="Review checks" value={Object.keys(teamReviewChecklist).length} />
         </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <HealthMetric label="Backup exports" value={backupOperations.exportCount} />
+          <HealthMetric label="Backup restores" value={backupOperations.restoreCount} />
+          <HealthMetric label="Latest action" value={backupOperations.latestAction === "backup-restore" ? "Restore" : backupOperations.latestAction === "backup-export" ? "Export" : "None"} />
+          <HealthMetric label="Last backup event" value={backupOperations.latestAt ? formatAuditDate(backupOperations.latestAt) : "None yet"} />
+        </div>
+        {backupOperations.latestDetail ? (
+          <div className="rounded-md border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+            {backupOperations.latestDetail}
+          </div>
+        ) : null}
         <BackupRiskAuditPanel
           audit={liveBackupRisk}
           title="Live backup sensitivity"
@@ -714,6 +737,13 @@ function readTeamReviewChecklist(): TeamReviewChecklistStore {
   } catch {
     return {};
   }
+}
+
+function formatAuditDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function NumberField({
