@@ -31,6 +31,7 @@ import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
 import { evaluateSupabaseSchemaReadiness, type SupabaseSchemaReadinessItem } from "@/lib/supabase-schema-readiness";
 import { buildSupabaseSyncSummary } from "@/lib/supabase-sync-status";
+import { buildWorkspaceSnapshotSummary } from "@/lib/workspace-snapshot-summary";
 
 export default function AdminPage() {
   const {
@@ -188,6 +189,13 @@ export default function AdminPage() {
     deploymentStatus: deploymentReadiness.status,
     storageStatus: storageDiagnostics?.status ?? "review"
   });
+  const workspaceSnapshot = buildWorkspaceSnapshotSummary({
+    participants,
+    savedRuns: savedMatchRuns,
+    activeCohort,
+    archivedCohorts,
+    auditHistory
+  });
 
   return (
     <div className="space-y-6">
@@ -233,6 +241,30 @@ export default function AdminPage() {
         <MetricCard href="/admin/teams" title="Team review" value={averageScore} detail={`${result.warnings.length} warning(s)`} icon={<ShieldCheck size={20} />} />
         <MetricCard href="/admin/teams" title="Saved runs" value={savedMatchRuns.length} detail={finalRun ? `Final: ${finalRun.name}` : latestRun ? `Latest: ${latestRun.name}` : "None saved"} icon={<Download size={20} />} />
       </div>
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Workspace snapshot</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{workspaceSnapshot.detail}</p>
+          </div>
+          <Badge className={workspaceSnapshot.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+            {workspaceSnapshot.status}
+          </Badge>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {workspaceSnapshot.metrics.map((metric) => (
+            <div className="rounded-md border border-border bg-muted/35 p-3" key={metric.label}>
+              <div className="text-sm text-muted-foreground">{metric.label}</div>
+              <div className="mt-1 text-lg font-semibold">{metric.value}</div>
+            </div>
+          ))}
+        </div>
+        {workspaceSnapshot.latestChange ? (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            {workspaceSnapshot.latestChange}
+          </p>
+        ) : null}
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
