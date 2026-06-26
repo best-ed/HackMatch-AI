@@ -56,6 +56,7 @@ import {
   type ParticipantReadinessFilter
 } from "@/lib/participant-readiness-filter";
 import { buildParticipantOperatorNudges } from "@/lib/participant-operator-nudges";
+import { buildParticipantExportManifest } from "@/lib/participant-export-manifest";
 import { buildPrivacyAudit } from "@/lib/privacy-audit";
 import { validateParticipantRegistration } from "@/lib/participant-validation";
 
@@ -199,6 +200,24 @@ export default function AdminParticipantsPage() {
         summary: intakeSummary
       }),
     [averageCompleteness, duplicateParticipantIds.size, intakeSummary]
+  );
+  const filteredExportManifest = useMemo(
+    () =>
+      buildParticipantExportManifest({
+        participants: filteredParticipants,
+        scope: "filtered",
+        activeCohort
+      }),
+    [activeCohort, filteredParticipants]
+  );
+  const fullExportManifest = useMemo(
+    () =>
+      buildParticipantExportManifest({
+        participants,
+        scope: "all",
+        activeCohort
+      }),
+    [activeCohort, participants]
   );
 
   function updateParticipant<K extends keyof Participant>(
@@ -426,6 +445,34 @@ export default function AdminParticipantsPage() {
           {directoryActionStatus}
         </div>
       ) : null}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[filteredExportManifest, fullExportManifest].map((manifest, index) => (
+          <Card className="space-y-3" key={`${manifest.title}-${index}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">{index === 0 ? "Filtered export manifest" : "Full export manifest"}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{manifest.detail}</p>
+              </div>
+              <Badge className={manifest.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                {manifest.status}
+              </Badge>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {manifest.checks.map((check) => (
+                <div className="rounded-md border border-border bg-muted/35 p-3" key={check.label}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm text-muted-foreground">{check.label}</div>
+                    <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                      {check.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 font-semibold">{check.value}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
       <AdminPersistenceStatus
         mode={persistenceMode}
         warning={persistenceWarning}
