@@ -203,6 +203,7 @@ Duplicate review is now prioritized instead of flat. Access-token collisions are
 The participant directory also includes a consent and privacy audit for the active cohort. It counts matching consent, excluded participants, contact-sharing consent, assigned participants with hidden contact details, and quick filters for consent review.
 
 The participant directory includes a detail panel for each participant. Organizers can inspect profile readiness, contact links, skills, interests, preferences, blocked teammates, grouped edit sections, and a deterministic completeness score without leaving the table.
+The same page now includes filtered and full export manifests so organizers can see, before downloading CSVs, how many consent-ready records, contact-sharing records, access tokens, and cohorts are about to leave the browser.
 
 Participant registrations include quality checks for required identity, role, availability, consent, duplicate emails, URL formatting, skills, and interests. If a participant enters an email that already exists, the registration page surfaces the existing record with confirmation and team-status links instead of silently creating confusion. Successful registrations receive an access token and redirect to `/participant/confirmation?access=...`, where participants can copy their team access link, review saved profile details, and see a clearer handoff snapshot covering matching consent, contact-sharing state, profile completeness, and current assignment state. Admins can open, copy, regenerate, bulk-copy, or export participant team links from `/admin/participants`, and the access-link handoff card now summarizes whether the filtered view or full directory is ready, review-worthy, or blocked before links are shared. Manual lookup by name, email, or ID remains available for local testing.
 
@@ -217,8 +218,11 @@ Saved runs can be marked as final from `/admin/teams`. The admin dashboard then 
 Saved-run cards include integrity signals that compare frozen snapshots against live participants, settings, cohort context, and stored assignment metrics. This helps organizers see whether a run is verified, needs review, or appears stale. Saved-run visibility filters narrow the list to all runs, the active cohort, final runs, or runs that need attention. Share previews on those cards now also show handoff posture and contact-sharing coverage before an organizer copies the summary out.
 
 The teams page also compares a saved run against the current live generated teams. It highlights score movement, assignment movement, warning changes, participants added or removed from the live snapshot, and settings differences before organizers restore, export, or mark a run final.
+It also shows a team export manifest so operators can quickly confirm assignment count, warning count, hidden-contact exposure, and score floor before downloading the live or saved-run CSV artifact.
 
 The teams page includes a review brief for the selected live or saved run. It summarizes assignment count, score floor, locked teams, and team-level review risks before organizers export or share results. Each team also has compact balance indicators for role coverage, skill coverage, experience, and availability before the full score breakdown, plus a contact-coverage signal so organizers can spot where teammate introductions may still need manual coordination.
+
+The admin overview now includes a workspace snapshot and a remote cutover checklist. Together they answer two operator questions quickly: what is currently stored in this browser, and what still needs review before switching from local rehearsal mode to Supabase-backed persistence.
 
 Team review also includes a cohort handoff packet. This is a copy-ready organizer summary for the current live view or selected saved run, with cohort-level assignment coverage, average score, warning count, and contact-sharing posture in one place.
 
