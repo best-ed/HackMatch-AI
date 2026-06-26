@@ -43,6 +43,7 @@ import {
   type SavedRunVisibilityFilter
 } from "@/lib/saved-run-visibility";
 import { summarizeTeamBalance, type TeamBalanceSignal } from "@/lib/team-balance";
+import { buildTeamExportManifest } from "@/lib/team-export-manifest";
 import { summarizeTeamHandoffCoverage } from "@/lib/team-handoff-coverage";
 import { buildTeamPlacementExplanations } from "@/lib/team-placement";
 import {
@@ -119,6 +120,16 @@ export default function AdminTeamsPage() {
         cohort: exportCohort,
         participants: activeParticipants,
         result: activeResult,
+        scope: isViewingSavedRun ? "saved" : "live"
+      }),
+    [activeParticipants, activeResult, exportCohort, isViewingSavedRun]
+  );
+  const exportManifest = useMemo(
+    () =>
+      buildTeamExportManifest({
+        result: activeResult,
+        participants: activeParticipants,
+        cohort: exportCohort,
         scope: isViewingSavedRun ? "saved" : "live"
       }),
     [activeParticipants, activeResult, exportCohort, isViewingSavedRun]
@@ -557,6 +568,30 @@ export default function AdminTeamsPage() {
       {!isViewingSavedRun ? <FinalizationGatePanel gate={finalizationGate} /> : null}
       <ReviewBriefPanel summary={reviewSummary} />
       <OperationsHistoryPanel history={auditHistory} />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Team export manifest</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{exportManifest.detail}</p>
+          </div>
+          <Badge className={exportManifest.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+            {exportManifest.status}
+          </Badge>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {exportManifest.checks.map((check) => (
+            <div className="rounded-md border border-border bg-muted/35 p-3" key={check.label}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm text-muted-foreground">{check.label}</div>
+                <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                  {check.status}
+                </Badge>
+              </div>
+              <div className="mt-1 font-semibold">{check.value}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <ExportAuditPanel audit={exportAudit} />
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
