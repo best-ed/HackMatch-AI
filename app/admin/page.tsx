@@ -31,6 +31,7 @@ import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
 import { evaluateSupabaseSchemaReadiness, type SupabaseSchemaReadinessItem } from "@/lib/supabase-schema-readiness";
 import { buildSupabaseSyncSummary } from "@/lib/supabase-sync-status";
+import { buildRemoteCutoverChecklist } from "@/lib/remote-cutover-checklist";
 import { buildWorkspaceSnapshotSummary } from "@/lib/workspace-snapshot-summary";
 
 export default function AdminPage() {
@@ -114,6 +115,14 @@ export default function AdminPage() {
     schema: supabaseSchemaReadiness,
     participantsCount: participants.length,
     savedRunsCount: savedMatchRuns.length
+  });
+  const remoteCutoverChecklist = buildRemoteCutoverChecklist({
+    supabase: supabaseReadiness,
+    schema: supabaseSchemaReadiness,
+    rls: supabaseRlsReadiness,
+    participantCount: participants.length,
+    savedRunCount: savedMatchRuns.length,
+    hasFinalRun: Boolean(finalRun)
   });
   const deploymentReadiness = evaluateDeploymentReadiness({
     supabase: supabaseReadiness,
@@ -419,6 +428,30 @@ export default function AdminPage() {
           <p className="mt-1 text-sm text-muted-foreground">{supabaseReadiness.detail}</p>
         </div>
         <AdminSupabaseSyncSummary summary={supabaseSyncSummary} />
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="font-semibold">{remoteCutoverChecklist.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">{remoteCutoverChecklist.detail}</p>
+            </div>
+            <Badge className={remoteCutoverChecklist.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+              {remoteCutoverChecklist.status}
+            </Badge>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {remoteCutoverChecklist.items.map((item) => (
+              <div className="rounded-md border border-border bg-muted/35 p-3" key={item.label}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold">{item.label}</div>
+                  <Badge className={item.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                    {item.status}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           {supabaseReadiness.checks.map((check) => (
             <div key={check.label} className="rounded-md border border-border bg-white p-4">
