@@ -35,8 +35,8 @@ const schemaItems: SupabaseSchemaReadinessItem[] = [
   },
   {
     label: "Workspace state",
-    status: "planned",
-    detail: "Schema now includes active cohort, archived cohorts, and admin audit history, but the remote workspace adapter still needs to be wired."
+    status: "ready",
+    detail: "Remote adapter and schema now cover active cohort, archived cohorts, and organizer audit history snapshots."
   }
 ];
 

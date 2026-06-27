@@ -30,6 +30,8 @@ import {
   buildSettingsValidationShortcuts,
   type SettingsValidationShortcut
 } from "@/lib/settings-validation-shortcuts";
+import { buildSupabaseFirstSyncPlan } from "@/lib/supabase-first-sync-plan";
+import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
 import { evaluateSupabaseSchemaReadiness } from "@/lib/supabase-schema-readiness";
 import { buildSupabaseSyncCoverage } from "@/lib/supabase-sync-coverage";
 import type { TeamReviewChecklistStore } from "@/lib/team-review-checklist";
@@ -79,6 +81,14 @@ export default function AdminSettingsPage() {
     () => summarizeBackupOperations(readAdminAuditHistory()),
     [backupSummaryAt]
   );
+  const supabaseReadiness = useMemo(
+    () =>
+      evaluateSupabaseReadiness({
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      }),
+    []
+  );
   const supabaseSyncCoverage = useMemo(
     () =>
       buildSupabaseSyncCoverage({
@@ -86,6 +96,16 @@ export default function AdminSettingsPage() {
         schema: evaluateSupabaseSchemaReadiness()
       }),
     [persistenceMode]
+  );
+  const supabaseFirstSyncPlan = useMemo(
+    () =>
+      buildSupabaseFirstSyncPlan({
+        readiness: supabaseReadiness,
+        participantCount: participants.length,
+        savedRunCount: savedMatchRuns.length,
+        backupExports: backupOperations.exportCount
+      }),
+    [backupOperations.exportCount, participants.length, savedMatchRuns.length, supabaseReadiness]
   );
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
@@ -281,6 +301,20 @@ export default function AdminSettingsPage() {
                 </Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div>
+          <h2 className="font-semibold">{supabaseFirstSyncPlan.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{supabaseFirstSyncPlan.detail}</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {supabaseFirstSyncPlan.steps.map((step) => (
+            <div className="rounded-md border border-border bg-white p-4" key={step.label}>
+              <div className="font-semibold">{step.label}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>
             </div>
           ))}
         </div>
