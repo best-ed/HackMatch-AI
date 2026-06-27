@@ -32,6 +32,11 @@ const schemaItems: SupabaseSchemaReadinessItem[] = [
     label: "Team review checklist",
     status: "ready",
     detail: "Remote adapter and schema cover organizer checklist rows while preserving local browser fallback."
+  },
+  {
+    label: "Workspace state",
+    status: "planned",
+    detail: "Schema now includes active cohort, archived cohorts, and admin audit history, but the remote workspace adapter still needs to be wired."
   }
 ];
 
