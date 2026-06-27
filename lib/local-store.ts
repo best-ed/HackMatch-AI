@@ -1,5 +1,6 @@
 "use client";
 
+import { readAdminAuditHistory } from "@/lib/admin-audit-history";
 import { demoMatchingSettings, demoParticipants } from "@/lib/demo-data";
 import {
   archiveCohortList,
@@ -26,10 +27,12 @@ import {
   loadRemoteMatchRuns,
   loadRemoteParticipants,
   loadRemoteSettings,
+  loadRemoteWorkspaceState,
   saveRemoteMatchRun,
   saveRemoteParticipant,
   saveRemoteSettings,
-  saveRemoteTeamReviewChecklist
+  saveRemoteTeamReviewChecklist,
+  saveRemoteWorkspaceState
 } from "@/lib/supabase-store";
 import { useEffect, useMemo, useState } from "react";
 
@@ -54,6 +57,20 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson<T>(key: string, value: T) {
   window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+function syncRemoteWorkspaceState(
+  activeCohort: string,
+  archivedCohorts: string[],
+  setPersistenceWarning: (value: string) => void
+) {
+  if (!isSupabaseConfigured()) return;
+
+  void saveRemoteWorkspaceState({
+    activeCohort,
+    archivedCohorts,
+    adminAuditHistory: readAdminAuditHistory()
+  }).catch(() => setPersistenceWarning("Supabase workspace-state sync failed; local browser storage is still updated."));
 }
 
 export function readCurrentParticipantLookup(): string {
@@ -231,10 +248,11 @@ export function useHackMatchData() {
       }
 
       try {
-        const [remoteParticipants, remoteSettings, remoteMatchRuns] = await Promise.all([
+        const [remoteParticipants, remoteSettings, remoteMatchRuns, remoteWorkspaceState] = await Promise.all([
           loadRemoteParticipants(),
           loadRemoteSettings(),
-          loadRemoteMatchRuns()
+          loadRemoteMatchRuns(),
+          loadRemoteWorkspaceState()
         ]);
 
         if (cancelled) return;
@@ -252,6 +270,14 @@ export function useHackMatchData() {
           const normalizedRemoteRuns = normalizeSavedRunsForStorage(remoteMatchRuns);
           setSavedMatchRunsState(normalizedRemoteRuns);
           writeJson(savedMatchRunsKey, normalizedRemoteRuns);
+        }
+        if (remoteWorkspaceState) {
+          const remoteActiveCohort = remoteWorkspaceState.activeCohort.trim() || defaultCohort;
+          const remoteArchivedCohorts = normalizeArchivedCohorts(remoteWorkspaceState.archivedCohorts);
+          setActiveCohortState(remoteActiveCohort);
+          setArchivedCohortsState(remoteArchivedCohorts);
+          window.localStorage.setItem(activeCohortKey, remoteActiveCohort);
+          writeJson(archivedCohortsKey, remoteArchivedCohorts);
         }
         setPersistenceMode("supabase");
         setPersistenceWarning("");
@@ -296,6 +322,7 @@ export function useHackMatchData() {
         const cleaned = next.trim() || defaultCohort;
         setActiveCohortState(cleaned);
         window.localStorage.setItem(activeCohortKey, cleaned);
+        syncRemoteWorkspaceState(cleaned, archivedCohorts, setPersistenceWarning);
       },
       archiveCohort(cohort: string) {
         const cleaned = cohort.trim();
@@ -303,15 +330,18 @@ export function useHackMatchData() {
         const next = archiveCohortList(archivedCohorts, cleaned);
         setArchivedCohortsState(next);
         writeJson(archivedCohortsKey, next);
+        const nextActiveCohort = activeCohort === cleaned ? defaultCohort : activeCohort;
         if (activeCohort === cleaned) {
           setActiveCohortState(defaultCohort);
           window.localStorage.setItem(activeCohortKey, defaultCohort);
         }
+        syncRemoteWorkspaceState(nextActiveCohort, next, setPersistenceWarning);
       },
       restoreCohort(cohort: string) {
         const next = restoreCohortList(archivedCohorts, cohort);
         setArchivedCohortsState(next);
         writeJson(archivedCohortsKey, next);
+        syncRemoteWorkspaceState(activeCohort, next, setPersistenceWarning);
       },
       setParticipants(next: Participant[]) {
         const normalized = normalizeParticipantsForStorage(next);
@@ -504,6 +534,7 @@ export function useHackMatchData() {
         writeJson(archivedCohortsKey, restoredArchivedCohorts);
         writeJson(teamReviewChecklistStorageKey, backup.teamReviewChecklist);
         window.localStorage.setItem(activeCohortKey, restoredCohort);
+        syncRemoteWorkspaceState(restoredCohort, restoredArchivedCohorts, setPersistenceWarning);
 
         if (isSupabaseConfigured()) {
           void Promise.all([
@@ -526,6 +557,7 @@ export function useHackMatchData() {
         writeJson(settingsKey, demoMatchingSettings);
         writeJson(savedMatchRunsKey, []);
         writeJson(archivedCohortsKey, []);
+        syncRemoteWorkspaceState(activeCohort, [], setPersistenceWarning);
         if (isSupabaseConfigured()) {
           void Promise.all([
             ...normalizedDemoParticipants.map((participant) => saveRemoteParticipant(participant)),
