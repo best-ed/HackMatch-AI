@@ -28,6 +28,7 @@ import { getFinalSavedRun } from "@/lib/saved-run-final";
 import { type AdminRuntimeSignals } from "@/lib/admin-runtime-signals";
 import { validateMatchingSettings } from "@/lib/settings-guardrails";
 import { evaluateSupabaseReadiness } from "@/lib/supabase-readiness";
+import { buildSupabaseEnvSummary } from "@/lib/supabase-env-summary";
 import { evaluateSupabaseRlsReadiness, type SupabaseRlsReadinessItem } from "@/lib/supabase-rls-readiness";
 import { evaluateSupabaseSchemaReadiness, type SupabaseSchemaReadinessItem } from "@/lib/supabase-schema-readiness";
 import { buildSupabaseSyncSummary } from "@/lib/supabase-sync-status";
@@ -99,6 +100,10 @@ export default function AdminPage() {
     lockedTeamCount: settings.lockedTeams?.length ?? 0
   });
   const supabaseReadiness = evaluateSupabaseReadiness({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
+  const supabaseEnvSummary = buildSupabaseEnvSummary({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL,
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   });
@@ -426,6 +431,30 @@ export default function AdminPage() {
         <div className="rounded-md border border-border bg-white p-4">
           <div className="font-semibold">{supabaseReadiness.title}</div>
           <p className="mt-1 text-sm text-muted-foreground">{supabaseReadiness.detail}</p>
+        </div>
+        <div className="rounded-md border border-border bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="font-semibold">{supabaseEnvSummary.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">{supabaseEnvSummary.detail}</p>
+            </div>
+            <Badge className={supabaseEnvSummary.status === "ready" ? "bg-emerald-100 text-emerald-800" : supabaseEnvSummary.status === "local" ? "bg-slate-100 text-slate-800" : "bg-amber-100 text-amber-800"}>
+              {supabaseEnvSummary.status}
+            </Badge>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {supabaseEnvSummary.checks.map((check) => (
+              <div className="rounded-md border border-border bg-muted/35 p-3" key={check.label}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">{check.label}</div>
+                  <Badge className={check.status === "ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                    {check.status}
+                  </Badge>
+                </div>
+                <div className="mt-1 font-semibold">{check.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
         <AdminSupabaseSyncSummary summary={supabaseSyncSummary} />
         <div className="rounded-md border border-border bg-white p-4">
