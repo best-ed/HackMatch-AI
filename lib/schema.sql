@@ -86,3 +86,11 @@ create table team_review_checklists (
 );
 
 create index team_review_checklists_run_id_idx on team_review_checklists (run_id);
+
+create table workspace_state (
+  id text primary key default 'default',
+  active_cohort text not null default 'General',
+  archived_cohorts jsonb not null default '[]',
+  admin_audit_history jsonb not null default '[]',
+  updated_at timestamptz not null default now()
+);
