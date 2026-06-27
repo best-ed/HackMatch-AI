@@ -15,6 +15,12 @@ import {
   type TeamReviewChecklistRow,
   type TeamReviewChecklistStore
 } from "@/lib/team-review-checklist";
+import {
+  rowToWorkspaceState,
+  workspaceStateToRow,
+  type RemoteWorkspaceState,
+  type WorkspaceStateRow
+} from "@/lib/supabase-workspace-state";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -149,6 +155,24 @@ export async function saveRemoteTeamReviewChecklist(key: string, checklist: Team
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify([teamReviewChecklistToRow({ key, checklist })])
+    }
+  );
+}
+
+export async function loadRemoteWorkspaceState(): Promise<RemoteWorkspaceState | undefined> {
+  const rows = await supabaseRequest<WorkspaceStateRow[]>(
+    "/workspace_state?id=eq.default&select=*&limit=1"
+  );
+  return rows[0] ? rowToWorkspaceState(rows[0]) : undefined;
+}
+
+export async function saveRemoteWorkspaceState(state: RemoteWorkspaceState) {
+  await supabaseRequest<WorkspaceStateRow[]>(
+    "/workspace_state?on_conflict=id",
+    {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify([workspaceStateToRow(state)])
     }
   );
 }
