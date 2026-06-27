@@ -30,6 +30,8 @@ import {
   buildSettingsValidationShortcuts,
   type SettingsValidationShortcut
 } from "@/lib/settings-validation-shortcuts";
+import { evaluateSupabaseSchemaReadiness } from "@/lib/supabase-schema-readiness";
+import { buildSupabaseSyncCoverage } from "@/lib/supabase-sync-coverage";
 import type { TeamReviewChecklistStore } from "@/lib/team-review-checklist";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +78,14 @@ export default function AdminSettingsPage() {
   const backupOperations = useMemo(
     () => summarizeBackupOperations(readAdminAuditHistory()),
     [backupSummaryAt]
+  );
+  const supabaseSyncCoverage = useMemo(
+    () =>
+      buildSupabaseSyncCoverage({
+        persistenceMode,
+        schema: evaluateSupabaseSchemaReadiness()
+      }),
+    [persistenceMode]
   );
   const health = useMemo(
     () => validateMatchingSettings(settings, cohortParticipants),
@@ -253,6 +263,28 @@ export default function AdminSettingsPage() {
         detail="Matching settings are stored in this browser until Supabase env vars are configured."
       />
       <AdminDataLoadNotice loaded={loaded} label="settings workspace" />
+      <Card className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">{supabaseSyncCoverage.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{supabaseSyncCoverage.detail}</p>
+          </div>
+          <Badge>{persistenceMode === "supabase" ? "remote active" : "local fallback"}</Badge>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {supabaseSyncCoverage.items.map((item) => (
+            <div className="rounded-md border border-border bg-white p-4" key={item.label}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{item.label}</div>
+                <Badge className={item.status === "active" ? "bg-emerald-100 text-emerald-800" : item.status === "planned" ? "bg-slate-100 text-slate-800" : "bg-amber-100 text-amber-800"}>
+                  {item.status}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
